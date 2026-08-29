@@ -1,0 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@300;400;500;600;700;800&display=swap');
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --black: #080808;
+  --dark: #101010;
+  --card: #151515;
+  --border: #292929;
+  --lime: #C8FF00;
+  --white: #FFFFFF;
+  --gray: #999999;
+  --red: #FF4D4D;
+  --gray-dark: #666666;
+  --gray-mid: #777777;
+}
+
+[data-theme='light'] {
+  --black: #F5F5F5;
+  --dark: #FFFFFF;
+  --card: #FFFFFF;
+  --border: #E0E0E0;
+  --lime: #0066ff;
+  --white: #1A1A1A;
+  --gray: #555555;
+  --red: #D32F2F;
+  --gray-dark: #999999;
+  --gray-mid: #777777;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--black);
+  color: var(--white);
+  overflow: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+input, button, textarea, select {
+  font-family: inherit;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-dark);
+}
+
+/* Light theme specific overrides */
+[data-theme='light'] .sidebar-link.active {
+  background: var(--lime);
+  color: #FFFFFF;
+}
+
+[data-theme='light'] .sidebar-link.active svg {
+  color: #FFFFFF;
+}
+
+[data-theme='light'] .search-box input::placeholder {
+  color: var(--gray-dark);
+}
+
+[data-theme='light'] .avatar {
+  background: var(--border);
+  color: var(--gray-dark);
+}
+
+[data-theme='light'] .trainer-avatar {
+  background: var(--border);
+  color: var(--gray-dark);
+}
+
+[data-theme='light'] .avatar-large {
+  background: var(--border);
+  color: var(--gray-dark);
+}
