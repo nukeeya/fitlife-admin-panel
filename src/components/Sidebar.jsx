@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -13,8 +13,10 @@ import {
   Sun,
   Moon,
   ClipboardList,
+  LogOut,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 const navItems = [
   { path: '/dashboard', label: 'DASHBOARD', icon: LayoutDashboard },
@@ -31,6 +33,13 @@ const navItems = [
 
 export default function Sidebar() {
   const { theme, toggleTheme } = useTheme();
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login');
+  };
 
   return (
     <div className="sidebar">
@@ -58,6 +67,10 @@ export default function Sidebar() {
         <button className="sidebar-link" onClick={toggleTheme}>
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           <span>{theme === 'dark' ? 'LIGHT MODE' : 'NIGHT MODE'}</span>
+        </button>
+        <button className="sidebar-link" onClick={handleSignOut}>
+          <LogOut size={18} />
+          <span>SIGN OUT</span>
         </button>
         <button className="sidebar-link settings-btn">
           <Settings size={18} />
