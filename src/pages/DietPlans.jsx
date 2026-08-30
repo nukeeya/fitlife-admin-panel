@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Flame, Users, Clock, ChevronDown, ChevronUp, Plus } from 'lucide-react';
-import { dietPlans } from '../data/gymData';
+import { useState, useEffect } from 'react';
+import { Flame, Users, Clock, ChevronDown, ChevronUp, Plus, Loader2 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 function MacroBar({ label, value, color }) {
   return (
@@ -46,7 +46,7 @@ function DietPlanCard({ plan }) {
         </div>
       </div>
 
-      {expanded && (
+      {expanded && plan.meals && plan.meals.length > 0 && (
         <div className="diet-meals">
           <h4 className="meals-title">
             <Flame size={16} className="meals-icon" />
@@ -68,14 +68,64 @@ function DietPlanCard({ plan }) {
 }
 
 export default function DietPlans() {
+  const [plans, setPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
-  const targets = ['All', ...new Set(dietPlans.map((p) => p.target))];
+
+  useEffect(() => {
+    fetchDietPlans();
+  }, []);
+
+  async function fetchDietPlans() {
+    const { data: dietData, error } = await supabase
+      .from('diet_plans')
+      .select('*')
+      .order('id', { ascending: true });
+
+    if (!error && dietData) {
+      // Fetch meals for each plan
+      const plansWithMeals = await Promise.all(
+        dietData.map(async (plan) => {
+          const { data: meals } = await supabase
+            .from('diet_plan_meals')
+            .select('time, meal')
+            .eq('diet_plan_id', plan.id)
+            .order('sort_order', { ascending: true });
+
+          return {
+            id: plan.id,
+            name: plan.name,
+            target: plan.target,
+            calories: plan.calories,
+            protein: plan.protein,
+            carbs: plan.carbs,
+            fats: plan.fats,
+            duration: plan.duration,
+            members: plan.member_count,
+            meals: meals || [],
+          };
+        })
+      );
+      setPlans(plansWithMeals);
+    }
+    setLoading(false);
+  }
+
+  const targets = ['All', ...new Set(plans.map((p) => p.target))];
 
   const filtered = filter === 'All'
-    ? dietPlans
-    : dietPlans.filter((p) => p.target === filter);
+    ? plans
+    : plans.filter((p) => p.target === filter);
 
-  const totalMembers = dietPlans.reduce((sum, p) => sum + p.members, 0);
+  const totalMembers = plans.reduce((sum, p) => sum + p.members, 0);
+
+  if (loading) {
+    return (
+      <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+        <Loader2 size={32} className="spin" style={{ color: 'var(--lime)' }} />
+      </div>
+    );
+  }
 
   return (
     <div className="page">
@@ -83,7 +133,7 @@ export default function DietPlans() {
         <div>
           <h1 className="page-title">DIET PLANS</h1>
           <p className="page-subtitle">
-            {dietPlans.length} PLANS ·{' '}
+            {plans.length} PLANS ·{' '}
             <span className="highlight-number">{totalMembers.toLocaleString()}</span> MEMBERS ON PLAN
           </p>
         </div>
@@ -109,7 +159,7 @@ export default function DietPlans() {
       <div className="stats-grid">
         <div className="stat-card">
           <span className="stat-title">TOTAL PLANS</span>
-          <div className="stat-value">{dietPlans.length}</div>
+          <div className="stat-value">{plans.length}</div>
         </div>
         <div className="stat-card">
           <span className="stat-title">ACTIVE MEMBERS</span>

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Search, Calendar } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Calendar, Loader2 } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -9,8 +9,9 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { attendanceRecords, hourlyCheckins, stats } from '../data/gymData';
+import { hourlyCheckins } from '../data/gymData';
 import { useTheme } from '../context/ThemeContext';
+import { supabase } from '../lib/supabase';
 
 export default function Attendance() {
   const { theme } = useTheme();
@@ -22,11 +23,51 @@ export default function Attendance() {
   const tooltipText = theme === 'light' ? '#1A1A1A' : '#FFFFFF';
 
   const [search, setSearch] = useState('');
-  const [date] = useState('28 AUG 2026');
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
 
-  const filtered = attendanceRecords.filter((r) =>
+  useEffect(() => {
+    fetchAttendance();
+  }, []);
+
+  async function fetchAttendance() {
+    const todayStart = new Date().toISOString().split('T')[0];
+    const { data, error } = await supabase
+      .from('attendance')
+      .select(`
+        id,
+        check_in,
+        check_out,
+        status,
+        members(first_name, last_name)
+      `)
+      .gte('check_in', todayStart)
+      .order('check_in', { ascending: false });
+
+    if (!error && data) {
+      setRecords(data.map(r => ({
+        id: r.id,
+        name: r.members ? `${r.members.first_name} ${r.members.last_name}` : 'Unknown',
+        checkIn: r.check_in ? new Date(r.check_in).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—',
+        checkOut: r.check_out ? new Date(r.check_out).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—',
+        status: r.status || 'In',
+      })));
+    }
+    setLoading(false);
+  }
+
+  const filtered = records.filter((r) =>
     r.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+        <Loader2 size={32} className="spin" style={{ color: 'var(--lime)' }} />
+      </div>
+    );
+  }
 
   return (
     <div className="page">
@@ -34,7 +75,7 @@ export default function Attendance() {
         <div>
           <h1 className="page-title">ATTENDANCE</h1>
           <p className="page-subtitle">
-            TODAY'S CHECK-INS <span className="highlight-number">{stats.checkIns}</span>
+            TODAY'S CHECK-INS <span className="highlight-number">{records.length}</span>
           </p>
         </div>
         <div className="header-actions">
@@ -49,7 +90,7 @@ export default function Attendance() {
           </div>
           <div className="date-box">
             <Calendar size={16} />
-            <span>DATE: {date}</span>
+            <span>DATE: {today}</span>
           </div>
         </div>
       </div>
@@ -77,6 +118,9 @@ export default function Attendance() {
                 </td>
               </tr>
             ))}
+            {filtered.length === 0 && (
+              <tr><td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: 'var(--gray)' }}>No check-ins today yet</td></tr>
+            )}
           </tbody>
         </table>
       </div>

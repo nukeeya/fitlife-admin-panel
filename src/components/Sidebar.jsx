@@ -12,6 +12,7 @@ import {
   Briefcase,
   Sun,
   Moon,
+  ClipboardList,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -25,6 +26,7 @@ const navItems = [
   { path: '/employees', label: 'EMPLOYEES', icon: Briefcase },
   { path: '/reports', label: 'REPORTS', icon: BarChart3 },
   { path: '/diet-plans', label: 'DIET PLANS', icon: Apple },
+  { path: '/admissions', label: 'ADMISSIONS', icon: ClipboardList },
 ];
 
 export default function Sidebar() {

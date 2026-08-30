@@ -1,13 +1,50 @@
-import { useState } from 'react';
-import { Search, Plus } from 'lucide-react';
-import { employees } from '../data/gymData';
+import { useState, useEffect } from 'react';
+import { Search, Plus, Loader2 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export default function Employees() {
   const [search, setSearch] = useState('');
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+  async function fetchEmployees() {
+    const { data, error } = await supabase
+      .from('employees')
+      .select('*')
+      .order('id', { ascending: true });
+
+    if (!error && data) {
+      setEmployees(data.map(e => ({
+        id: e.id,
+        name: `${e.first_name} ${e.last_name}`,
+        avatar: `${e.first_name?.[0]}${e.last_name?.[0]}`,
+        role: e.role,
+        department: e.department,
+        phone: e.phone,
+        email: e.email,
+        joined: e.joined ? new Date(e.joined).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase() : '—',
+        salary: e.salary,
+        status: e.status,
+      })));
+    }
+    setLoading(false);
+  }
 
   const filtered = employees.filter((e) =>
     e.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+        <Loader2 size={32} className="spin" style={{ color: 'var(--lime)' }} />
+      </div>
+    );
+  }
 
   return (
     <div className="page">

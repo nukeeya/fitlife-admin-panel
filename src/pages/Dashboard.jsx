@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   Users,
   CalendarCheck,
@@ -19,12 +20,11 @@ import {
   Cell,
 } from 'recharts';
 import {
-  stats,
   attendanceData,
   membershipOverview,
-  members,
 } from '../data/gymData';
 import { useTheme } from '../context/ThemeContext';
+import { supabase } from '../lib/supabase';
 
 function StatCard({ title, value, change, changeLabel, icon: Icon, isLime }) {
   return (
@@ -60,6 +60,41 @@ export default function Dashboard() {
   const tooltipBorder = theme === 'light' ? '#E0E0E0' : '#292929';
   const tooltipText = theme === 'light' ? '#1A1A1A' : '#FFFFFF';
 
+  const [stats, setStats] = useState({ active_members: 0, today_checkins: 0, pending_submissions: 0 });
+  const [recentMembers, setRecentMembers] = useState([]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  async function fetchDashboardData() {
+    // Fetch stats from view
+    const { data: statsData } = await supabase
+      .rpc ? supabase.from('dashboard_stats').select('*').limit(1) : { data: null };
+
+    // Fallback: fetch counts manually
+    const [membersRes, checkinsRes, pendingRes] = await Promise.all([
+      supabase.from('members').select('id', { count: 'exact', head: true }).eq('status', 'Active'),
+      supabase.from('attendance').select('id', { count: 'exact', head: true }).gte('check_in', new Date().toISOString().split('T')[0]),
+      supabase.from('admission_submissions').select('id', { count: 'exact', head: true }).eq('status', 'Pending'),
+    ]);
+
+    setStats({
+      active_members: membersRes.count || 0,
+      today_checkins: checkinsRes.count || 0,
+      pending_submissions: pendingRes.count || 0,
+    });
+
+    // Fetch recent members
+    const { data: members } = await supabase
+      .from('members')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    setRecentMembers(members || []);
+  }
+
   const donutColors = [
     theme === 'light' ? '#0066ff' : '#C8FF00',
     theme === 'light' ? '#999999' : '#666666',
@@ -79,28 +114,27 @@ export default function Dashboard() {
       <div className="stats-grid">
         <StatCard
           title="ACTIVE MEMBERS"
-          value={stats.activeMembers.toLocaleString()}
-          change={`↑ ${stats.activeMembersChange}%`}
+          value={stats.active_members.toLocaleString()}
+          change="↑ 8.4%"
           changeLabel="vs last month"
           icon={Users}
         />
         <StatCard
           title="TODAY'S CHECK-INS"
-          value={stats.checkIns}
-          change={`↑ ${stats.checkInsChange}%`}
+          value={stats.today_checkins}
+          change="↑ 12.6%"
           changeLabel="vs yesterday"
           icon={CalendarCheck}
         />
         <StatCard
-          title="MONTHLY REVENUE"
-          value={stats.monthlyRevenue}
-          change={`↑ ${stats.revenueChange}%`}
-          changeLabel="vs last month"
+          title="PENDING ADMISSIONS"
+          value={stats.pending_submissions}
+          changeLabel="Awaiting review"
           icon={DollarSign}
         />
         <StatCard
           title="EXPIRING SOON"
-          value={stats.expiringSoon}
+          value="—"
           icon={AlertTriangle}
           isLime
           changeLabel="NEXT 7 DAYS"
@@ -166,7 +200,7 @@ export default function Dashboard() {
               </PieChart>
             </ResponsiveContainer>
             <div className="donut-center">
-              <span className="donut-total">{stats.activeMembers.toLocaleString()}</span>
+              <span className="donut-total">{stats.active_members.toLocaleString()}</span>
               <span className="donut-label">TOTAL MEMBERS</span>
             </div>
             <div className="donut-legend">
@@ -201,20 +235,22 @@ export default function Dashboard() {
             </tr>
           </thead>
           <tbody>
-            {members.map((m) => (
+            {recentMembers.map((m) => (
               <tr key={m.id}>
                 <td>
                   <div className="member-cell">
-                    <div className="avatar">{m.avatar}</div>
-                    {m.name}
+                    <div className="avatar">
+                      {m.first_name?.[0]}{m.last_name?.[0]}
+                    </div>
+                    {m.first_name} {m.last_name}
                   </div>
                 </td>
                 <td>{m.plan}</td>
-                <td>{m.joined}</td>
-                <td>{m.expiry}</td>
+                <td>{m.joined ? new Date(m.joined).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase() : '—'}</td>
+                <td>{m.expiry ? new Date(m.expiry).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase() : '—'}</td>
                 <td>
-                  <span className={`status-badge ${m.status.toLowerCase()}`}>
-                    ● {m.status.toUpperCase()}
+                  <span className={`status-badge ${m.status?.toLowerCase()}`}>
+                    ● {m.status?.toUpperCase()}
                   </span>
                 </td>
               </tr>

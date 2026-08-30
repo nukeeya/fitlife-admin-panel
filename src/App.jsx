@@ -12,6 +12,7 @@ import Memberships from './pages/Memberships';
 import Reports from './pages/Reports';
 import DietPlans from './pages/DietPlans';
 import Employees from './pages/Employees';
+import Admissions from './pages/Admissions';
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="/memberships" element={<Memberships />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/diet-plans" element={<DietPlans />} />
+          <Route path="/admissions" element={<Admissions />} />
         </Route>
       </Routes>
     </BrowserRouter>

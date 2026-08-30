@@ -1,7 +1,43 @@
-import { Plus, Users } from 'lucide-react';
-import { trainers } from '../data/gymData';
+import { useState, useEffect } from 'react';
+import { Plus, Users, Loader2 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export default function Trainers() {
+  const [trainers, setTrainers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchTrainers();
+  }, []);
+
+  async function fetchTrainers() {
+    const { data, error } = await supabase
+      .from('trainers')
+      .select('*')
+      .order('id', { ascending: true });
+
+    if (!error && data) {
+      setTrainers(data.map(t => ({
+        id: t.id,
+        name: `${t.first_name} ${t.last_name}`,
+        avatar: `${t.first_name?.[0]}${t.last_name?.[0]}`,
+        role: t.role,
+        specialty: t.specialty,
+        clients: t.clients,
+        available: t.available,
+      })));
+    }
+    setLoading(false);
+  }
+
+  if (loading) {
+    return (
+      <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+        <Loader2 size={32} className="spin" style={{ color: 'var(--lime)' }} />
+      </div>
+    );
+  }
+
   return (
     <div className="page">
       <div className="page-header">
