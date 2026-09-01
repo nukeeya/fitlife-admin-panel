@@ -1,97 +1,139 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, Calendar, CreditCard, CheckCircle } from 'lucide-react';
-import { members } from '../data/gymData';
+import { useParams, Link } from 'react-router-dom';
+import {
+  ArrowLeft,
+  User,
+  Phone,
+  Mail,
+  Calendar,
+  CreditCard,
+  Key,
+  Dumbbell,
+  CheckCircle2,
+  Clock,
+  Tag,
+} from 'lucide-react';
+import { useGymData } from '../context/GymDataContext';
 
 export default function MemberDetails() {
   const { id } = useParams();
-  const navigate = useNavigate();
-  const member = members.find((m) => m.id === Number(id));
+  const { members, invoices, attendance, checkInMember } = useGymData();
+
+  const member = members.find((m) => m.id === Number(id)) || members[0];
+  const memberInvoices = invoices.filter((i) => i.memberId === member?.id);
+  const memberAttendance = attendance.filter((a) => a.memberId === member?.id);
 
   if (!member) {
     return (
       <div className="page">
-        <p style={{ color: 'var(--gray)' }}>Member not found.</p>
+        <Link to="/members" className="btn btn-secondary">
+          <ArrowLeft size={16} /> Back to Members
+        </Link>
+        <p>Member not found.</p>
       </div>
     );
   }
 
-  const paymentHistory = [
-    { date: member.joined, amount: member.plan === 'Premium' ? '৳5,000' : member.plan === 'Standard' ? '৳3,000' : '৳2,000', method: 'bKASH', status: 'Paid' },
-    { date: '12 JUL', amount: member.plan === 'Premium' ? '৳5,000' : member.plan === 'Standard' ? '৳3,000' : '৳2,000', method: 'CASH', status: 'Paid' },
-    { date: '12 JUN', amount: member.plan === 'Premium' ? '৳5,000' : member.plan === 'Standard' ? '৳3,000' : '৳2,000', method: 'CARD', status: 'Paid' },
-  ];
-
   return (
     <div className="page">
-      <button className="back-btn" onClick={() => navigate('/members')}>
-        <ArrowLeft size={18} /> BACK TO MEMBERS
-      </button>
-
-      <h1 className="page-title">MEMBER PROFILE</h1>
-
-      <div className="member-profile-grid">
-        {/* Profile Card */}
-        <div className="profile-card">
-          <div className="profile-top">
-            <div className="avatar-large">{member.avatar}</div>
-            <div className="profile-info">
-              <h2 className="profile-name">{member.name}</h2>
-              <p className="profile-plan">{member.plan} Member</p>
-              <span className={`status-badge ${member.status.toLowerCase()}`}>
-                ● {member.status.toUpperCase()}
-              </span>
-            </div>
-          </div>
-
-          <div className="info-grid">
-            <div className="info-item">
-              <span className="info-label">PLAN</span>
-              <span className="info-value">{member.plan}</span>
-            </div>
-            <div className="info-item">
-              <span className="info-label">JOINED</span>
-              <span className="info-value">{member.joined} 2026</span>
-            </div>
-            <div className="info-item">
-              <span className="info-label">EXPIRES</span>
-              <span className="info-value">{member.expiry} 2026</span>
-            </div>
-            <div className="info-item">
-              <span className="info-label">ATTENDANCE</span>
-              <span className="info-value">{member.visits} VISITS</span>
-            </div>
-            <div className="info-item full-width">
-              <span className="info-label">PHONE</span>
-              <span className="info-value">{member.phone}</span>
-            </div>
+      {/* Header */}
+      <div className="page-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <Link to="/members" className="btn btn-secondary btn-sm">
+            <ArrowLeft size={14} /> Back
+          </Link>
+          <div className="page-title-group">
+            <h1 className="page-title">{member.name}</h1>
+            <p className="page-subtitle">
+              {member.code} • {member.gender} • Registered on {member.joined}
+            </p>
           </div>
         </div>
 
-        {/* Payment History */}
-        <div className="table-card">
-          <div className="table-header">
-            <h2 className="chart-title">PAYMENT HISTORY</h2>
-          </div>
-          <table className="data-table">
+        <button className="btn btn-primary" onClick={() => checkInMember(member.id)}>
+          <CheckCircle2 size={16} /> Check In Today
+        </button>
+      </div>
+
+      {/* Member Profile Summary Cards */}
+      <div className="dashboard-metrics-grid">
+        <div className="stat-widget">
+          <span className="stat-widget-title">Membership Plan</span>
+          <div className="stat-widget-value primary-highlight">{member.plan}</div>
+          <div className="stat-widget-sub">Exp: {member.expiry}</div>
+        </div>
+
+        <div className="stat-widget">
+          <span className="stat-widget-title">Assigned Locker</span>
+          <div className="stat-widget-value">{member.lockerNumber || 'None'}</div>
+          <div className="stat-widget-sub">Dedicated storage</div>
+        </div>
+
+        <div className="stat-widget">
+          <span className="stat-widget-title">Personal Trainer</span>
+          <div className="stat-widget-value">{member.trainer || 'None'}</div>
+          <div className="stat-widget-sub">Assigned coach</div>
+        </div>
+
+        <div className="stat-widget">
+          <span className="stat-widget-title">Total Gym Visits</span>
+          <div className="stat-widget-value" style={{ color: '#10B981' }}>{member.visits} Sessions</div>
+          <div className="stat-widget-sub">Check-in telemetry</div>
+        </div>
+      </div>
+
+      {/* Member Invoices & Discount History */}
+      <div className="activity-card">
+        <div className="activity-header">
+          <span style={{ fontWeight: 800 }}>Billing Invoices & Discount History</span>
+        </div>
+
+        <div className="table-responsive">
+          <table className="custom-table">
             <thead>
               <tr>
-                <th>DATE</th>
-                <th>AMOUNT</th>
-                <th>METHOD</th>
-                <th>STATUS</th>
+                <th>Invoice Number</th>
+                <th>Plan Name</th>
+                <th>Base Price</th>
+                <th>Discount Applied</th>
+                <th>Tax</th>
+                <th>Net Payable</th>
+                <th>Paid Amount</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              {paymentHistory.map((p, i) => (
-                <tr key={i}>
-                  <td>{p.date}</td>
-                  <td>{p.amount}</td>
-                  <td>{p.method}</td>
-                  <td>
-                    <span className="status-badge active">● {p.status.toUpperCase()}</span>
+              {memberInvoices.length === 0 ? (
+                <tr>
+                  <td colSpan="8" style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
+                    No invoice records found for this member.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                memberInvoices.map((inv) => (
+                  <tr key={inv.id}>
+                    <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{inv.number}</td>
+                    <td>{inv.planName}</td>
+                    <td>৳{inv.baseAmount.toLocaleString()}</td>
+                    <td>
+                      {inv.discountAmount > 0 ? (
+                        <span style={{ color: 'var(--danger)', fontWeight: 700 }}>
+                          - ৳{inv.discountAmount} ({inv.discountReason})
+                        </span>
+                      ) : (
+                        'None'
+                      )}
+                    </td>
+                    <td>৳{inv.taxAmount}</td>
+                    <td style={{ fontWeight: 800 }}>৳{inv.netPayable.toLocaleString()}</td>
+                    <td style={{ color: '#10B981', fontWeight: 700 }}>৳{inv.paidAmount.toLocaleString()}</td>
+                    <td>
+                      <span className={`badge ${inv.status === 'Paid' ? 'badge-success' : 'badge-warning'}`}>
+                        {inv.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -1,77 +1,125 @@
 import { useState } from 'react';
-import { Search, Plus } from 'lucide-react';
-import { employees } from '../data/gymData';
+import {
+  Briefcase,
+  Search,
+  Plus,
+  DollarSign,
+  Phone,
+  Mail,
+  UserCheck,
+  FileSpreadsheet,
+} from 'lucide-react';
+import { useGymData } from '../context/GymDataContext';
 
 export default function Employees() {
-  const [search, setSearch] = useState('');
+  const { employees } = useGymData();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [deptFilter, setDeptFilter] = useState('All');
 
-  const filtered = employees.filter((e) =>
-    e.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = employees.filter((e) => {
+    const matchesSearch =
+      e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      e.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      e.role.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDept = deptFilter === 'All' || e.department === deptFilter;
+    return matchesSearch && matchesDept;
+  });
+
+  const totalPayroll = employees.reduce((sum, e) => sum + e.salary, 0);
 
   return (
     <div className="page">
+      {/* Header */}
       <div className="page-header">
-        <div>
-          <h1 className="page-title">EMPLOYEES</h1>
-          <p className="page-subtitle">{employees.length} TOTAL EMPLOYEES</p>
-        </div>
-        <div className="header-actions">
-          <div className="search-box">
-            <Search size={16} />
-            <input
-              type="text"
-              placeholder="Search employees..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <button className="btn-primary">
-            <Plus size={16} /> ADD EMPLOYEE
-          </button>
+        <div className="page-title-group">
+          <h1 className="page-title">Employee Management & Staff Roster</h1>
+          <p className="page-subtitle">
+            Front desk, operations, maintenance, finance staff records, and monthly payroll budget overview.
+          </p>
         </div>
       </div>
 
-      <div className="table-card">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>EMPLOYEE</th>
-              <th>ROLE</th>
-              <th>DEPARTMENT</th>
-              <th>PHONE</th>
-              <th>JOINED</th>
-              <th>SALARY</th>
-              <th>STATUS</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((e) => (
-              <tr key={e.id}>
-                <td>
-                  <div className="member-cell">
-                    <div className="avatar">{e.avatar}</div>
-                    {e.name}
-                  </div>
-                </td>
-                <td>{e.role}</td>
-                <td>{e.department}</td>
-                <td>{e.phone}</td>
-                <td>{e.joined}</td>
-                <td style={{ color: 'var(--white)', fontWeight: 600 }}>
-                  {e.salary}
-                </td>
-                <td>
-                  <span
-                    className={`status-badge ${e.status === 'Active' ? 'active' : 'expiring'}`}
-                  >
-                    ● {e.status.toUpperCase()}
-                  </span>
-                </td>
+      {/* Filter and Stats */}
+      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-card)', padding: '16px 20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-base)' }}>
+        <div className="header-search" style={{ width: '300px' }}>
+          <Search size={16} color="var(--text-muted)" />
+          <input
+            type="text"
+            placeholder="Search employee name or role..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {['All', 'Reception', 'Operations', 'Finance', 'Maintenance', 'Marketing'].map((d) => (
+            <button
+              key={d}
+              className={`btn btn-sm ${deptFilter === d ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setDeptFilter(d)}
+            >
+              {d}
+            </button>
+          ))}
+        </div>
+
+        <div className="badge badge-primary" style={{ padding: '8px 14px', fontSize: '13px' }}>
+          Total Staff Payroll: ৳{totalPayroll.toLocaleString()} / mo
+        </div>
+      </div>
+
+      {/* Employee Table */}
+      <div className="activity-card">
+        <div className="table-responsive">
+          <table className="custom-table">
+            <thead>
+              <tr>
+                <th>Staff Profile</th>
+                <th>Role & Department</th>
+                <th>Contact</th>
+                <th>Joined Date</th>
+                <th>Monthly Salary</th>
+                <th>Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map((e) => (
+                <tr key={e.id}>
+                  <td>
+                    <div className="member-cell">
+                      <div className="avatar-initials">{e.avatar}</div>
+                      <div className="member-cell-info">
+                        <span className="member-cell-name">{e.name}</span>
+                        <span className="member-cell-code">{e.code}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontWeight: 700 }}>{e.role}</span>
+                      <span style={{ fontSize: '11px', color: 'var(--primary)' }}>{e.department}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', flexDirection: 'column', fontSize: '12px' }}>
+                      <span>{e.phone}</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{e.email}</span>
+                    </div>
+                  </td>
+                  <td style={{ fontSize: '12px' }}>{e.joined}</td>
+                  <td style={{ fontWeight: 800, color: 'var(--text-primary)' }}>
+                    ৳{e.salary.toLocaleString()}
+                  </td>
+                  <td>
+                    <span className={`badge ${e.status === 'Active' ? 'badge-success' : 'badge-warning'}`}>
+                      {e.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
