@@ -1,4 +1,3 @@
-import { useOutletContext } from 'react-router-dom';
 import {
   Users,
   UserCheck,
@@ -28,43 +27,52 @@ import {
   BarChart,
   Bar,
 } from 'recharts';
-import { useGymData } from '../context/GymDataContext';
+import {
+  stats,
+  attendanceData,
+  membershipOverview,
+  members,
+} from '../data/gymData';
 import { useTheme } from '../context/ThemeContext';
 
+function StatCard({ title, value, change, changeLabel, icon: Icon, isLime }) {
+  return (
+    <div className="stat-card">
+      <div className="stat-card-header">
+        <span className="stat-title">{title}</span>
+        <Icon size={18} className="stat-icon" />
+      </div>
+      <div className={`stat-value ${isLime ? 'lime' : ''}`}>{value}</div>
+      {change && (
+        <div className="stat-change">
+          <span className="change-positive">
+            <TrendingUp size={12} /> {change}
+          </span>
+          <span className="change-label">{changeLabel}</span>
+        </div>
+      )}
+      {changeLabel === 'NEXT 7 DAYS' && (
+        <div className="stat-change">
+          <span className="change-label">{changeLabel}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard() {
-  const { openAdmission } = useOutletContext();
-  const {
-    getAnalytics,
-    attendance,
-    checkOutMember,
-    checkInMember,
-    members,
-    expenses,
-    invoices,
-  } = useGymData();
-  const { theme, primaryColor } = useTheme();
+  const { theme } = useTheme();
+  const lime = theme === 'light' ? '#0066ff' : '#C8FF00';
+  const gridColor = theme === 'light' ? '#E0E0E0' : '#292929';
+  const axisColor = theme === 'light' ? '#999999' : '#666666';
+  const tooltipBg = theme === 'light' ? '#FFFFFF' : '#151515';
+  const tooltipBorder = theme === 'light' ? '#E0E0E0' : '#292929';
+  const tooltipText = theme === 'light' ? '#1A1A1A' : '#FFFFFF';
 
-  const analytics = getAnalytics();
-
-  // Split live attendance into Members In and Members Out
-  const membersIn = attendance.filter((a) => a.status === 'In');
-  const membersOut = attendance.filter((a) => a.status === 'Out');
-
-  // Chart Theme variables
-  const gridColor = theme === 'light' ? '#E2E8F0' : '#26262B';
-  const textColor = theme === 'light' ? '#64748B' : '#94A3B8';
-  const tooltipBg = theme === 'light' ? '#FFFFFF' : '#141416';
-  const tooltipBorder = theme === 'light' ? '#E2E8F0' : '#33333A';
-
-  // Sample trend data for revenue & attendance
-  const chartData = [
-    { day: 'Mon', checkins: 180, revenue: 35000 },
-    { day: 'Tue', checkins: 220, revenue: 48000 },
-    { day: 'Wed', checkins: 205, revenue: 42000 },
-    { day: 'Thu', checkins: 260, revenue: 58000 },
-    { day: 'Fri', checkins: 310, revenue: 75000 },
-    { day: 'Sat', checkins: 290, revenue: 68000 },
-    { day: 'Sun', checkins: 240, revenue: 52000 },
+  const donutColors = [
+    theme === 'light' ? '#0066ff' : '#C8FF00',
+    theme === 'light' ? '#999999' : '#666666',
+    theme === 'light' ? '#CCCCCC' : '#444444',
   ];
 
   return (
@@ -86,145 +94,37 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* =========================================================================
-          3. DASHBOARD ANALYTICS & SUMMARY WIDGETS (14 TOP METRIC CARDS)
-          ========================================================================= */}
-      <div className="dashboard-metrics-grid">
-        {/* 1. Total Members */}
-        <div className="stat-widget">
-          <div className="stat-widget-top">
-            <span className="stat-widget-title">Total Members</span>
-            <div className="stat-widget-icon"><Users size={18} /></div>
-          </div>
-          <div className="stat-widget-value">{analytics.totalMembers.toLocaleString()}</div>
-          <div className="stat-widget-sub">
-            <span style={{ color: '#10B981', fontWeight: 700 }}>↑ 12.4%</span> vs last quarter
-          </div>
-        </div>
-
-        {/* 2. Active Members */}
-        <div className="stat-widget">
-          <div className="stat-widget-top">
-            <span className="stat-widget-title">Active Members</span>
-            <div className="stat-widget-icon" style={{ color: '#10B981' }}><UserCheck size={18} /></div>
-          </div>
-          <div className="stat-widget-value" style={{ color: '#10B981' }}>{analytics.activeMembers.toLocaleString()}</div>
-          <div className="stat-widget-sub">Full gym access privileges</div>
-        </div>
-
-        {/* 3. Inactive Members */}
-        <div className="stat-widget">
-          <div className="stat-widget-top">
-            <span className="stat-widget-title">Inactive / Expired</span>
-            <div className="stat-widget-icon" style={{ color: 'var(--danger)' }}><UserX size={18} /></div>
-          </div>
-          <div className="stat-widget-value" style={{ color: 'var(--danger)' }}>{analytics.inactiveMembers}</div>
-          <div className="stat-widget-sub">Eligible for SMS campaign</div>
-        </div>
-
-        {/* 4. Pending Online Reg */}
-        <div className="stat-widget">
-          <div className="stat-widget-top">
-            <span className="stat-widget-title">Pending Online Reg.</span>
-            <div className="stat-widget-icon" style={{ color: 'var(--warning)' }}><Clock size={18} /></div>
-          </div>
-          <div className="stat-widget-value warning-highlight">{analytics.pendingApps}</div>
-          <div className="stat-widget-sub">Awaiting admin review</div>
-        </div>
-
-        {/* 5. Membership Plans */}
-        <div className="stat-widget">
-          <div className="stat-widget-top">
-            <span className="stat-widget-title">Membership Plans</span>
-            <div className="stat-widget-icon"><Award size={18} /></div>
-          </div>
-          <div className="stat-widget-value">{analytics.totalPlans} Active</div>
-          <div className="stat-widget-sub">Basic, Standard, VIP & Elite</div>
-        </div>
-
-        {/* 6. Check In / Present / Check Out */}
-        <div className="stat-widget">
-          <div className="stat-widget-top">
-            <span className="stat-widget-title">Live Check In / Present</span>
-            <div className="stat-widget-icon"><CalendarCheck size={18} /></div>
-          </div>
-          <div className="stat-widget-value primary-highlight">
-            {analytics.presentNow} <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>/ {analytics.totalDailyCheckIns} Today</span>
-          </div>
-          <div className="stat-widget-sub">
-            {analytics.checkedOutToday} Checked Out
-          </div>
-        </div>
-
-        {/* 7. Remaining SMS Balance */}
-        <div className="stat-widget">
-          <div className="stat-widget-top">
-            <span className="stat-widget-title">Remaining SMS Balance</span>
-            <div className="stat-widget-icon" style={{ color: '#06B6D4' }}><MessageSquare size={18} /></div>
-          </div>
-          <div className="stat-widget-value" style={{ color: '#06B6D4' }}>{analytics.remainingSms.toLocaleString()}</div>
-          <div className="stat-widget-sub">Credits active via Greenweb</div>
-        </div>
-
-        {/* 8. Employee Count */}
-        <div className="stat-widget">
-          <div className="stat-widget-top">
-            <span className="stat-widget-title">Total Staff & Trainers</span>
-            <div className="stat-widget-icon"><Briefcase size={18} /></div>
-          </div>
-          <div className="stat-widget-value">{analytics.totalEmployees} Staff</div>
-          <div className="stat-widget-sub">Trainers, Operations, Desk</div>
-        </div>
-
-        {/* 9. Total Sales (This Month) */}
-        <div className="stat-widget">
-          <div className="stat-widget-top">
-            <span className="stat-widget-title">Total Sales (This Month)</span>
-            <div className="stat-widget-icon" style={{ color: 'var(--primary)' }}><DollarSign size={18} /></div>
-          </div>
-          <div className="stat-widget-value primary-highlight">৳{(analytics.monthlySalesTotal / 1000).toFixed(1)}k</div>
-          <div className="stat-widget-sub">Real discounted revenue</div>
-        </div>
-
-        {/* 10. Today Sales (Invoice) */}
-        <div className="stat-widget">
-          <div className="stat-widget-top">
-            <span className="stat-widget-title">Today Sales (Invoice)</span>
-            <div className="stat-widget-icon"><Receipt size={18} /></div>
-          </div>
-          <div className="stat-widget-value">৳{analytics.todaySalesInvoice.toLocaleString()}</div>
-          <div className="stat-widget-sub">Billed today</div>
-        </div>
-
-        {/* 11. Today Sales (Payment) */}
-        <div className="stat-widget">
-          <div className="stat-widget-top">
-            <span className="stat-widget-title">Today Sales (Payment)</span>
-            <div className="stat-widget-icon" style={{ color: '#10B981' }}><CreditCard size={18} /></div>
-          </div>
-          <div className="stat-widget-value" style={{ color: '#10B981' }}>৳{analytics.todaySalesPayment.toLocaleString()}</div>
-          <div className="stat-widget-sub">Collected in cash/bank</div>
-        </div>
-
-        {/* 12. Total Expense (This Month) */}
-        <div className="stat-widget">
-          <div className="stat-widget-top">
-            <span className="stat-widget-title">Total Expense (This Month)</span>
-            <div className="stat-widget-icon" style={{ color: 'var(--danger)' }}><TrendingUp size={18} /></div>
-          </div>
-          <div className="stat-widget-value danger-highlight">৳{(analytics.monthlyExpenseTotal / 1000).toFixed(1)}k</div>
-          <div className="stat-widget-sub">Maintenance, Bills, Supplies</div>
-        </div>
-
-        {/* 13. New Admissions (This Month) */}
-        <div className="stat-widget">
-          <div className="stat-widget-top">
-            <span className="stat-widget-title">New Admissions (Month)</span>
-            <div className="stat-widget-icon"><UserPlus size={18} /></div>
-          </div>
-          <div className="stat-widget-value">{analytics.newAdmissionsMonth}</div>
-          <div className="stat-widget-sub">Member onboardings</div>
-        </div>
+      {/* Statistics */}
+      <div className="stats-grid">
+        <StatCard
+          title="ACTIVE MEMBERS"
+          value={stats.activeMembers.toLocaleString()}
+          change={`↑ ${stats.activeMembersChange}%`}
+          changeLabel="vs last month"
+          icon={Users}
+        />
+        <StatCard
+          title="TODAY'S CHECK-INS"
+          value={stats.checkIns}
+          change={`↑ ${stats.checkInsChange}%`}
+          changeLabel="vs yesterday"
+          icon={CalendarCheck}
+        />
+        <StatCard
+          title="MONTHLY REVENUE"
+          value={stats.monthlyRevenue}
+          change={`↑ ${stats.revenueChange}%`}
+          changeLabel="vs last month"
+          icon={DollarSign}
+        />
+        <StatCard
+          title="EXPIRING SOON"
+          value={stats.expiringSoon}
+          icon={AlertTriangle}
+          isLime
+          changeLabel="NEXT 7 DAYS"
+        />
+      </div>
 
         {/* 14. Membership Expiring (Today) */}
         <div className="stat-widget" style={{ borderColor: 'rgba(245, 158, 11, 0.4)' }}>
@@ -296,16 +196,32 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* =========================================================================
-          LIVE ACTIVITY LOGS (Members In & Members Out Tables)
-          ========================================================================= */}
-      <div className="activity-logs-container">
-        {/* Members In */}
-        <div className="activity-card">
-          <div className="activity-header">
-            <div className="activity-title-group">
-              <span style={{ fontWeight: 800, fontSize: '15px' }}>Live Activity: Members In</span>
-              <span className="activity-pill-in">{membersIn.length} Present</span>
+        {/* Membership Donut */}
+        <div className="chart-card medium">
+          <div className="chart-header">
+            <h2 className="chart-title">MEMBERSHIP OVERVIEW</h2>
+          </div>
+          <div className="chart-body donut-container">
+            <ResponsiveContainer width="100%" height={180}>
+              <PieChart>
+                <Pie
+                  data={membershipOverview}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={80}
+                  dataKey="value"
+                  strokeWidth={0}
+                >
+                  {membershipOverview.map((entry, index) => (
+                    <Cell key={index} fill={donutColors[index] || entry.color} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="donut-center">
+              <span className="donut-total">{stats.activeMembers.toLocaleString()}</span>
+              <span className="donut-label">TOTAL MEMBERS</span>
             </div>
             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Updated real-time</span>
           </div>
@@ -373,58 +289,45 @@ export default function Dashboard() {
             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Session completed</span>
           </div>
 
-          <div className="table-responsive">
-            <table className="custom-table">
-              <thead>
-                <tr>
-                  <th>SL</th>
-                  <th>Member</th>
-                  <th>Time Out</th>
-                  <th>Package</th>
-                  <th>Expiry</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {membersOut.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
-                      No check-outs recorded today yet.
-                    </td>
-                  </tr>
-                ) : (
-                  membersOut.map((rec, idx) => (
-                    <tr key={rec.id}>
-                      <td style={{ fontWeight: 700 }}>{idx + 1}</td>
-                      <td>
-                        <div className="member-cell">
-                          <div className="avatar-initials">{rec.avatar}</div>
-                          <div className="member-cell-info">
-                            <span className="member-cell-name">{rec.name}</span>
-                            <span className="member-cell-code">{rec.memberCode}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ fontWeight: 700, color: 'var(--danger)' }}>{rec.checkOut}</td>
-                      <td><span className="badge badge-primary">{rec.plan}</span></td>
-                      <td style={{ fontSize: '12px' }}>{rec.expiry}</td>
-                      <td><span className="badge badge-danger">Out</span></td>
-                      <td>
-                        <button
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => checkInMember(rec.memberId)}
-                        >
-                          Re-Entry
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+      {/* Recent Members Table */}
+      <div className="table-card">
+        <div className="table-header">
+          <h2 className="chart-title">RECENT MEMBERS</h2>
+          <button className="view-all-btn">
+            VIEW ALL <ArrowRight size={14} />
+          </button>
         </div>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>MEMBER</th>
+              <th>PLAN</th>
+              <th>JOINED</th>
+              <th>EXPIRY</th>
+              <th>STATUS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {members.map((m) => (
+              <tr key={m.id}>
+                <td>
+                  <div className="member-cell">
+                    <div className="avatar">{m.avatar}</div>
+                    {m.name}
+                  </div>
+                </td>
+                <td>{m.plan}</td>
+                <td>{m.joined}</td>
+                <td>{m.expiry}</td>
+                <td>
+                  <span className={`status-badge ${m.status.toLowerCase()}`}>
+                    ● {m.status.toUpperCase()}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

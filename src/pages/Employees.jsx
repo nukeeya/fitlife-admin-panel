@@ -1,31 +1,13 @@
 import { useState } from 'react';
-import {
-  Briefcase,
-  Search,
-  Plus,
-  DollarSign,
-  Phone,
-  Mail,
-  UserCheck,
-  FileSpreadsheet,
-} from 'lucide-react';
-import { useGymData } from '../context/GymDataContext';
+import { Search, Plus } from 'lucide-react';
+import { employees } from '../data/gymData';
 
 export default function Employees() {
-  const { employees } = useGymData();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [deptFilter, setDeptFilter] = useState('All');
+  const [search, setSearch] = useState('');
 
-  const filtered = employees.filter((e) => {
-    const matchesSearch =
-      e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      e.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      e.role.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDept = deptFilter === 'All' || e.department === deptFilter;
-    return matchesSearch && matchesDept;
-  });
-
-  const totalPayroll = employees.reduce((sum, e) => sum + e.salary, 0);
+  const filtered = employees.filter((e) =>
+    e.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="page">

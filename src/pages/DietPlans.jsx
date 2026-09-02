@@ -1,95 +1,81 @@
 import { useState } from 'react';
-import {
-  Apple,
-  Sparkles,
-  Flame,
-  PieChart,
-  UserCheck,
-  CheckCircle2,
-  Clock,
-  Utensils,
-} from 'lucide-react';
-import { useGymData } from '../context/GymDataContext';
+import { Flame, Users, Clock, ChevronDown, ChevronUp, Plus } from 'lucide-react';
+import { dietPlans } from '../data/gymData';
+
+function MacroBar({ label, value, color }) {
+  return (
+    <div className="macro-item">
+      <span className="macro-label">{label}</span>
+      <span className="macro-value" style={{ color }}>{value}</span>
+    </div>
+  );
+}
+
+function DietPlanCard({ plan }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className={`diet-card ${expanded ? 'expanded' : ''}`}>
+      <div className="diet-card-header" onClick={() => setExpanded(!expanded)}>
+        <div className="diet-card-top">
+          <div>
+            <h3 className="diet-plan-name">{plan.name}</h3>
+            <span className="diet-target">{plan.target}</span>
+          </div>
+          <div className="diet-expand-btn">
+            {expanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </div>
+        </div>
+
+        <div className="diet-macros">
+          <MacroBar label="CALORIES" value={plan.calories} color="var(--lime)" />
+          <MacroBar label="PROTEIN" value={plan.protein} color="var(--white)" />
+          <MacroBar label="CARBS" value={plan.carbs} color="var(--gray)" />
+          <MacroBar label="FATS" value={plan.fats} color="var(--gray-dark)" />
+        </div>
+
+        <div className="diet-card-meta">
+          <div className="diet-meta-item">
+            <Clock size={14} />
+            <span>{plan.duration}</span>
+          </div>
+          <div className="diet-meta-item">
+            <Users size={14} />
+            <span>{plan.members} MEMBERS</span>
+          </div>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="diet-meals">
+          <h4 className="meals-title">
+            <Flame size={16} className="meals-icon" />
+            DAILY MEAL PLAN
+          </h4>
+          <div className="meals-timeline">
+            {plan.meals.map((m, i) => (
+              <div key={i} className="meal-row">
+                <div className="meal-time">{m.time}</div>
+                <div className="meal-dot" />
+                <div className="meal-desc">{m.meal}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function DietPlans() {
-  const { members } = useGymData();
+  const [filter, setFilter] = useState('All');
+  const targets = ['All', ...new Set(dietPlans.map((p) => p.target))];
 
-  const [dietGoal, setDietGoal] = useState('Muscle Building (Hypertrophy)');
-  const [caloricTarget, setCaloricTarget] = useState('2,800 kcal');
-  const [dietaryPref, setDietaryPref] = useState('Non-Vegetarian (High Protein)');
-  const [selectedMemberId, setSelectedMemberId] = useState(members[0]?.id || 1);
+  const filtered = filter === 'All'
+    ? dietPlans
+    : dietPlans.filter((p) => p.target === filter);
 
-  const [dietPlansList, setDietPlansList] = useState([
-    {
-      id: 1,
-      name: 'Lean Muscle Gain Protocol',
-      target: 'Muscle Building',
-      calories: '2,800 kcal',
-      protein: '180g',
-      carbs: '320g',
-      fats: '75g',
-      meals: [
-        { time: '07:30 AM', name: 'Breakfast', detail: 'Oats with banana, 4 boiled egg whites, 1 scoop whey protein, almonds' },
-        { time: '10:30 AM', name: 'Mid-Morning Snack', detail: 'Greek yogurt with blueberries and chia seeds' },
-        { time: '01:30 PM', name: 'Lunch', detail: 'Grilled chicken breast (200g) with brown rice (150g) and steamed broccoli' },
-        { time: '05:00 PM', name: 'Pre-Workout Fuel', detail: 'Whole grain toast with peanut butter & black coffee' },
-        { time: '08:30 PM', name: 'Dinner', detail: 'Salmon fillet with roasted sweet potatoes and olive oil garden salad' },
-      ],
-    },
-    {
-      id: 2,
-      name: 'Fat Loss Shred & Tone',
-      target: 'Weight Loss & Caloric Deficit',
-      calories: '1,850 kcal',
-      protein: '165g',
-      carbs: '140g',
-      fats: '55g',
-      meals: [
-        { time: '08:00 AM', name: 'Breakfast', detail: '3 Egg white spinach omelette with whole grain toast' },
-        { time: '11:00 AM', name: 'Snack', detail: 'Green apple slices with 1 tbsp almond butter' },
-        { time: '01:30 PM', name: 'Lunch', detail: 'Grilled white fish fillet with cauliflower mash and green salad' },
-        { time: '05:00 PM', name: 'Pre-Workout', detail: 'Whey protein isolate shake with water & 5g BCAAs' },
-        { time: '08:00 PM', name: 'Dinner', detail: 'Lean minced turkey stir-fry with zucchini noodles and bell peppers' },
-      ],
-    },
-    {
-      id: 3,
-      name: 'Athletic High Energy Balance',
-      target: 'Endurance & General Fitness',
-      calories: '2,300 kcal',
-      protein: '145g',
-      carbs: '260g',
-      fats: '70g',
-      meals: [
-        { time: '07:30 AM', name: 'Breakfast', detail: 'Overnight oats with honey, mixed berries, and chia seeds' },
-        { time: '11:00 AM', name: 'Snack', detail: 'Boiled chickpeas salad with cucumber and lemon dressing' },
-        { time: '01:30 PM', name: 'Lunch', detail: 'Grilled chicken sandwich on sourdough bread with avocado' },
-        { time: '05:00 PM', name: 'Snack', detail: 'Fruit bowl with walnuts and cottage cheese' },
-        { time: '08:00 PM', name: 'Dinner', detail: 'Baked chicken thighs with jasmine rice and asparagus' },
-      ],
-    },
-  ]);
-
-  const handleGenerateDiet = (e) => {
-    e.preventDefault();
-    const newPlan = {
-      id: dietPlansList.length + 1,
-      name: `AI Custom ${dietGoal} Plan`,
-      target: dietGoal,
-      calories: caloricTarget,
-      protein: '175g',
-      carbs: '220g',
-      fats: '65g',
-      meals: [
-        { time: '08:00 AM', name: 'Breakfast', detail: 'High protein oatmeal bowl with whey and crushed walnuts' },
-        { time: '01:00 PM', name: 'Lunch', detail: 'Grilled lean chicken with quinoa and fresh leafy salad' },
-        { time: '05:00 PM', name: 'Snack', detail: 'Greek yogurt with mixed berries' },
-        { time: '08:30 PM', name: 'Dinner', detail: 'Fish fillet with sweet potato and sauteed vegetables' },
-      ],
-    };
-    setDietPlansList([newPlan, ...dietPlansList]);
-    alert(`AI Diet Plan generated for ${members.find(m => m.id === Number(selectedMemberId))?.name}!`);
-  };
+  const totalMembers = dietPlans.reduce((sum, p) => sum + p.members, 0);
 
   return (
     <div className="page">
@@ -98,7 +84,8 @@ export default function DietPlans() {
         <div className="page-title-group">
           <h1 className="page-title">AI Personalized Diet & Nutrition Planner</h1>
           <p className="page-subtitle">
-            Calculate basal metabolic rate (BMR), generate tailored macro targets, and design structured daily meal timelines.
+            {dietPlans.length} PLANS ·{' '}
+            <span className="highlight-number">{totalMembers.toLocaleString()}</span> MEMBERS ON PLAN
           </p>
         </div>
       </div>
@@ -203,21 +190,25 @@ export default function DietPlans() {
                 </span>
               </div>
 
-              {/* Macro Pills */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', background: 'var(--bg-surface)', padding: '10px', borderRadius: '8px', textAlign: 'center', fontSize: '12px' }}>
-                <div>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase' }}>Protein</span>
-                  <div style={{ fontWeight: 800, color: 'var(--primary)' }}>{plan.protein}</div>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase' }}>Carbs</span>
-                  <div style={{ fontWeight: 800, color: '#06B6D4' }}>{plan.carbs}</div>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase' }}>Fats</span>
-                  <div style={{ fontWeight: 800, color: '#F59E0B' }}>{plan.fats}</div>
-                </div>
-              </div>
+      {/* Summary Stats */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <span className="stat-title">TOTAL PLANS</span>
+          <div className="stat-value">{dietPlans.length}</div>
+        </div>
+        <div className="stat-card">
+          <span className="stat-title">ACTIVE MEMBERS</span>
+          <div className="stat-value">{totalMembers.toLocaleString()}</div>
+        </div>
+        <div className="stat-card">
+          <span className="stat-title">AVG CALORIES</span>
+          <div className="stat-value">2,280</div>
+        </div>
+        <div className="stat-card">
+          <span className="stat-title">MOST POPULAR</span>
+          <div className="stat-value" style={{ fontSize: '22px' }}>Balanced Wellness</div>
+        </div>
+      </div>
 
               {/* Meals Timeline */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

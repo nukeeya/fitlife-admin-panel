@@ -1,15 +1,28 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState('admin@fitlife.com');
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { signIn } = useAuth();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    navigate('/dashboard');
+    setError('');
+    setLoading(true);
+
+    const { error: authError } = await signIn(email, password);
+
+    if (authError) {
+      setError(authError.message);
+      setLoading(false);
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   return (
@@ -57,20 +70,21 @@ export default function Login() {
 
             <div className="form-check">
               <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={remember}
-                  onChange={(e) => setRemember(e.target.checked)}
-                />
+                <input type="checkbox" />
                 <span>Remember me</span>
               </label>
             </div>
 
-            <button type="submit" className="login-btn">
-              LOGIN
+            {error && <p className="login-error">{error}</p>}
+
+            <button type="submit" className="login-btn" disabled={loading}>
+              {loading ? 'LOGGING IN...' : 'LOGIN'}
             </button>
 
             <p className="forgot-link">Forgot password?</p>
+            <p className="signup-link">
+              Don't have an account? <span onClick={() => navigate('/signup')}>Sign up</span>
+            </p>
           </form>
         </div>
       </div>

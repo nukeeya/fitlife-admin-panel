@@ -1,28 +1,7 @@
-import { useState } from 'react';
-import {
-  Dumbbell,
-  Search,
-  Star,
-  Users,
-  Phone,
-  Mail,
-  CheckCircle2,
-  XCircle,
-  Calendar,
-} from 'lucide-react';
-import { useGymData } from '../context/GymDataContext';
+import { Plus, Users } from 'lucide-react';
+import { trainers } from '../data/gymData';
 
 export default function Trainers() {
-  const { trainers, members } = useGymData();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTrainer, setSelectedTrainer] = useState(null);
-
-  const filtered = trainers.filter(
-    (t) =>
-      t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.specialty.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
     <div className="page">
       {/* Header */}
