@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Key,
   Search,
-  Plus,
   CheckCircle2,
   AlertTriangle,
   XCircle,
@@ -11,6 +10,8 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
+import Modal from '../components/common/Modal';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 
 export default function LockerManagement() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -22,6 +23,9 @@ export default function LockerManagement() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedLocker, setSelectedLocker] = useState(null);
   const [selectedMemberId, setSelectedMemberId] = useState('');
+
+  // Release Confirm Dialog state
+  const [releaseConfirmLocker, setReleaseConfirmLocker] = useState(null);
 
   const filtered = lockers.filter((l) => {
     const matchesSearch =
@@ -51,6 +55,14 @@ export default function LockerManagement() {
         memberId: selectedMemberId,
       });
       setShowAssignModal(false);
+      setSelectedLocker(null);
+    }
+  };
+
+  const handleConfirmRelease = () => {
+    if (releaseConfirmLocker) {
+      releaseLocker(releaseConfirmLocker.id);
+      setReleaseConfirmLocker(null);
     }
   };
 
@@ -59,44 +71,48 @@ export default function LockerManagement() {
       {/* Header */}
       <div className="page-header">
         <div className="page-title-group">
-          <h1 className="page-title">Locker Management</h1>
+          <h1 className="page-title">Smart Locker Management</h1>
           <p className="page-subtitle">
-            Manage assigned member lockers, biometric/PIN access zones, maintenance and rental slots.
+            Assign digital RFID lockers, track occupancy zones, monthly rental periods and maintenance.
           </p>
         </div>
 
         <div className="subtabs-bar">
           <button
+            type="button"
             className={`subtab-btn ${activeTab === 'assigned' ? 'active' : ''}`}
             onClick={() => setSearchParams({ tab: 'assigned' })}
           >
-            Assigned Locker View
+            Assigned Locker List
           </button>
           <button
+            type="button"
             className={`subtab-btn ${activeTab === 'edit-list' ? 'active' : ''}`}
             onClick={() => setSearchParams({ tab: 'edit-list' })}
           >
-            Locker Edit List & Zones
+            Locker Floor Grid & Zones
           </button>
         </div>
       </div>
 
-      {/* Filter & Stats Row */}
-      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-card)', padding: '16px 20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-base)' }}>
+      {/* Filter Bar */}
+      <div className="filter-bar">
         <div className="header-search" style={{ width: '300px' }}>
           <Search size={16} color="var(--text-muted)" />
           <input
             type="text"
-            placeholder="Search locker number or member..."
+            placeholder="Search locker no, member or code..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {['All', 'Zone A', 'Zone B', 'Zone VIP', 'VIP Suite'].map((z) => (
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>ZONE:</span>
+          {['All', 'Zone A', 'Zone B', 'Zone C', 'Executive'].map((z) => (
             <button
               key={z}
+              type="button"
               className={`btn btn-sm ${zoneFilter === z ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setZoneFilter(z)}
             >
@@ -106,9 +122,16 @@ export default function LockerManagement() {
         </div>
       </div>
 
-      {/* Grid or Table Display */}
+      {/* Tab 1: Assigned Locker List Table */}
       {activeTab === 'assigned' ? (
         <div className="activity-card">
+          <div className="activity-header">
+            <span style={{ fontWeight: 800 }}>Active Locker Allocations</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              {filtered.length} Occupied Lockers
+            </span>
+          </div>
+
           <div className="table-responsive">
             <table className="custom-table">
               <thead>
@@ -149,12 +172,9 @@ export default function LockerManagement() {
                       <td><span className="badge badge-danger">Occupied</span></td>
                       <td>
                         <button
+                          type="button"
                           className="btn btn-secondary btn-sm"
-                          onClick={() => {
-                            if (confirm(`Release locker ${l.number} from ${l.assignedTo}?`)) {
-                              releaseLocker(l.id);
-                            }
-                          }}
+                          onClick={() => setReleaseConfirmLocker(l)}
                         >
                           Release Locker
                         </button>
@@ -178,27 +198,39 @@ export default function LockerManagement() {
 
               <span
                 className={`badge ${
-                  l.status === 'Available'
-                    ? 'badge-success'
-                    : l.status === 'Occupied'
-                    ? 'badge-danger'
-                    : 'badge-warning'
+                  l.status === 'Available' ? 'badge-success' : l.status === 'Occupied' ? 'badge-danger' : 'badge-warning'
                 }`}
+                style={{ marginTop: '4px' }}
               >
                 {l.status}
               </span>
 
-              {l.assignedTo ? (
-                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)', marginTop: '4px' }}>
-                  {l.assignedTo} ({l.memberCode})
+              {l.status === 'Occupied' && (
+                <div style={{ fontSize: '11px', marginTop: '4px', textAlign: 'center' }}>
+                  <div style={{ fontWeight: 700 }}>{l.assignedTo}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '10px' }}>Exp: {l.expiryDate}</div>
                 </div>
-              ) : (
+              )}
+
+              {l.status === 'Available' && (
                 <button
+                  type="button"
                   className="btn btn-primary btn-sm"
-                  style={{ width: '100%', marginTop: '6px' }}
+                  style={{ width: '100%', marginTop: '8px' }}
                   onClick={() => handleOpenAssign(l)}
                 >
-                  Assign Member
+                  Assign
+                </button>
+              )}
+
+              {l.status === 'Occupied' && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ width: '100%', marginTop: '8px' }}
+                  onClick={() => setReleaseConfirmLocker(l)}
+                >
+                  Release
                 </button>
               )}
             </div>
@@ -206,46 +238,60 @@ export default function LockerManagement() {
         </div>
       )}
 
-      {/* Assign Locker Modal */}
-      {showAssignModal && selectedLocker && (
-        <div className="modal-overlay" onClick={() => setShowAssignModal(false)}>
-          <div className="modal-content" style={{ maxWidth: '480px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 style={{ fontSize: '16px', fontWeight: 800 }}>
-                Assign Locker {selectedLocker.number} ({selectedLocker.zone})
-              </h2>
-            </div>
-            <form onSubmit={handleConfirmAssign}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Select Member</label>
-                  <select
-                    className="form-select"
-                    value={selectedMemberId}
-                    onChange={(e) => setSelectedMemberId(e.target.value)}
-                  >
-                    {members.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name} ({m.code} - {m.plan})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Monthly Rental Fee</label>
-                  <input
-                    type="text"
-                    disabled
-                    className="form-input"
-                    value={`৳${selectedLocker.monthlyFee} / month`}
-                  />
-                </div>
+      {/* Standardized Assign Locker Modal */}
+      <Modal
+        isOpen={showAssignModal && !!selectedLocker}
+        onClose={() => {
+          setShowAssignModal(false);
+          setSelectedLocker(null);
+        }}
+        title={selectedLocker ? `Assign Locker ${selectedLocker.number} (${selectedLocker.zone})` : 'Assign Locker'}
+        subtitle="Select an active gym member to allocate digital locker access"
+        icon={Key}
+        size="sm"
+      >
+        {selectedLocker && (
+          <form onSubmit={handleConfirmAssign}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div className="form-group">
+                <label className="form-label">Select Active Member *</label>
+                <select
+                  className="form-select"
+                  value={selectedMemberId}
+                  onChange={(e) => setSelectedMemberId(e.target.value)}
+                  required
+                >
+                  {members.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.code} - {m.plan})
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div className="modal-footer">
+
+              <div className="form-group">
+                <label className="form-label">Monthly Rental Tariff</label>
+                <input
+                  type="text"
+                  disabled
+                  className="form-input"
+                  value={`৳${selectedLocker.monthlyFee} / month`}
+                  style={{ opacity: 0.8 }}
+                />
+              </div>
+
+              <div style={{ background: 'var(--bg-surface)', padding: '12px', borderRadius: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                Lockers are billed monthly in sync with membership renewals. Digital lock code will be sent via SMS upon assignment.
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '8px' }}>
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  onClick={() => setShowAssignModal(false)}
+                  onClick={() => {
+                    setShowAssignModal(false);
+                    setSelectedLocker(null);
+                  }}
                 >
                   Cancel
                 </button>
@@ -253,10 +299,26 @@ export default function LockerManagement() {
                   Confirm Locker Assignment
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* Release Locker Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!releaseConfirmLocker}
+        onClose={() => setReleaseConfirmLocker(null)}
+        onConfirm={handleConfirmRelease}
+        title="Release Assigned Locker"
+        message={
+          releaseConfirmLocker
+            ? `Are you sure you want to release Locker ${releaseConfirmLocker.number} from member "${releaseConfirmLocker.assignedTo}"? This will revoke digital lock code access and mark the locker available for other members.`
+            : ''
+        }
+        confirmText="Yes, Release Locker"
+        cancelText="Keep Assigned"
+        type="warning"
+      />
     </div>
   );
 }

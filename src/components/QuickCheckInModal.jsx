@@ -1,18 +1,24 @@
-import { useState } from 'react';
-import { X, UserCheck, CheckCircle2, Search } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { UserCheck, Search } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
+import Modal from './common/Modal';
 
 export default function QuickCheckInModal({ isOpen, onClose }) {
   const { members, attendance, checkInMember, checkOutMember } = useGymData();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMethod, setSelectedMethod] = useState('RFID Card');
 
-  if (!isOpen) return null;
+  // Reset search whenever opened
+  useEffect(() => {
+    if (isOpen) {
+      setSearchTerm('');
+    }
+  }, [isOpen]);
 
   const filteredMembers = members.filter((m) =>
-    m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.phone.includes(searchTerm)
+    m.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    m.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    m.phone?.includes(searchTerm)
   );
 
   const isMemberCheckedIn = (memberId) => {
@@ -31,49 +37,55 @@ export default function QuickCheckInModal({ isOpen, onClose }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" style={{ maxWidth: '560px' }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <UserCheck size={20} color="var(--primary)" />
-            <h2 style={{ fontSize: '18px', fontWeight: 800 }}>Quick Daily Member Check-In / Out</h2>
-          </div>
-          <button className="header-icon-btn" onClick={onClose}>
-            <X size={18} />
-          </button>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Quick Daily Member Check-In / Out"
+      subtitle="Search active members to log attendance or verify gym entrance"
+      icon={UserCheck}
+      size="md"
+      footer={
+        <button type="button" className="btn btn-secondary" onClick={onClose}>
+          Done
+        </button>
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {/* Method Selector */}
+        <div className="form-group">
+          <label className="form-label">Check-In Method</label>
+          <select
+            className="form-select"
+            value={selectedMethod}
+            onChange={(e) => setSelectedMethod(e.target.value)}
+          >
+            <option value="RFID Card">RFID Card Terminal</option>
+            <option value="Biometric">Biometric Fingerprint Scanner</option>
+            <option value="Barcode">Mobile App QR / Barcode</option>
+            <option value="Manual Admin">Manual Reception Desk</option>
+          </select>
         </div>
 
-        <div className="modal-body">
-          {/* Method Selector */}
-          <div className="form-group">
-            <label className="form-label">Check-In Method</label>
-            <select
-              className="form-select"
-              value={selectedMethod}
-              onChange={(e) => setSelectedMethod(e.target.value)}
-            >
-              <option value="RFID Card">RFID Card Terminal</option>
-              <option value="Biometric">Biometric Fingerprint Scanner</option>
-              <option value="Barcode">Mobile App QR / Barcode</option>
-              <option value="Manual Admin">Manual Reception Desk</option>
-            </select>
-          </div>
+        {/* Search Box */}
+        <div className="header-search" style={{ width: '100%' }}>
+          <Search size={16} color="var(--text-muted)" />
+          <input
+            type="text"
+            placeholder="Type member name, FLM code or phone..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ width: '100%' }}
+          />
+        </div>
 
-          {/* Search Box */}
-          <div className="header-search" style={{ width: '100%' }}>
-            <Search size={16} color="var(--text-muted)" />
-            <input
-              type="text"
-              autoFocus
-              placeholder="Type member name, FLM code or phone..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          {/* Member List */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '320px', overflowY: 'auto' }}>
-            {filteredMembers.map((m) => {
+        {/* Member List */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '320px', overflowY: 'auto' }}>
+          {filteredMembers.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)', fontSize: '13px' }}>
+              No members matched your search.
+            </div>
+          ) : (
+            filteredMembers.map((m) => {
               const activeRecord = isMemberCheckedIn(m.id);
               return (
                 <div
@@ -99,6 +111,7 @@ export default function QuickCheckInModal({ isOpen, onClose }) {
                   </div>
 
                   <button
+                    type="button"
                     className={`btn btn-sm ${activeRecord ? 'btn-danger' : 'btn-primary'}`}
                     onClick={() => handleAction(m)}
                   >
@@ -106,16 +119,10 @@ export default function QuickCheckInModal({ isOpen, onClose }) {
                   </button>
                 </div>
               );
-            })}
-          </div>
-        </div>
-
-        <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>
-            Close
-          </button>
+            })
+          )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

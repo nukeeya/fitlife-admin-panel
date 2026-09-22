@@ -41,12 +41,15 @@ export default function SMSManagement() {
       ? members.filter((m) => m.status === 'Active').length
       : 12;
 
+  const [errorNotice, setErrorNotice] = useState('');
+
   const handleSendCampaign = (e) => {
     e.preventDefault();
     if (!campaignTitle || !messageText) {
-      alert('Please fill in title and message.');
+      setErrorNotice('Please fill in both campaign title and broadcast message.');
       return;
     }
+    setErrorNotice('');
 
     const success = sendSMS({
       title: campaignTitle,
@@ -91,6 +94,13 @@ export default function SMSManagement() {
             <div style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10B981', color: '#10B981', padding: '12px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <CheckCircle2 size={16} />
               Campaign dispatched successfully! SMS balance deducted.
+            </div>
+          )}
+
+          {errorNotice && (
+            <div style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid var(--danger)', color: 'var(--danger)', padding: '12px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertCircle size={16} />
+              {errorNotice}
             </div>
           )}
 

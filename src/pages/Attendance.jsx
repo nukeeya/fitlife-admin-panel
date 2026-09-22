@@ -11,6 +11,7 @@ import {
   Check,
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 
 export default function Attendance() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -44,6 +45,8 @@ export default function Attendance() {
       r.memberCode.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const [successNotice, setSuccessNotice] = useState('');
+
   const handleToggleBulkSelect = (id) => {
     setSelectedBulkIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
@@ -52,9 +55,10 @@ export default function Attendance() {
 
   const handleBulkCheckInSubmit = () => {
     if (selectedBulkIds.length === 0) return;
+    const count = selectedBulkIds.length;
     bulkCheckIn(selectedBulkIds, 'Manual Admin');
     setSelectedBulkIds([]);
-    alert(`Successfully checked in ${selectedBulkIds.length} members.`);
+    setSuccessNotice(`Successfully checked in ${count} members.`);
   };
 
   return (
@@ -431,6 +435,18 @@ export default function Attendance() {
           </div>
         </div>
       )}
+
+      {/* Bulk Check-In Success Dialog */}
+      <ConfirmDialog
+        isOpen={!!successNotice}
+        onClose={() => setSuccessNotice('')}
+        onConfirm={() => setSuccessNotice('')}
+        title="Attendance Confirmed"
+        message={successNotice}
+        confirmText="Done"
+        cancelText="Close"
+        type="success"
+      />
     </div>
   );
 }

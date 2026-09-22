@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Search, CheckCircle, XCircle, Loader2, User, Heart, MapPin, Dumbbell, Eye, X } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Loader2, User, Heart, MapPin, Dumbbell, Eye, X, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import Modal from '../components/common/Modal';
 
 export default function Admissions() {
   const [submissions, setSubmissions] = useState([]);
@@ -230,84 +231,92 @@ export default function Admissions() {
       </div>
 
       {/* Detail Modal */}
-      {selectedSubmission && (
-        <div className="modal-overlay" onClick={() => setSelectedSubmission(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>APPLICATION DETAILS</h2>
-              <button className="modal-close" onClick={() => setSelectedSubmission(null)}>
-                <X size={20} />
+      <Modal
+        isOpen={!!selectedSubmission}
+        onClose={() => setSelectedSubmission(null)}
+        title={selectedSubmission ? `Application Details: ${selectedSubmission.name}` : 'Application Details'}
+        subtitle={selectedSubmission ? `Submitted: ${new Date(selectedSubmission.submitted_at || Date.now()).toLocaleDateString()}` : ''}
+        icon={User}
+        size="lg"
+        footer={
+          selectedSubmission && selectedSubmission.status === 'Pending' ? (
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', width: '100%' }}>
+              <button
+                type="button"
+                className="btn btn-danger btn-sm"
+                onClick={() => handleReject(selectedSubmission)}
+                disabled={processing === selectedSubmission.id}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                {processing === selectedSubmission.id ? <Loader2 size={16} className="spin" /> : <XCircle size={16} />}
+                Reject Application
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => handleApprove(selectedSubmission)}
+                disabled={processing === selectedSubmission.id}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                {processing === selectedSubmission.id ? <Loader2 size={16} className="spin" /> : <CheckCircle size={16} />}
+                Approve & Create Member
               </button>
             </div>
-            <div className="modal-body">
-              {/* Personal Info */}
-              <div className="detail-section">
-                <h3><User size={16} /> PERSONAL INFORMATION</h3>
-                <div className="detail-grid">
-                  <div><span className="detail-label">Name</span><span className="detail-value">{selectedSubmission.name}</span></div>
-                  <div><span className="detail-label">Email</span><span className="detail-value">{selectedSubmission.email || '—'}</span></div>
-                  <div><span className="detail-label">Phone</span><span className="detail-value">{selectedSubmission.phone}</span></div>
-                  <div><span className="detail-label">Date of Birth</span><span className="detail-value">{selectedSubmission.date_of_birth || '—'}</span></div>
-                  <div><span className="detail-label">Gender</span><span className="detail-value">{selectedSubmission.gender || '—'}</span></div>
-                  <div><span className="detail-label">Address</span><span className="detail-value">{selectedSubmission.address || '—'}</span></div>
-                </div>
-              </div>
-
-              {/* Branch & Plan */}
-              <div className="detail-section">
-                <h3><MapPin size={16} /> BRANCH & PLAN</h3>
-                <div className="detail-grid">
-                  <div><span className="detail-label">Branch</span><span className="detail-value">{selectedSubmission.branch?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span></div>
-                  <div><span className="detail-label">Plan</span><span className="detail-value">{selectedSubmission.plan?.replace(/\b\w/g, l => l.toUpperCase())}</span></div>
-                </div>
-              </div>
-
-              {/* Health */}
-              <div className="detail-section">
-                <h3><Heart size={16} /> HEALTH INFORMATION</h3>
-                <div className="detail-grid">
-                  <div><span className="detail-label">Blood Group</span><span className="detail-value">{selectedSubmission.blood_group || '—'}</span></div>
-                  <div><span className="detail-label">Height</span><span className="detail-value">{selectedSubmission.height ? `${selectedSubmission.height} cm` : '—'}</span></div>
-                  <div><span className="detail-label">Weight</span><span className="detail-value">{selectedSubmission.weight ? `${selectedSubmission.weight} kg` : '—'}</span></div>
-                  <div><span className="detail-label">Allergies</span><span className="detail-value">{selectedSubmission.allergies || '—'}</span></div>
-                  <div className="full-width"><span className="detail-label">Medical Conditions</span><span className="detail-value">{selectedSubmission.medical_conditions || '—'}</span></div>
-                </div>
-              </div>
-
-              {/* Emergency Contact */}
-              <div className="detail-section">
-                <h3>EMERGENCY CONTACT</h3>
-                <div className="detail-grid">
-                  <div><span className="detail-label">Name</span><span className="detail-value">{selectedSubmission.emergency_name}</span></div>
-                  <div><span className="detail-label">Relationship</span><span className="detail-value">{selectedSubmission.emergency_relation || '—'}</span></div>
-                  <div><span className="detail-label">Phone</span><span className="detail-value">{selectedSubmission.emergency_phone}</span></div>
-                </div>
+          ) : (
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedSubmission(null)}>
+              Close
+            </button>
+          )
+        }
+      >
+        {selectedSubmission && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Personal Info */}
+            <div className="detail-section">
+              <h3><User size={16} /> PERSONAL INFORMATION</h3>
+              <div className="detail-grid">
+                <div><span className="detail-label">Name</span><span className="detail-value">{selectedSubmission.name}</span></div>
+                <div><span className="detail-label">Email</span><span className="detail-value">{selectedSubmission.email || '—'}</span></div>
+                <div><span className="detail-label">Phone</span><span className="detail-value">{selectedSubmission.phone}</span></div>
+                <div><span className="detail-label">Date of Birth</span><span className="detail-value">{selectedSubmission.date_of_birth || '—'}</span></div>
+                <div><span className="detail-label">Gender</span><span className="detail-value">{selectedSubmission.gender || '—'}</span></div>
+                <div><span className="detail-label">Address</span><span className="detail-value">{selectedSubmission.address || '—'}</span></div>
               </div>
             </div>
 
-            {selectedSubmission.status === 'Pending' && (
-              <div className="modal-footer">
-                <button
-                  className="btn-reject"
-                  onClick={() => handleReject(selectedSubmission)}
-                  disabled={processing === selectedSubmission.id}
-                >
-                  {processing === selectedSubmission.id ? <Loader2 size={16} className="spin" /> : <XCircle size={16} />}
-                  REJECT
-                </button>
-                <button
-                  className="btn-approve"
-                  onClick={() => handleApprove(selectedSubmission)}
-                  disabled={processing === selectedSubmission.id}
-                >
-                  {processing === selectedSubmission.id ? <Loader2 size={16} className="spin" /> : <CheckCircle size={16} />}
-                  APPROVE & CREATE MEMBER
-                </button>
+            {/* Branch & Plan */}
+            <div className="detail-section">
+              <h3><MapPin size={16} /> BRANCH & PLAN</h3>
+              <div className="detail-grid">
+                <div><span className="detail-label">Branch</span><span className="detail-value">{selectedSubmission.branch?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span></div>
+                <div><span className="detail-label">Plan</span><span className="detail-value">{selectedSubmission.plan?.replace(/\b\w/g, l => l.toUpperCase())}</span></div>
               </div>
-            )}
+            </div>
+
+            {/* Health */}
+            <div className="detail-section">
+              <h3><Heart size={16} /> HEALTH INFORMATION</h3>
+              <div className="detail-grid">
+                <div><span className="detail-label">Blood Group</span><span className="detail-value">{selectedSubmission.blood_group || '—'}</span></div>
+                <div><span className="detail-label">Height</span><span className="detail-value">{selectedSubmission.height ? `${selectedSubmission.height} cm` : '—'}</span></div>
+                <div><span className="detail-label">Weight</span><span className="detail-value">{selectedSubmission.weight ? `${selectedSubmission.weight} kg` : '—'}</span></div>
+                <div><span className="detail-label">Allergies</span><span className="detail-value">{selectedSubmission.allergies || '—'}</span></div>
+                <div className="full-width"><span className="detail-label">Medical Conditions</span><span className="detail-value">{selectedSubmission.medical_conditions || '—'}</span></div>
+              </div>
+            </div>
+
+            {/* Emergency Contact */}
+            <div className="detail-section">
+              <h3>EMERGENCY CONTACT</h3>
+              <div className="detail-grid">
+                <div><span className="detail-label">Name</span><span className="detail-value">{selectedSubmission.emergency_name}</span></div>
+                <div><span className="detail-label">Relationship</span><span className="detail-value">{selectedSubmission.emergency_relation || '—'}</span></div>
+                <div><span className="detail-label">Phone</span><span className="detail-value">{selectedSubmission.emergency_phone}</span></div>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }

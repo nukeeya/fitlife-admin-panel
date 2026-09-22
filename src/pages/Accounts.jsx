@@ -13,14 +13,16 @@ import {
   Download,
   AlertCircle,
   Tag,
+  Printer,
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
+import Modal from '../components/common/Modal';
 
 export default function Accounts() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'invoices'; // 'invoices' | 'payments' | 'expenses' | 'balance-sheet'
 
-  const { invoices, expenses, collectPayment, addExpense, members } = useGymData();
+  const { invoices, expenses, collectPayment, addExpense, members, branding } = useGymData();
   const [searchTerm, setSearchTerm] = useState('');
 
   // Payment Collection Modal
@@ -37,6 +39,9 @@ export default function Accounts() {
   const [expenseMethod, setExpenseMethod] = useState('BANK');
   const [expenseNotes, setExpenseNotes] = useState('');
 
+  // Balance Sheet Export Preview Modal
+  const [showReportModal, setShowReportModal] = useState(false);
+
   // Calculations for Monthly Balance Sheet
   const totalRevenue = invoices.reduce((sum, i) => sum + i.netPayable, 0);
   const totalCollected = invoices.reduce((sum, i) => sum + i.paidAmount, 0);
@@ -48,6 +53,8 @@ export default function Accounts() {
   const handleOpenPayment = (invoice) => {
     setSelectedInvoiceForPayment(invoice);
     setPaymentAmount(invoice.dueAmount > 0 ? invoice.dueAmount : invoice.netPayable);
+    setPaymentMethod('bKASH');
+    setTrxId('');
   };
 
   const handleRecordPayment = (e) => {
@@ -334,8 +341,8 @@ export default function Accounts() {
           <div className="activity-card">
             <div className="activity-header">
               <span style={{ fontWeight: 800 }}>August - September 2026 Profit & Loss Breakdown</span>
-              <button className="btn btn-secondary btn-sm" onClick={() => alert('Exporting PDF Balance Sheet...')}>
-                <Download size={14} /> Export Report
+              <button className="btn btn-secondary btn-sm" onClick={() => setShowReportModal(true)}>
+                <Download size={14} /> View / Export Report
               </button>
             </div>
 
@@ -384,60 +391,63 @@ export default function Accounts() {
       )}
 
       {/* Collect Payment Modal */}
-      {selectedInvoiceForPayment && (
-        <div className="modal-overlay" onClick={() => setSelectedInvoiceForPayment(null)}>
-          <div className="modal-content" style={{ maxWidth: '460px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 style={{ fontSize: '16px', fontWeight: 800 }}>
-                Collect Payment for {selectedInvoiceForPayment.number}
-              </h2>
-            </div>
-            <form onSubmit={handleRecordPayment}>
-              <div className="modal-body">
-                <div style={{ background: 'var(--bg-surface)', padding: '12px', borderRadius: '8px', fontSize: '13px' }}>
-                  <div><strong>Member:</strong> {selectedInvoiceForPayment.memberName}</div>
-                  <div><strong>Net Payable:</strong> ৳{selectedInvoiceForPayment.netPayable}</div>
-                  <div><strong>Current Due:</strong> <span style={{ color: 'var(--danger)', fontWeight: 700 }}>৳{selectedInvoiceForPayment.dueAmount}</span></div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Payment Amount (৳)</label>
-                  <input
-                    type="number"
-                    required
-                    className="form-input"
-                    value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Payment Method</label>
-                  <select
-                    className="form-select"
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                  >
-                    <option value="bKASH">bKASH Digital</option>
-                    <option value="CASH">Cash Over Counter</option>
-                    <option value="CARD">Debit / Credit Card</option>
-                    <option value="BANK">Bank Wire</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Transaction Reference (Optional)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. TRX-904128"
-                    className="form-input"
-                    value={trxId}
-                    onChange={(e) => setTrxId(e.target.value)}
-                  />
-                </div>
+      <Modal
+        isOpen={!!selectedInvoiceForPayment}
+        onClose={() => setSelectedInvoiceForPayment(null)}
+        title={selectedInvoiceForPayment ? `Collect Payment: ${selectedInvoiceForPayment.number}` : 'Collect Payment'}
+        subtitle={selectedInvoiceForPayment ? `Member: ${selectedInvoiceForPayment.memberName}` : ''}
+        icon={Receipt}
+        size="sm"
+      >
+        {selectedInvoiceForPayment && (
+          <form onSubmit={handleRecordPayment}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ background: 'var(--bg-surface)', padding: '14px', borderRadius: '8px', fontSize: '13px', border: '1px solid var(--border-base)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div><strong>Member:</strong> {selectedInvoiceForPayment.memberName}</div>
+                <div><strong>Code:</strong> {selectedInvoiceForPayment.memberCode}</div>
+                <div><strong>Net Payable:</strong> ৳{selectedInvoiceForPayment.netPayable.toLocaleString()}</div>
+                <div><strong>Current Due:</strong> <span style={{ color: 'var(--danger)', fontWeight: 700 }}>৳{selectedInvoiceForPayment.dueAmount.toLocaleString()}</span></div>
               </div>
 
-              <div className="modal-footer">
+              <div className="form-group">
+                <label className="form-label">Payment Collection Amount (৳) *</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  max={selectedInvoiceForPayment.dueAmount}
+                  className="form-input"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Payment Channel</label>
+                <select
+                  className="form-select"
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                >
+                  <option value="bKASH">bKASH Merchant Payment</option>
+                  <option value="CASH">Cash Over Counter</option>
+                  <option value="CARD">Debit / Credit Card POS</option>
+                  <option value="BANK">Direct Bank Transfer</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Transaction Reference (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. TRX-904128"
+                  className="form-input"
+                  value={trxId}
+                  onChange={(e) => setTrxId(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
                 <button
                   type="button"
                   className="btn btn-secondary"
@@ -449,104 +459,178 @@ export default function Accounts() {
                   Confirm Payment Receipt
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+          </form>
+        )}
+      </Modal>
 
       {/* Add Expense Modal */}
-      {showExpenseModal && (
-        <div className="modal-overlay" onClick={() => setShowExpenseModal(false)}>
-          <div className="modal-content" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 style={{ fontSize: '16px', fontWeight: 800 }}>Record Gym Operating Expense</h2>
+      <Modal
+        isOpen={showExpenseModal}
+        onClose={() => setShowExpenseModal(false)}
+        title="Record Operating Expense"
+        subtitle="Log operational expenditures, utility bills, maintenance or staff salaries"
+        icon={CreditCard}
+        size="md"
+      >
+        <form onSubmit={handleRecordExpense}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="form-group">
+              <label className="form-label">Expense Title *</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Treadmill Belt Lubricant & Service"
+                className="form-input"
+                value={expenseTitle}
+                onChange={(e) => setExpenseTitle(e.target.value)}
+              />
             </div>
-            <form onSubmit={handleRecordExpense}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Expense Title *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Treadmill Belt Lubricant & Service"
-                    className="form-input"
-                    value={expenseTitle}
-                    onChange={(e) => setExpenseTitle(e.target.value)}
-                  />
-                </div>
 
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label className="form-label">Category</label>
-                    <select
-                      className="form-select"
-                      value={expenseCategory}
-                      onChange={(e) => setExpenseCategory(e.target.value)}
-                    >
-                      <option value="Equipment Maintenance">Equipment Maintenance</option>
-                      <option value="Utilities">Utilities (Electricity/Water)</option>
-                      <option value="Supplements">Supplements & Whey</option>
-                      <option value="Marketing">Marketing & Advertising</option>
-                      <option value="Maintenance">Cleaning & Towel Supplies</option>
-                      <option value="Salaries">Staff Salaries / Payroll</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Amount (৳) *</label>
-                    <input
-                      type="number"
-                      required
-                      placeholder="e.g. 15000"
-                      className="form-input"
-                      value={expenseAmount}
-                      onChange={(e) => setExpenseAmount(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Payment Method</label>
-                  <select
-                    className="form-select"
-                    value={expenseMethod}
-                    onChange={(e) => setExpenseMethod(e.target.value)}
-                  >
-                    <option value="BANK">Bank Transfer</option>
-                    <option value="CASH">Petty Cash</option>
-                    <option value="CARD">Corporate Card</option>
-                    <option value="bKASH">bKASH Merchant</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Expense Notes</label>
-                  <textarea
-                    rows="2"
-                    placeholder="Additional context or invoice memo..."
-                    className="form-textarea"
-                    value={expenseNotes}
-                    onChange={(e) => setExpenseNotes(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowExpenseModal(false)}
+            <div className="form-grid">
+              <div className="form-group">
+                <label className="form-label">Category</label>
+                <select
+                  className="form-select"
+                  value={expenseCategory}
+                  onChange={(e) => setExpenseCategory(e.target.value)}
                 >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Save & Log Expense
-                </button>
+                  <option value="Equipment Maintenance">Equipment Maintenance</option>
+                  <option value="Utilities">Utilities (Electricity/Water)</option>
+                  <option value="Supplements">Supplements & Whey</option>
+                  <option value="Marketing">Marketing & Advertising</option>
+                  <option value="Maintenance">Cleaning & Towel Supplies</option>
+                  <option value="Salaries">Staff Salaries / Payroll</option>
+                </select>
               </div>
-            </form>
+
+              <div className="form-group">
+                <label className="form-label">Amount (৳) *</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  placeholder="e.g. 15000"
+                  className="form-input"
+                  value={expenseAmount}
+                  onChange={(e) => setExpenseAmount(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Payment Channel</label>
+              <select
+                className="form-select"
+                value={expenseMethod}
+                onChange={(e) => setExpenseMethod(e.target.value)}
+              >
+                <option value="BANK">Bank Wire</option>
+                <option value="CASH">Petty Cash</option>
+                <option value="CARD">Corporate Card</option>
+                <option value="bKASH">bKASH Merchant</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Expense Notes</label>
+              <textarea
+                rows="2"
+                placeholder="Additional vendor receipt details or memo..."
+                className="form-textarea"
+                value={expenseNotes}
+                onChange={(e) => setExpenseNotes(e.target.value)}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowExpenseModal(false)}
+              >
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary">
+                Save & Log Expense
+              </button>
+            </div>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Balance Sheet Statement Export Modal */}
+      <Modal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        title={`${branding?.gymName || 'FitLife'} Financial Statement & Dossier`}
+        subtitle="Audited breakdown of revenues, member dynamic discounts, and operating net profits"
+        icon={FileSpreadsheet}
+        size="lg"
+        footer={
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', width: '100%' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setShowReportModal(false)}>
+              Close
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                window.print();
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Printer size={15} /> Print / Export PDF
+            </button>
+          </div>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+            <div style={{ background: 'var(--bg-surface)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-base)' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>GROSS COLLECTED</span>
+              <div style={{ fontSize: '20px', fontWeight: 900, color: '#10B981', marginTop: '4px' }}>
+                ৳{totalCollected.toLocaleString()}
+              </div>
+            </div>
+            <div style={{ background: 'var(--bg-surface)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-base)' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>TOTAL EXPENSES</span>
+              <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--danger)', marginTop: '4px' }}>
+                ৳{totalExpenses.toLocaleString()}
+              </div>
+            </div>
+            <div style={{ background: 'var(--bg-surface)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-base)' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>NET OPERATING SURPLUS</span>
+              <div style={{ fontSize: '20px', fontWeight: 900, color: netProfit >= 0 ? 'var(--primary)' : 'var(--danger)', marginTop: '4px' }}>
+                ৳{netProfit.toLocaleString()}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ fontSize: '13px', lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+            This statement documents all settled invoices, dynamic discount vouchers authorized under RBAC guidelines, and operating expenditures for the current fiscal period.
+          </div>
+
+          <div style={{ background: 'var(--bg-surface)', borderRadius: '8px', padding: '12px', border: '1px solid var(--border-base)', fontSize: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border-base)' }}>
+              <span>Total Member Invoices Issued:</span>
+              <span style={{ fontWeight: 700 }}>{invoices.length} Invoices</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border-base)' }}>
+              <span>Outstanding Receivable Member Dues:</span>
+              <span style={{ fontWeight: 700, color: 'var(--danger)' }}>
+                ৳{invoices.reduce((sum, i) => sum + i.dueAmount, 0).toLocaleString()}
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
+              <span>RBAC Promotional Discounts Granted:</span>
+              <span style={{ fontWeight: 700, color: 'var(--warning)' }}>
+                ৳{totalDiscountsGiven.toLocaleString()}
+              </span>
+            </div>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

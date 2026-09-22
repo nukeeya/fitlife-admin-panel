@@ -9,6 +9,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 
 export default function AIWorkoutManagement() {
   const { members } = useGymData();
@@ -19,6 +20,7 @@ export default function AIWorkoutManagement() {
   const [days, setDays] = useState('4 Days / Week');
   const [selectedMemberId, setSelectedMemberId] = useState(members[0]?.id || 1);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [dialogNotice, setDialogNotice] = useState(null); // { title, message, type }
   const [generatedRoutine, setGeneratedRoutine] = useState({
     title: '4-Day Hypertrophy & Progressive Overload Split',
     target: 'Chest, Back, Delts & Quads',
@@ -90,7 +92,11 @@ export default function AIWorkoutManagement() {
           },
         ],
       });
-      alert('AI Workout Generated and synced!');
+      setDialogNotice({
+        title: 'AI Workout Synthesized',
+        message: 'The progressive overload routine was generated and synchronized with the member app portal.',
+        type: 'success',
+      });
     }, 800);
   };
 
@@ -187,8 +193,16 @@ export default function AIWorkoutManagement() {
               <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{generatedRoutine.target}</span>
             </div>
             <button
+              type="button"
               className="btn btn-secondary btn-sm"
-              onClick={() => alert(`Assigned to member ${members.find(m => m.id === Number(selectedMemberId))?.name} successfully!`)}
+              onClick={() => {
+                const targetMember = members.find((m) => m.id === Number(selectedMemberId));
+                setDialogNotice({
+                  title: 'Workout Regime Assigned',
+                  message: `Successfully assigned "${generatedRoutine.title}" to ${targetMember?.name || 'Selected Member'}. The regime is now active on their profile.`,
+                  type: 'success',
+                });
+              }}
             >
               <UserCheck size={14} /> Assign Regime
             </button>
@@ -235,6 +249,18 @@ export default function AIWorkoutManagement() {
           </div>
         </div>
       </div>
+
+      {/* Confirmation / Status Dialog */}
+      <ConfirmDialog
+        isOpen={!!dialogNotice}
+        onClose={() => setDialogNotice(null)}
+        onConfirm={() => setDialogNotice(null)}
+        title={dialogNotice?.title || 'Notice'}
+        message={dialogNotice?.message || ''}
+        confirmText="Done"
+        cancelText="Close"
+        type={dialogNotice?.type || 'info'}
+      />
     </div>
   );
 }

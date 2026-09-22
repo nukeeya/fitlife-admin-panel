@@ -1072,19 +1072,28 @@
 }
 
 /* =============================================================================
-   DYNAMIC DISCOUNT ENGINE & ADMISSION MODAL
+   DYNAMIC DISCOUNT ENGINE & ADMISSION MODAL & STANDARDIZED MODAL SYSTEM
    ============================================================================= */
+.modal-portal-wrapper {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(5px);
-  z-index: 300;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
   animation: fadeIn 0.2s ease;
+  pointer-events: auto;
 }
 
 .modal-content {
@@ -1094,12 +1103,19 @@
   width: 100%;
   max-width: 680px;
   max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
   display: flex;
   flex-direction: column;
-  animation: pageFadeSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: pageFadeSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  z-index: 10001;
+  pointer-events: auto;
 }
+
+.modal-sm { max-width: 440px !important; }
+.modal-md { max-width: 580px !important; }
+.modal-lg { max-width: 760px !important; }
+.modal-xl { max-width: 960px !important; }
 
 .modal-header {
   padding: 18px 24px;
@@ -1107,6 +1123,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
 }
 
 .modal-body {
@@ -1114,6 +1131,8 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
+  overflow-y: auto;
+  flex: 1 1 auto;
 }
 
 .modal-footer {
@@ -1123,6 +1142,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .form-grid {
