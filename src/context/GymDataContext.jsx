@@ -515,6 +515,9 @@ export function GymDataProvider({ children }) {
   const [smsBalance, setSmsBalance] = useState(() => safeLoad('fitlife-sms-balance', 1420));
   const [ads, setAds] = useState(() => safeLoad('fitlife-ads', INITIAL_ADS));
   const [jobs, setJobs] = useState(() => safeLoad('fitlife-jobs', INITIAL_JOBS));
+  const [dietPlans, setDietPlans] = useState(() => safeLoad('fitlife-diet-plans', []));
+  const [workoutPlans, setWorkoutPlans] = useState(() => safeLoad('fitlife-workout-plans', []));
+  const [progressLogs, setProgressLogs] = useState(() => safeLoad('fitlife-progress-logs', []));
 
   // Current active admin role
   const [currentUserRole, setCurrentUserRole] = useState('Super Admin');
@@ -549,6 +552,41 @@ export function GymDataProvider({ children }) {
   useEffect(() => { localStorage.setItem('fitlife-sms-balance', JSON.stringify(smsBalance)); }, [smsBalance]);
   useEffect(() => { localStorage.setItem('fitlife-ads', JSON.stringify(ads)); }, [ads]);
   useEffect(() => { localStorage.setItem('fitlife-jobs', JSON.stringify(jobs)); }, [jobs]);
+  useEffect(() => { localStorage.setItem('fitlife-diet-plans', JSON.stringify(dietPlans)); }, [dietPlans]);
+  useEffect(() => { localStorage.setItem('fitlife-workout-plans', JSON.stringify(workoutPlans)); }, [workoutPlans]);
+  useEffect(() => { localStorage.setItem('fitlife-progress-logs', JSON.stringify(progressLogs)); }, [progressLogs]);
+
+  const saveDietPlan = (newPlan) => {
+    setDietPlans((prev) => {
+      const filtered = prev.filter((p) => p.id !== newPlan.id);
+      return [newPlan, ...filtered];
+    });
+  };
+
+  const deleteDietPlan = (planId) => {
+    setDietPlans((prev) => prev.filter((p) => p.id !== planId));
+  };
+
+  const saveWorkoutPlan = (newProgram) => {
+    setWorkoutPlans((prev) => {
+      const filtered = prev.filter((p) => p.id !== newProgram.id);
+      return [newProgram, ...filtered];
+    });
+  };
+
+  const deleteWorkoutPlan = (programId) => {
+    setWorkoutPlans((prev) => prev.filter((p) => p.id !== programId));
+  };
+
+  const logMemberProgress = (entry) => {
+    const newEntry = {
+      id: Date.now(),
+      timestamp: new Date().toISOString(),
+      ...entry,
+    };
+    setProgressLogs((prev) => [newEntry, ...prev]);
+    return newEntry;
+  };
 
   // Dynamic Discount Calculation Engine
   const calculatePricing = ({ basePrice, discountType, discountValue, vatPercent = 5 }) => {
@@ -989,6 +1027,14 @@ export function GymDataProvider({ children }) {
         smsBalance,
         ads,
         jobs,
+        dietPlans,
+        saveDietPlan,
+        deleteDietPlan,
+        workoutPlans,
+        saveWorkoutPlan,
+        deleteWorkoutPlan,
+        progressLogs,
+        logMemberProgress,
         stats,
         analytics,
         currentUserRole,
