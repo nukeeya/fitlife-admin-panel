@@ -1,59 +1,46 @@
 import {
   Users,
-  UserCheck,
-  UserX,
-  Clock,
-  Award,
   CalendarCheck,
-  MessageSquare,
-  Briefcase,
-  DollarSign,
-  TrendingUp,
   CreditCard,
-  Receipt,
   AlertTriangle,
-  UserPlus,
+  UserCheck,
+  TrendingUp,
+  Clock,
   ArrowRight,
-  Sparkles,
+  ShieldCheck,
+  CheckCircle2,
+  DollarSign,
+  Activity,
+  UserX,
 } from 'lucide-react';
 import {
   AreaChart,
   Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
 } from 'recharts';
-import {
-  stats,
-  attendanceData,
-  membershipOverview,
-  members,
-} from '../data/gymData';
 import { useTheme } from '../context/ThemeContext';
+import { useGymData } from '../context/GymDataContext';
 
-function StatCard({ title, value, change, changeLabel, icon: Icon, isLime }) {
+function StatCard({ title, value, change, changeLabel, icon: Icon, isLime, color }) {
   return (
-    <div className="stat-card">
-      <div className="stat-card-header">
-        <span className="stat-title">{title}</span>
-        <Icon size={18} className="stat-icon" />
-      </div>
-      <div className={`stat-value ${isLime ? 'lime' : ''}`}>{value}</div>
-      {change && (
-        <div className="stat-change">
-          <span className="change-positive">
-            <TrendingUp size={12} /> {change}
-          </span>
-          <span className="change-label">{changeLabel}</span>
+    <div className={`stat-card ${isLime ? 'stat-card-lime' : ''}`}>
+      <div className="stat-card-top">
+        <span className="stat-card-title">{title}</span>
+        <div className="stat-icon-wrapper" style={{ color: color || 'inherit' }}>
+          <Icon size={20} />
         </div>
-      )}
-      {changeLabel === 'NEXT 7 DAYS' && (
-        <div className="stat-change">
-          <span className="change-label">{changeLabel}</span>
+      </div>
+      <div className="stat-card-value">{value}</div>
+      {(change || changeLabel) && (
+        <div className="stat-card-bottom">
+          {change && <span className="stat-card-change">{change}</span>}
+          {changeLabel && <span className="stat-card-label">{changeLabel}</span>}
         </div>
       )}
     </div>
@@ -62,17 +49,33 @@ function StatCard({ title, value, change, changeLabel, icon: Icon, isLime }) {
 
 export default function Dashboard() {
   const { theme } = useTheme();
-  const lime = theme === 'light' ? '#0066ff' : '#C8FF00';
-  const gridColor = theme === 'light' ? '#E0E0E0' : '#292929';
-  const axisColor = theme === 'light' ? '#999999' : '#666666';
-  const tooltipBg = theme === 'light' ? '#FFFFFF' : '#151515';
-  const tooltipBorder = theme === 'light' ? '#E0E0E0' : '#292929';
-  const tooltipText = theme === 'light' ? '#1A1A1A' : '#FFFFFF';
+  const {
+    stats,
+    analytics,
+    attendance,
+    members,
+    checkInMember,
+    checkOutMember,
+  } = useGymData();
 
-  const donutColors = [
-    theme === 'light' ? '#0066ff' : '#C8FF00',
-    theme === 'light' ? '#999999' : '#666666',
-    theme === 'light' ? '#CCCCCC' : '#444444',
+  const textColor = theme === 'light' ? '#666666' : '#8E8E93';
+  const gridColor = theme === 'light' ? '#E5E5EA' : '#222222';
+  const tooltipBg = theme === 'light' ? '#FFFFFF' : '#141414';
+  const tooltipBorder = theme === 'light' ? '#E0E0E0' : '#292929';
+  const primaryColor = theme === 'light' ? '#2563EB' : '#C8FF00';
+
+  // Live Activity Logs (Present on floor vs Departed today)
+  const membersIn = attendance.filter((a) => a.status === 'In');
+  const membersOut = attendance.filter((a) => a.status === 'Out');
+
+  const chartData = [
+    { day: 'Mon', checkins: 124, revenue: 12000 },
+    { day: 'Tue', checkins: 145, revenue: 18500 },
+    { day: 'Wed', checkins: 132, revenue: 9000 },
+    { day: 'Thu', checkins: 168, revenue: 24000 },
+    { day: 'Fri', checkins: 189, revenue: 31000 },
+    { day: 'Sat', checkins: 210, revenue: 42000 },
+    { day: 'Sun', checkins: 154, revenue: 15000 },
   ];
 
   return (
@@ -80,65 +83,139 @@ export default function Dashboard() {
       {/* Page Header */}
       <div className="page-header">
         <div className="page-title-group">
-          <h1 className="page-title">Operational Overview Dashboard</h1>
+          <h1 className="page-title">Executive Command Center</h1>
           <p className="page-subtitle">
-            Real-time analytics, dynamic discounted sales, attendance telemetry & member logs.
+            Enterprise analytics, multi-branch tracking & real-time gym floor activity.
           </p>
-        </div>
-
-        <div className="page-actions">
-          <button className="btn btn-primary" onClick={openAdmission}>
-            <Sparkles size={16} />
-            + New Admission & Discount
-          </button>
         </div>
       </div>
 
-      {/* Statistics */}
-      <div className="stats-grid">
+      {/* =========================================================================
+          14 CORE DASHBOARD KPI CARDS
+          ========================================================================= */}
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+        {/* 1. Total Active Members */}
         <StatCard
-          title="ACTIVE MEMBERS"
+          title="TOTAL ACTIVE"
           value={stats.activeMembers.toLocaleString()}
-          change={`↑ ${stats.activeMembersChange}%`}
+          change="↑ 8.4%"
           changeLabel="vs last month"
           icon={Users}
         />
+
+        {/* 2. Active Male Members */}
         <StatCard
-          title="TODAY'S CHECK-INS"
+          title="ACTIVE MALE"
+          value={analytics.activeMale.toLocaleString()}
+          changeLabel="72% of total"
+          icon={Users}
+        />
+
+        {/* 3. Active Female Members */}
+        <StatCard
+          title="ACTIVE FEMALE"
+          value={analytics.activeFemale.toLocaleString()}
+          changeLabel="28% of total"
+          icon={Users}
+        />
+
+        {/* 4. Expired Members */}
+        <StatCard
+          title="TOTAL EXPIRED"
+          value={stats.expiredMembers.toLocaleString()}
+          changeLabel="Require renewal"
+          icon={UserX}
+          color="var(--danger)"
+        />
+
+        {/* 5. Today's Check-ins */}
+        <StatCard
+          title="TODAY CHECK-INS"
           value={stats.checkIns}
-          change={`↑ ${stats.checkInsChange}%`}
-          changeLabel="vs yesterday"
+          change="↑ 12.6%"
+          changeLabel="Active attendance"
           icon={CalendarCheck}
         />
+
+        {/* 6. Today Male Check-ins */}
+        <StatCard
+          title="TODAY MALE SCANS"
+          value={analytics.todayMaleCheckins}
+          changeLabel="Floor presence"
+          icon={CalendarCheck}
+        />
+
+        {/* 7. Today Female Check-ins */}
+        <StatCard
+          title="TODAY FEMALE SCANS"
+          value={analytics.todayFemaleCheckins}
+          changeLabel="Floor presence"
+          icon={CalendarCheck}
+        />
+
+        {/* 8. Today Total Collected */}
+        <StatCard
+          title="TODAY COLLECTED"
+          value={`৳${analytics.todayCollected.toLocaleString()}`}
+          changeLabel="Cash, bKASH, POS"
+          icon={CreditCard}
+        />
+
+        {/* 9. Today Total Due */}
+        <StatCard
+          title="TODAY DUE"
+          value={`৳${analytics.todayDue.toLocaleString()}`}
+          changeLabel="Pending invoices"
+          icon={AlertTriangle}
+          color="var(--warning)"
+        />
+
+        {/* 10. Monthly Collected */}
         <StatCard
           title="MONTHLY REVENUE"
-          value={stats.monthlyRevenue}
-          change={`↑ ${stats.revenueChange}%`}
-          changeLabel="vs last month"
+          value={`৳${analytics.monthlyCollected.toLocaleString()}`}
+          change="↑ 18.2%"
+          changeLabel="Current billing cycle"
           icon={DollarSign}
         />
+
+        {/* 11. Monthly Due Balance */}
         <StatCard
-          title="EXPIRING SOON"
+          title="MONTHLY TOTAL DUE"
+          value={`৳${analytics.monthlyDue.toLocaleString()}`}
+          changeLabel="Receivable from members"
+          icon={Clock}
+          color="var(--warning)"
+        />
+
+        {/* 12. Active Trainers */}
+        <StatCard
+          title="ACTIVE TRAINERS"
+          value={stats.trainersCount}
+          changeLabel="On roster duty"
+          icon={ShieldCheck}
+        />
+
+        {/* 13. Active Employees */}
+        <StatCard
+          title="ACTIVE EMPLOYEES"
+          value={stats.employeesCount}
+          changeLabel="Admin & Front desk"
+          icon={Activity}
+        />
+
+        {/* 14. Membership Expiring Soon */}
+        <StatCard
+          title="EXPIRING (7 DAYS)"
           value={stats.expiringSoon}
           icon={AlertTriangle}
           isLime
-          changeLabel="NEXT 7 DAYS"
+          changeLabel="Urgent follow-up"
         />
       </div>
 
-        {/* 14. Membership Expiring (Today) */}
-        <div className="stat-widget" style={{ borderColor: 'rgba(245, 158, 11, 0.4)' }}>
-          <div className="stat-widget-top">
-            <span className="stat-widget-title">Expiring (Today)</span>
-            <div className="stat-widget-icon" style={{ color: 'var(--warning)' }}><AlertTriangle size={18} /></div>
-          </div>
-          <div className="stat-widget-value warning-highlight">{analytics.expiringTodayCount} Members</div>
-          <div className="stat-widget-sub">Renewal reminder needed</div>
-        </div>
-      </div>
-
       {/* Analytics Charts Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginTop: '20px' }}>
         <div style={{ background: 'var(--bg-card)', padding: '20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-base)' }}>
           <h2 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '14px' }}>
             Weekly Check-Ins & Revenue Trend
@@ -196,32 +273,16 @@ export default function Dashboard() {
         </div>
       </div>
 
-        {/* Membership Donut */}
-        <div className="chart-card medium">
-          <div className="chart-header">
-            <h2 className="chart-title">MEMBERSHIP OVERVIEW</h2>
-          </div>
-          <div className="chart-body donut-container">
-            <ResponsiveContainer width="100%" height={180}>
-              <PieChart>
-                <Pie
-                  data={membershipOverview}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={80}
-                  dataKey="value"
-                  strokeWidth={0}
-                >
-                  {membershipOverview.map((entry, index) => (
-                    <Cell key={index} fill={donutColors[index] || entry.color} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="donut-center">
-              <span className="donut-total">{stats.activeMembers.toLocaleString()}</span>
-              <span className="donut-label">TOTAL MEMBERS</span>
+      {/* =========================================================================
+          LIVE ACTIVITY LOGS (Members In & Members Out Tables)
+          ========================================================================= */}
+      <div className="activity-logs-container" style={{ marginTop: '20px' }}>
+        {/* Members In */}
+        <div className="activity-card">
+          <div className="activity-header">
+            <div className="activity-title-group">
+              <span style={{ fontWeight: 800, fontSize: '15px' }}>Live Activity: Members In</span>
+              <span className="activity-pill-in">{membersIn.length} Present</span>
             </div>
             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Updated real-time</span>
           </div>
@@ -280,7 +341,7 @@ export default function Dashboard() {
         </div>
 
         {/* Members Out */}
-        <div className="activity-card">
+        <div className="activity-card" style={{ marginTop: '20px' }}>
           <div className="activity-header">
             <div className="activity-title-group">
               <span style={{ fontWeight: 800, fontSize: '15px' }}>Live Activity: Members Out</span>
@@ -289,45 +350,58 @@ export default function Dashboard() {
             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Session completed</span>
           </div>
 
-      {/* Recent Members Table */}
-      <div className="table-card">
-        <div className="table-header">
-          <h2 className="chart-title">RECENT MEMBERS</h2>
-          <button className="view-all-btn">
-            VIEW ALL <ArrowRight size={14} />
-          </button>
+          <div className="table-responsive">
+            <table className="custom-table">
+              <thead>
+                <tr>
+                  <th>SL</th>
+                  <th>Member</th>
+                  <th>Time Out</th>
+                  <th>Package</th>
+                  <th>Expiry</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {membersOut.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
+                      No check-outs recorded today yet.
+                    </td>
+                  </tr>
+                ) : (
+                  membersOut.map((rec, idx) => (
+                    <tr key={rec.id}>
+                      <td style={{ fontWeight: 700 }}>{idx + 1}</td>
+                      <td>
+                        <div className="member-cell">
+                          <div className="avatar-initials">{rec.avatar}</div>
+                          <div className="member-cell-info">
+                            <span className="member-cell-name">{rec.name}</span>
+                            <span className="member-cell-code">{rec.memberCode}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ fontWeight: 700, color: 'var(--danger)' }}>{rec.checkOut}</td>
+                      <td><span className="badge badge-primary">{rec.plan}</span></td>
+                      <td style={{ fontSize: '12px' }}>{rec.expiry}</td>
+                      <td><span className="badge badge-danger">Out</span></td>
+                      <td>
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => checkInMember(rec.memberId)}
+                        >
+                          Re-Entry
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>MEMBER</th>
-              <th>PLAN</th>
-              <th>JOINED</th>
-              <th>EXPIRY</th>
-              <th>STATUS</th>
-            </tr>
-          </thead>
-          <tbody>
-            {members.map((m) => (
-              <tr key={m.id}>
-                <td>
-                  <div className="member-cell">
-                    <div className="avatar">{m.avatar}</div>
-                    {m.name}
-                  </div>
-                </td>
-                <td>{m.plan}</td>
-                <td>{m.joined}</td>
-                <td>{m.expiry}</td>
-                <td>
-                  <span className={`status-badge ${m.status.toLowerCase()}`}>
-                    ● {m.status.toUpperCase()}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
     </div>
   );

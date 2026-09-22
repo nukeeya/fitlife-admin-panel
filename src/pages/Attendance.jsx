@@ -1,93 +1,166 @@
 import { useState } from 'react';
-import { Search, Calendar } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
-import { attendanceRecords, hourlyCheckins, stats } from '../data/gymData';
-import { useTheme } from '../context/ThemeContext';
+  CalendarCheck,
+  Search,
+  CheckCircle2,
+  Clock,
+  UserX,
+  FileSpreadsheet,
+  Download,
+  Check,
+} from 'lucide-react';
+import { useGymData } from '../context/GymDataContext';
 
 export default function Attendance() {
-  const { theme } = useTheme();
-  const lime = theme === 'light' ? '#0066ff' : '#C8FF00';
-  const gridColor = theme === 'light' ? '#E0E0E0' : '#292929';
-  const axisColor = theme === 'light' ? '#999999' : '#666666';
-  const tooltipBg = theme === 'light' ? '#FFFFFF' : '#151515';
-  const tooltipBorder = theme === 'light' ? '#E0E0E0' : '#292929';
-  const tooltipText = theme === 'light' ? '#1A1A1A' : '#FFFFFF';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'daily-present'; // 'daily-present' | 'daily-absent' | 'summary' | 'individual' | 'multiple'
 
-  const [search, setSearch] = useState('');
-  const [date] = useState('28 AUG 2026');
+  const {
+    attendance,
+    members,
+    checkInMember,
+    checkOutMember,
+    bulkCheckIn,
+  } = useGymData();
 
-  const filtered = attendanceRecords.filter((r) =>
-    r.name.toLowerCase().includes(search.toLowerCase())
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedIndividualMemberId, setSelectedIndividualMemberId] = useState(members[0]?.id || '1');
+  const [selectedBulkIds, setSelectedBulkIds] = useState([]);
+
+  // Filtered lists
+  const presentRecords = attendance.filter((a) => a.status === 'In');
+  const attendedTodayMemberIds = new Set(attendance.map((a) => a.memberId));
+  const absentMembers = members.filter((m) => m.status === 'Active' && !attendedTodayMemberIds.has(m.id));
+
+  // Individual member attendance records
+  const selectedMemberObj = members.find((m) => m.id === selectedIndividualMemberId);
+  const individualLogs = attendance.filter((a) => a.memberId === selectedIndividualMemberId);
+
+  // Filter search
+  const filteredPresent = presentRecords.filter(
+    (r) =>
+      r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.memberCode.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleToggleBulkSelect = (id) => {
+    setSelectedBulkIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkCheckInSubmit = () => {
+    if (selectedBulkIds.length === 0) return;
+    bulkCheckIn(selectedBulkIds, 'Manual Admin');
+    setSelectedBulkIds([]);
+    alert(`Successfully checked in ${selectedBulkIds.length} members.`);
+  };
 
   return (
     <div className="page">
       {/* Header */}
       <div className="page-header">
         <div className="page-title-group">
-          <h1 className="page-title">Attendance Tracking System</h1>
+          <h1 className="page-title">Attendance Management</h1>
           <p className="page-subtitle">
-            TODAY'S CHECK-INS <span className="highlight-number">{stats.checkIns}</span>
+            RFID, Biometric scans, individual audit logs & bulk manual entries.
           </p>
         </div>
 
-        <div className="subtabs-bar">
-          <button
-            className={`subtab-btn ${activeTab === 'daily-present' ? 'active' : ''}`}
-            onClick={() => setSearchParams({ tab: 'daily-present' })}
-          >
-            Daily Present
-          </button>
-          <button
-            className={`subtab-btn ${activeTab === 'daily-absent' ? 'active' : ''}`}
-            onClick={() => setSearchParams({ tab: 'daily-absent' })}
-          >
-            Daily Absent
-          </button>
-          <button
-            className={`subtab-btn ${activeTab === 'summary' ? 'active' : ''}`}
-            onClick={() => setSearchParams({ tab: 'summary' })}
-          >
-            Summary Attendance
-          </button>
-          <button
-            className={`subtab-btn ${activeTab === 'individual' ? 'active' : ''}`}
-            onClick={() => setSearchParams({ tab: 'individual' })}
-          >
-            Individual Attendance
-          </button>
-          <button
-            className={`subtab-btn ${activeTab === 'multiple' ? 'active' : ''}`}
-            onClick={() => setSearchParams({ tab: 'multiple' })}
-          >
-            Multiple Attendance (Bulk)
+        <div className="header-actions">
+          <button className="btn btn-secondary btn-sm" onClick={() => window.print()}>
+            <Download size={14} /> Export Report
           </button>
         </div>
+      </div>
+
+      {/* Navigation Sub-Tabs */}
+      <div className="customizer-tabs" style={{ marginBottom: '20px' }}>
+        {[
+          { id: 'daily-present', label: `Daily Present (${presentRecords.length})` },
+          { id: 'daily-absent', label: `Daily Absent (${absentMembers.length})` },
+          { id: 'summary', label: 'Summary' },
+          { id: 'individual', label: 'Individual Audit' },
+          { id: 'multiple', label: 'Bulk Check-In' },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            className={`customizer-tab ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => setSearchParams({ tab: tab.id })}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* 1. DAILY PRESENT SUBTAB */}
       {activeTab === 'daily-present' && (
         <div className="activity-card">
           <div className="activity-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontWeight: 800 }}>Present Members Today (01 SEP 2026)</span>
-              <span className="badge badge-success">{presentMembers.length} on floor</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontWeight: 800 }}>Live Floor Attendance</span>
+              <span className="badge badge-success">{filteredPresent.length} Present</span>
             </div>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Total daily entries: {attendance.length}
-            </span>
+
+            <div className="header-search" style={{ width: '260px' }}>
+              <Search size={14} color="var(--text-muted)" />
+              <input
+                type="text"
+                placeholder="Search present..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
-          <div className="date-box">
-            <Calendar size={16} />
-            <span>DATE: {date}</span>
+
+          <div className="table-responsive">
+            <table className="custom-table">
+              <thead>
+                <tr>
+                  <th>SL</th>
+                  <th>Member Name</th>
+                  <th>Code</th>
+                  <th>Check In</th>
+                  <th>Method</th>
+                  <th>Plan</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPresent.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                      No members currently marked present.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredPresent.map((r, i) => (
+                    <tr key={r.id}>
+                      <td style={{ fontWeight: 700 }}>{i + 1}</td>
+                      <td>
+                        <div className="member-cell">
+                          <div className="avatar-initials">{r.avatar}</div>
+                          <span style={{ fontWeight: 700 }}>{r.name}</span>
+                        </div>
+                      </td>
+                      <td><span className="badge badge-primary">{r.memberCode}</span></td>
+                      <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{r.checkIn}</td>
+                      <td><span className="badge badge-info">{r.method}</span></td>
+                      <td>{r.plan}</td>
+                      <td>
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={() => checkOutMember(r.id)}
+                        >
+                          Check Out
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -96,7 +169,7 @@ export default function Attendance() {
       {activeTab === 'daily-absent' && (
         <div className="activity-card">
           <div className="activity-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ fontWeight: 800 }}>Daily Absent Active Members</span>
               <span className="badge badge-danger">{absentMembers.length} absent today</span>
             </div>
@@ -105,32 +178,144 @@ export default function Attendance() {
             </span>
           </div>
 
-      <div className="table-card">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>MEMBER</th>
-              <th>CHECK-IN</th>
-              <th>CHECK-OUT</th>
-              <th>STATUS</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((r) => (
-              <tr key={r.id}>
-                <td>{r.name}</td>
-                <td>{r.checkIn}</td>
-                <td>{r.checkOut}</td>
-                <td>
-                  <span className={`status-badge ${r.status === 'In' ? 'active' : 'expired'}`}>
-                    ● {r.status.toUpperCase()}
+          <div className="table-responsive">
+            <table className="custom-table">
+              <thead>
+                <tr>
+                  <th>SL</th>
+                  <th>Member Name</th>
+                  <th>Code</th>
+                  <th>Phone</th>
+                  <th>Plan</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {absentMembers.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                      All members have checked in today!
+                    </td>
+                  </tr>
+                ) : (
+                  absentMembers.map((m, i) => (
+                    <tr key={m.id}>
+                      <td style={{ fontWeight: 700 }}>{i + 1}</td>
+                      <td>
+                        <div className="member-cell">
+                          <div className="avatar-initials">{m.avatar}</div>
+                          <span style={{ fontWeight: 700 }}>{m.name}</span>
+                        </div>
+                      </td>
+                      <td><span className="badge badge-primary">{m.code}</span></td>
+                      <td>{m.phone}</td>
+                      <td>{m.plan}</td>
+                      <td>
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => checkInMember(m.id, 'Manual Admin')}
+                        >
+                          <Check size={14} /> Quick In
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 3. SUMMARY SUBTAB */}
+      {activeTab === 'summary' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div className="stats-grid">
+            <div className="stat-card">
+              <span className="stat-card-title">TOTAL LOGS RECORDED</span>
+              <div className="stat-card-value">{attendance.length}</div>
+              <span className="stat-card-label">Overall historical records</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-card-title">TODAY ATTENDANCE RATE</span>
+              <div className="stat-card-value">
+                {members.length > 0 ? `${Math.round((attendance.length / members.length) * 100)}%` : '0%'}
+              </div>
+              <span className="stat-card-label">Active members present</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-card-title">PEAK SCAN TIME</span>
+              <div className="stat-card-value" style={{ color: 'var(--primary)', fontSize: '20px' }}>
+                7:00 PM - 9:00 PM
+              </div>
+              <span className="stat-card-label">Highest floor traffic</span>
+            </div>
+          </div>
+
+          <div className="activity-card">
+            <div className="activity-header">
+              <span style={{ fontWeight: 800 }}>Scan Method Breakdown</span>
+            </div>
+            <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
+              <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '8px', textAlign: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>RFID Card Scans</span>
+                <h3 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--primary)', marginTop: '4px' }}>
+                  {attendance.filter((a) => a.method === 'RFID Card').length}
+                </h3>
+              </div>
+              <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '8px', textAlign: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Biometric Scans</span>
+                <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#10B981', marginTop: '4px' }}>
+                  {attendance.filter((a) => a.method === 'Biometric').length}
+                </h3>
+              </div>
+              <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '8px', textAlign: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Manual Desk</span>
+                <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#06B6D4', marginTop: '4px' }}>
+                  {attendance.filter((a) => a.method === 'Manual Admin').length}
+                </h3>
+              </div>
+              <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '8px', textAlign: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Peak Flow Slot</span>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--warning)', marginTop: '6px' }}>
+                  6:00 PM - 8:30 PM
+                </h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. INDIVIDUAL ATTENDANCE SUBTAB */}
+      {activeTab === 'individual' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ background: 'var(--bg-card)', padding: '18px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-base)', display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700 }}>Select Member:</span>
+            <select
+              className="form-select"
+              style={{ maxWidth: '340px' }}
+              value={selectedIndividualMemberId}
+              onChange={(e) => setSelectedIndividualMemberId(e.target.value)}
+            >
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name} ({m.code} - {m.plan})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selectedMemberObj && (
+            <div className="activity-card">
+              <div className="activity-header">
+                <div>
+                  <span style={{ fontWeight: 800 }}>Attendance Audit: {selectedMemberObj.name}</span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '10px' }}>
+                    Total Visits: {selectedMemberObj.visits} sessions
                   </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                </div>
+                <span className="badge badge-primary">{selectedMemberObj.plan}</span>
+              </div>
 
               <div className="table-responsive">
                 <table className="custom-table">

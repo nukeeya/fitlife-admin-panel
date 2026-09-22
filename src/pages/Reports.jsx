@@ -27,7 +27,7 @@ import { useGymData } from '../context/GymDataContext';
 
 export default function Reports() {
   const { theme, primaryColor } = useTheme();
-  const { invoices, expenses, members } = useGymData();
+  const { invoices, expenses, members, branding } = useGymData();
 
   const gridColor = theme === 'light' ? '#E2E8F0' : '#26262B';
   const textColor = theme === 'light' ? '#64748B' : '#94A3B8';
@@ -52,7 +52,7 @@ export default function Reports() {
   ];
 
   const handleExportCSV = () => {
-    alert('Exporting FitLife Full Analytical Report to CSV/Excel...');
+    alert(`Exporting ${branding?.gymName || 'FitLife'} Full Analytical Report to CSV/Excel...`);
   };
 
   return (

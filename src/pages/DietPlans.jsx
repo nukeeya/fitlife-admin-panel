@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Flame, Users, Clock, ChevronDown, ChevronUp, Plus } from 'lucide-react';
+import { Flame, Users, Clock, ChevronDown, ChevronUp, Plus, Sparkles, Apple, CheckCircle2 } from 'lucide-react';
+import { useGymData } from '../context/GymDataContext';
 import { dietPlans } from '../data/gymData';
 
 function MacroBar({ label, value, color }) {
@@ -57,7 +58,7 @@ function DietPlanCard({ plan }) {
               <div key={i} className="meal-row">
                 <div className="meal-time">{m.time}</div>
                 <div className="meal-dot" />
-                <div className="meal-desc">{m.meal}</div>
+                <div className="meal-desc">{m.meal || m.detail}</div>
               </div>
             ))}
           </div>
@@ -68,14 +69,45 @@ function DietPlanCard({ plan }) {
 }
 
 export default function DietPlans() {
-  const [filter, setFilter] = useState('All');
-  const targets = ['All', ...new Set(dietPlans.map((p) => p.target))];
+  const { members: liveMembers } = useGymData();
+  const members = liveMembers || [];
 
-  const filtered = filter === 'All'
-    ? dietPlans
-    : dietPlans.filter((p) => p.target === filter);
+  const [dietPlansList, setDietPlansList] = useState(dietPlans);
+  const [selectedMemberId, setSelectedMemberId] = useState(members[0]?.id || 1);
+  const [dietGoal, setDietGoal] = useState('Muscle Building (Hypertrophy)');
+  const [caloricTarget, setCaloricTarget] = useState('2,200 kcal');
+  const [dietaryPref, setDietaryPref] = useState('Non-Vegetarian (High Protein)');
+  const [isGenerated, setIsGenerated] = useState(false);
 
-  const totalMembers = dietPlans.reduce((sum, p) => sum + p.members, 0);
+  const totalMembers = dietPlansList.reduce((sum, p) => sum + (p.members || 1), 0);
+
+  const handleGenerateDiet = (e) => {
+    e.preventDefault();
+    const assignedMember = members.find((m) => m.id === Number(selectedMemberId));
+    const memberName = assignedMember ? assignedMember.name : 'Member';
+
+    const newPlan = {
+      id: Date.now(),
+      name: `${memberName}'s ${dietGoal.split(' ')[0]} Protocol`,
+      target: `${dietGoal} • ${dietaryPref}`,
+      calories: caloricTarget,
+      protein: '165g',
+      carbs: '220g',
+      fats: '55g',
+      duration: '4 WEEKS',
+      members: 1,
+      meals: [
+        { time: '08:00 AM', name: 'Power Breakfast', detail: 'High-protein oatmeal, whey isolate, blueberries & flaxseed' },
+        { time: '01:00 PM', name: 'Anabolic Lunch', detail: 'Lean chicken breast / paneer, brown rice, broccoli & olive oil' },
+        { time: '05:00 PM', name: 'Pre-Workout Fuel', detail: 'Greek yogurt with banana, honey and rice cakes' },
+        { time: '08:30 PM', name: 'Recovery Dinner', detail: 'Grilled salmon / egg whites, sweet potato mash & asparagus' },
+      ],
+    };
+
+    setDietPlansList([newPlan, ...dietPlansList]);
+    setIsGenerated(true);
+    setTimeout(() => setIsGenerated(false), 3000);
+  };
 
   return (
     <div className="page">
@@ -87,6 +119,26 @@ export default function DietPlans() {
             {dietPlans.length} PLANS ·{' '}
             <span className="highlight-number">{totalMembers.toLocaleString()}</span> MEMBERS ON PLAN
           </p>
+        </div>
+      </div>
+
+      {/* Summary Stats */}
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+        <div className="stat-card">
+          <span className="stat-title">TOTAL PLANS</span>
+          <div className="stat-value">{dietPlans.length}</div>
+        </div>
+        <div className="stat-card">
+          <span className="stat-title">ACTIVE MEMBERS</span>
+          <div className="stat-value">{totalMembers.toLocaleString()}</div>
+        </div>
+        <div className="stat-card">
+          <span className="stat-title">AVG CALORIES</span>
+          <div className="stat-value">2,280</div>
+        </div>
+        <div className="stat-card">
+          <span className="stat-title">MOST POPULAR</span>
+          <div className="stat-value" style={{ fontSize: '20px' }}>Balanced Wellness</div>
         </div>
       </div>
 
@@ -161,6 +213,12 @@ export default function DietPlans() {
               <Apple size={16} />
               Generate AI Diet Plan
             </button>
+
+            {isGenerated && (
+              <div className="badge badge-success" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
+                <CheckCircle2 size={16} /> Diet Plan Generated Successfully!
+              </div>
+            )}
           </form>
         </div>
 
@@ -189,26 +247,6 @@ export default function DietPlans() {
                   🔥 {plan.calories}
                 </span>
               </div>
-
-      {/* Summary Stats */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <span className="stat-title">TOTAL PLANS</span>
-          <div className="stat-value">{dietPlans.length}</div>
-        </div>
-        <div className="stat-card">
-          <span className="stat-title">ACTIVE MEMBERS</span>
-          <div className="stat-value">{totalMembers.toLocaleString()}</div>
-        </div>
-        <div className="stat-card">
-          <span className="stat-title">AVG CALORIES</span>
-          <div className="stat-value">2,280</div>
-        </div>
-        <div className="stat-card">
-          <span className="stat-title">MOST POPULAR</span>
-          <div className="stat-value" style={{ fontSize: '22px' }}>Balanced Wellness</div>
-        </div>
-      </div>
 
               {/* Meals Timeline */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

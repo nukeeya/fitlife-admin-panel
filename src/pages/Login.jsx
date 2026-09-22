@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useGymData } from '../context/GymDataContext';
+import { Flame, Dumbbell, Award, ShieldCheck } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('admin@fitlife.com');
@@ -9,6 +11,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { signIn } = useAuth();
+  const { branding } = useGymData();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -25,19 +28,37 @@ export default function Login() {
     }
   };
 
+  const renderBrandIcon = () => {
+    if (branding?.logoUrl) {
+      return (
+        <img
+          src={branding.logoUrl}
+          alt={branding.gymName || 'Logo'}
+          style={{ width: '48px', height: '48px', objectFit: 'contain', marginBottom: '8px' }}
+        />
+      );
+    }
+    const iconName = branding?.logoIcon || 'Flame';
+    switch (iconName) {
+      case 'Dumbbell': return <Dumbbell size={40} color="var(--primary)" style={{ marginBottom: '8px' }} />;
+      case 'Award': return <Award size={40} color="var(--primary)" style={{ marginBottom: '8px' }} />;
+      case 'Shield': return <ShieldCheck size={40} color="var(--primary)" style={{ marginBottom: '8px' }} />;
+      default: return <Flame size={40} color="var(--primary)" style={{ marginBottom: '8px' }} />;
+    }
+  };
+
   return (
     <div className="login-page">
       <div className="login-left">
         <div className="login-overlay">
           <div className="login-hero-text">
-            <h1 className="login-brand">FITLIFE</h1>
-            <p className="login-tagline">
-              TRAIN HARD.<br />
-              LIVE STRONG.
+            {renderBrandIcon()}
+            <h1 className="login-brand">{branding?.gymName || 'FITLIFE'}</h1>
+            <p className="login-tagline" style={{ whiteSpace: 'pre-line' }}>
+              {branding?.heroTagline || 'TRAIN HARD.\nLIVE STRONG.'}
             </p>
-            <p className="login-sub">
-              YOUR FITNESS.<br />
-              YOUR JOURNEY.
+            <p className="login-sub" style={{ whiteSpace: 'pre-line' }}>
+              {branding?.heroSub || 'YOUR FITNESS.\nYOUR JOURNEY.'}
             </p>
           </div>
         </div>

@@ -1,7 +1,23 @@
-import { Plus, Users } from 'lucide-react';
-import { trainers } from '../data/gymData';
+import { useState } from 'react';
+import { Plus, Users, Search, Star, X } from 'lucide-react';
+import { useGymData } from '../context/GymDataContext';
+import { trainers as fallbackTrainers } from '../data/gymData';
 
 export default function Trainers() {
+  const { trainers: liveTrainers, members: liveMembers } = useGymData();
+  const allTrainers = liveTrainers || fallbackTrainers;
+  const members = liveMembers || [];
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTrainer, setSelectedTrainer] = useState(null);
+
+  const filtered = allTrainers.filter(
+    (t) =>
+      t.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.specialty?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.role?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="page">
       {/* Header */}
@@ -26,7 +42,7 @@ export default function Trainers() {
           />
         </div>
         <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-          {trainers.length} Certified Trainers on Staff
+          {allTrainers.length} Certified Trainers on Staff
         </span>
       </div>
 

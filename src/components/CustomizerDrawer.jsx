@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import {
   X,
   RotateCcw,
@@ -11,6 +12,8 @@ import {
   Palette,
   Columns,
   Rows,
+  Sparkles,
+  ExternalLink,
 } from 'lucide-react';
 import {
   useTheme,
@@ -18,8 +21,11 @@ import {
   BG_PRESETS_DARK,
   BG_PRESETS_LIGHT,
 } from '../context/ThemeContext';
+import { useGymData } from '../context/GymDataContext';
 
 export default function CustomizerDrawer() {
+  const navigate = useNavigate();
+  const { branding } = useGymData();
   const {
     isCustomizerOpen,
     setIsCustomizerOpen,
@@ -62,6 +68,33 @@ export default function CustomizerDrawer() {
 
         {/* Drawer Body */}
         <div className="customizer-body">
+          {/* Brand Identity Quick Panel */}
+          <div className="customizer-section" style={{ background: 'var(--bg-app)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-base)', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span className="customizer-label" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Sparkles size={14} color="var(--primary)" /> Gym Identity
+              </span>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-light)', padding: '2px 8px', borderRadius: '12px' }}>
+                {branding?.gymName || 'FitLife'}
+              </span>
+            </div>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 10px 0', lineHeight: 1.4 }}>
+              Customize gym name, slogan, vector icon, or upload your official logo.
+            </p>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              style={{ width: '100%', justifyContent: 'center', gap: '6px' }}
+              onClick={() => {
+                setIsCustomizerOpen(false);
+                navigate('/system');
+              }}
+            >
+              <ExternalLink size={13} />
+              Change Brand Name & Logo
+            </button>
+          </div>
+
           {/* 1. Theme Style (Dark / Light) */}
           <div className="customizer-section">
             <span className="customizer-label">1. Theme Style</span>

@@ -1,15 +1,30 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Plus } from 'lucide-react';
-import { members } from '../data/gymData';
+import { useNavigate, useOutletContext } from 'react-router-dom';
+import { Search, Plus } from 'lucide-react';
+import { useGymData } from '../context/GymDataContext';
+import { members as fallbackMembers } from '../data/gymData';
 
 export default function Members() {
-  const [search, setSearch] = useState('');
   const navigate = useNavigate();
+  const outletContext = useOutletContext();
+  const openAdmission = outletContext?.openAdmission || (() => {});
+  const { members: liveMembers } = useGymData();
+  const allMembers = liveMembers || fallbackMembers;
 
-  const filtered = members.filter((m) =>
-    m.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [planFilter, setPlanFilter] = useState('All');
+
+  const filtered = allMembers.filter((m) => {
+    const matchesSearch =
+      m.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.phone?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === 'All' || m.status?.toLowerCase() === statusFilter.toLowerCase();
+    const matchesPlan = planFilter === 'All' || m.plan === planFilter;
+    return matchesSearch && matchesStatus && matchesPlan;
+  });
 
   return (
     <div className="page">

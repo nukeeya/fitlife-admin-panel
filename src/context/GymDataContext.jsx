@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 
 const GymDataContext = createContext();
 
@@ -472,81 +472,69 @@ const INITIAL_JOBS = [
   { id: 3, title: 'Sports Physiotherapist & Rehab Specialist', department: 'Fitness', type: 'Part Time', salary: '৳40,000 - ৳60,000 / mo', vacancies: 1, status: 'Open', applicantsCount: 8, postedDate: '2026-08-28', description: 'Provide injury prevention, rehabilitation guidance and mobility assessments for elite athletes and gym members.' },
 ];
 
+export const DEFAULT_BRANDING = {
+  gymName: 'FitLife',
+  tagline: 'ENTERPRISE GYM',
+  logoUrl: '',
+  logoIcon: 'Flame',
+  heroTagline: 'TRAIN HARD. LIVE STRONG.',
+  heroSub: 'YOUR FITNESS. YOUR JOURNEY.',
+  phone: '+880 1711-223344',
+  email: 'contact@fitlife.com',
+  address: 'Plot 42, Gulshan Avenue, Dhaka, Bangladesh',
+};
+
+function safeLoad(key, fallback) {
+  try {
+    const saved = localStorage.getItem(key);
+    if (!saved || saved === 'undefined' || saved === 'null') return fallback;
+    const parsed = JSON.parse(saved);
+    if (Array.isArray(fallback)) {
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : fallback;
+    }
+    return parsed ?? fallback;
+  } catch (e) {
+    console.warn(`Failed reading ${key} from storage:`, e);
+    return fallback;
+  }
+}
+
 export function GymDataProvider({ children }) {
-  const [members, setMembers] = useState(() => {
-    const saved = localStorage.getItem('fitlife-members');
-    return saved ? JSON.parse(saved) : INITIAL_MEMBERS;
-  });
-
-  const [applications, setApplications] = useState(() => {
-    const saved = localStorage.getItem('fitlife-applications');
-    return saved ? JSON.parse(saved) : INITIAL_APPLICATIONS;
-  });
-
-  const [plans, setPlans] = useState(() => {
-    const saved = localStorage.getItem('fitlife-plans');
-    return saved ? JSON.parse(saved) : INITIAL_PLANS;
-  });
-
-  const [lockers, setLockers] = useState(() => {
-    const saved = localStorage.getItem('fitlife-lockers');
-    return saved ? JSON.parse(saved) : INITIAL_LOCKERS;
-  });
-
-  const [trainers, setTrainers] = useState(() => {
-    const saved = localStorage.getItem('fitlife-trainers');
-    return saved ? JSON.parse(saved) : INITIAL_TRAINERS;
-  });
-
-  const [employees, setEmployees] = useState(() => {
-    const saved = localStorage.getItem('fitlife-employees');
-    return saved ? JSON.parse(saved) : INITIAL_EMPLOYEES;
-  });
-
-  const [invoices, setInvoices] = useState(() => {
-    const saved = localStorage.getItem('fitlife-invoices');
-    return saved ? JSON.parse(saved) : INITIAL_INVOICES;
-  });
-
-  const [expenses, setExpenses] = useState(() => {
-    const saved = localStorage.getItem('fitlife-expenses');
-    return saved ? JSON.parse(saved) : INITIAL_EXPENSES;
-  });
-
-  const [attendance, setAttendance] = useState(() => {
-    const saved = localStorage.getItem('fitlife-attendance');
-    return saved ? JSON.parse(saved) : INITIAL_ATTENDANCE;
-  });
-
-  const [roles, setRoles] = useState(() => {
-    const saved = localStorage.getItem('fitlife-roles');
-    return saved ? JSON.parse(saved) : INITIAL_ROLES;
-  });
-
-  const [smsCampaigns, setSmsCampaigns] = useState(() => {
-    const saved = localStorage.getItem('fitlife-sms');
-    return saved ? JSON.parse(saved) : INITIAL_SMS_CAMPAIGNS;
-  });
-
-  const [smsBalance, setSmsBalance] = useState(() => {
-    const saved = localStorage.getItem('fitlife-sms-balance');
-    return saved ? JSON.parse(saved) : 1420;
-  });
-
-  const [ads, setAds] = useState(() => {
-    const saved = localStorage.getItem('fitlife-ads');
-    return saved ? JSON.parse(saved) : INITIAL_ADS;
-  });
-
-  const [jobs, setJobs] = useState(() => {
-    const saved = localStorage.getItem('fitlife-jobs');
-    return saved ? JSON.parse(saved) : INITIAL_JOBS;
-  });
+  const [branding, setBranding] = useState(() => safeLoad('fitlife-branding', DEFAULT_BRANDING));
+  const [members, setMembers] = useState(() => safeLoad('fitlife-members', INITIAL_MEMBERS));
+  const [applications, setApplications] = useState(() => safeLoad('fitlife-applications', INITIAL_APPLICATIONS));
+  const [plans, setPlans] = useState(() => safeLoad('fitlife-plans', INITIAL_PLANS));
+  const [lockers, setLockers] = useState(() => safeLoad('fitlife-lockers', INITIAL_LOCKERS));
+  const [trainers, setTrainers] = useState(() => safeLoad('fitlife-trainers', INITIAL_TRAINERS));
+  const [employees, setEmployees] = useState(() => safeLoad('fitlife-employees', INITIAL_EMPLOYEES));
+  const [invoices, setInvoices] = useState(() => safeLoad('fitlife-invoices', INITIAL_INVOICES));
+  const [expenses, setExpenses] = useState(() => safeLoad('fitlife-expenses', INITIAL_EXPENSES));
+  const [attendance, setAttendance] = useState(() => safeLoad('fitlife-attendance', INITIAL_ATTENDANCE));
+  const [roles, setRoles] = useState(() => safeLoad('fitlife-roles', INITIAL_ROLES));
+  const [smsCampaigns, setSmsCampaigns] = useState(() => safeLoad('fitlife-sms', INITIAL_SMS_CAMPAIGNS));
+  const [smsBalance, setSmsBalance] = useState(() => safeLoad('fitlife-sms-balance', 1420));
+  const [ads, setAds] = useState(() => safeLoad('fitlife-ads', INITIAL_ADS));
+  const [jobs, setJobs] = useState(() => safeLoad('fitlife-jobs', INITIAL_JOBS));
 
   // Current active admin role
   const [currentUserRole, setCurrentUserRole] = useState('Super Admin');
 
   // Persistence effects
+  useEffect(() => {
+    localStorage.setItem('fitlife-branding', JSON.stringify(branding));
+    if (typeof document !== 'undefined') {
+      document.title = `${branding.gymName || 'FitLife'} - Gym Management Admin Panel`;
+    }
+  }, [branding]);
+
+  const updateBranding = (updates) => {
+    setBranding((prev) => ({ ...prev, ...updates }));
+  };
+
+  const resetBranding = () => {
+    setBranding(DEFAULT_BRANDING);
+  };
+
   useEffect(() => { localStorage.setItem('fitlife-members', JSON.stringify(members)); }, [members]);
   useEffect(() => { localStorage.setItem('fitlife-applications', JSON.stringify(applications)); }, [applications]);
   useEffect(() => { localStorage.setItem('fitlife-plans', JSON.stringify(plans)); }, [plans]);
@@ -886,7 +874,52 @@ export function GymDataProvider({ children }) {
     );
   };
 
-  // Aggregated Analytics Getters
+  // Aggregated Analytics Getters & Real-Time Stats
+  const stats = useMemo(() => {
+    const active = members.filter((m) => m.status === 'Active').length;
+    const expired = members.filter((m) => m.status === 'Expired').length;
+    const expiring = members.filter((m) => m.status === 'Expiring').length;
+    const activeTrainers = trainers.filter((t) => t.status === 'Active').length;
+    const activeEmployees = employees.filter((e) => e.status === 'Active').length;
+
+    return {
+      activeMembers: 2480 + (members.length - INITIAL_MEMBERS.length) + active,
+      expiredMembers: 142 + expired,
+      checkIns: 184 + attendance.length,
+      trainersCount: activeTrainers || 6,
+      employeesCount: activeEmployees || 8,
+      expiringSoon: 18 + expiring,
+    };
+  }, [members, attendance, trainers, employees]);
+
+  const analytics = useMemo(() => {
+    const activeMale = members.filter((m) => m.status === 'Active' && m.gender === 'Male').length;
+    const activeFemale = members.filter((m) => m.status === 'Active' && m.gender === 'Female').length;
+    const todayMaleCheckins = attendance.filter((a) => a.gender === 'Male' || !a.gender).length;
+    const todayFemaleCheckins = attendance.filter((a) => a.gender === 'Female').length;
+    const todayCollected = invoices.reduce((sum, inv) => sum + (inv.paidAmount || 0), 0);
+    const todayDue = invoices.reduce((sum, inv) => sum + (inv.dueAmount || 0), 0);
+    const monthlyCollected = 245000 + todayCollected;
+    const monthlyDue = 38500 + todayDue;
+    const expiringTodayCount = members.filter((m) => m.status === 'Expiring').length;
+
+    return {
+      activeMale: 1785 + activeMale,
+      activeFemale: 695 + activeFemale,
+      todayMaleCheckins: 132 + todayMaleCheckins,
+      todayFemaleCheckins: 52 + todayFemaleCheckins,
+      todayCollected: todayCollected || 48500,
+      todayDue: todayDue || 8200,
+      monthlyCollected,
+      monthlyDue,
+      expiringTodayCount: expiringTodayCount || 6,
+    };
+  }, [members, attendance, invoices]);
+
+  const pendingApprovals = useMemo(() => {
+    return applications.filter((a) => a.status === 'Pending');
+  }, [applications]);
+
   const getAnalytics = () => {
     const totalMembers = 2481 + (members.length - INITIAL_MEMBERS.length);
     const activeMembers = members.filter((m) => m.status === 'Active').length;
@@ -936,9 +969,13 @@ export function GymDataProvider({ children }) {
   return (
     <GymDataContext.Provider
       value={{
+        branding,
+        updateBranding,
+        resetBranding,
         members,
         setMembers,
         applications,
+        pendingApprovals,
         plans,
         setPlans,
         lockers,
@@ -952,6 +989,8 @@ export function GymDataProvider({ children }) {
         smsBalance,
         ads,
         jobs,
+        stats,
+        analytics,
         currentUserRole,
         setCurrentUserRole,
         calculatePricing,

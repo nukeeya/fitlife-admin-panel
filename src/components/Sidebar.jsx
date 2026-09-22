@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom';
+import { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -15,39 +16,67 @@ import {
   Apple,
   FileSpreadsheet,
   BarChart3,
+  ShieldCheck,
   Settings,
-  Apple,
-  Briefcase,
+  Flame,
   Sun,
   Moon,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-
-const navItems = [
-  { path: '/dashboard', label: 'DASHBOARD', icon: LayoutDashboard },
-  { path: '/members', label: 'MEMBERS', icon: Users },
-  { path: '/attendance', label: 'ATTENDANCE', icon: CalendarCheck },
-  { path: '/memberships', label: 'MEMBERSHIPS', icon: Award },
-  { path: '/payments', label: 'PAYMENTS', icon: CreditCard },
-  { path: '/trainers', label: 'TRAINERS', icon: Dumbbell },
-  { path: '/employees', label: 'EMPLOYEES', icon: Briefcase },
-  { path: '/reports', label: 'REPORTS', icon: BarChart3 },
-  { path: '/diet-plans', label: 'DIET PLANS', icon: Apple },
-];
+import { useGymData } from '../context/GymDataContext';
 
 export default function Sidebar() {
   const { theme, toggleTheme } = useTheme();
+  const { applications, branding } = useGymData();
+  const location = useLocation();
+
+  const [openMenus, setOpenMenus] = useState({
+    lockers: false,
+    accounts: false,
+    attendance: false,
+    plans: false,
+  });
+
+  const pendingAppsCount = applications?.filter((a) => a.status === 'Pending').length || 0;
+
+  const toggleSubmenu = (menu) => {
+    setOpenMenus((prev) => ({
+      ...prev,
+      [menu]: !prev[menu],
+    }));
+  };
+
+  const renderBrandIcon = () => {
+    if (branding?.logoUrl) {
+      return (
+        <img
+          src={branding.logoUrl}
+          alt={branding.gymName || 'Logo'}
+          style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 'inherit' }}
+        />
+      );
+    }
+    const iconName = branding?.logoIcon || 'Flame';
+    switch (iconName) {
+      case 'Dumbbell': return <Dumbbell size={20} />;
+      case 'Award': return <Award size={20} />;
+      case 'Shield': return <ShieldCheck size={20} />;
+      default: return <Flame size={20} />;
+    }
+  };
 
   return (
     <aside className="sidebar">
       {/* Brand Header */}
       <div className="sidebar-logo">
         <div className="logo-badge">
-          <Flame size={20} />
+          {renderBrandIcon()}
         </div>
         <div className="logo-text-group">
-          <span className="logo-text">FITLIFE</span>
-          <span className="logo-sub">ENTERPRISE GYM</span>
+          <span className="logo-text">{branding?.gymName || 'FITLIFE'}</span>
+          <span className="logo-sub">{branding?.tagline || 'ENTERPRISE GYM'}</span>
         </div>
       </div>
 
@@ -147,10 +176,170 @@ export default function Sidebar() {
             className={`sidebar-link ${location.pathname.startsWith('/accounts') ? 'active' : ''}`}
             onClick={() => toggleSubmenu('accounts')}
           >
-            <item.icon size={18} />
-            <span>{item.label}</span>
-          </NavLink>
-        ))}
+            <div className="sidebar-link-content">
+              <CreditCard size={18} />
+              <span>Accounts</span>
+            </div>
+            {openMenus.accounts ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </button>
+          {openMenus.accounts && (
+            <div className="sidebar-submenu">
+              <NavLink to="/accounts?tab=invoices" className="submenu-link">
+                • Invoice List
+              </NavLink>
+              <NavLink to="/accounts?tab=payments" className="submenu-link">
+                • Payment Collection
+              </NavLink>
+              <NavLink to="/accounts?tab=expenses" className="submenu-link">
+                • Expense Management
+              </NavLink>
+              <NavLink to="/accounts?tab=balance-sheet" className="submenu-link">
+                • Monthly Balance Sheet
+              </NavLink>
+            </div>
+          )}
+        </div>
+
+        {/* 8. Attendance (Submenus) */}
+        <div>
+          <button
+            type="button"
+            className={`sidebar-link ${location.pathname.startsWith('/attendance') ? 'active' : ''}`}
+            onClick={() => toggleSubmenu('attendance')}
+          >
+            <div className="sidebar-link-content">
+              <CalendarCheck size={18} />
+              <span>Attendance</span>
+            </div>
+            {openMenus.attendance ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </button>
+          {openMenus.attendance && (
+            <div className="sidebar-submenu">
+              <NavLink to="/attendance?tab=daily-present" className="submenu-link">
+                • Daily Present Attendance
+              </NavLink>
+              <NavLink to="/attendance?tab=daily-absent" className="submenu-link">
+                • Daily Absent Attendance
+              </NavLink>
+              <NavLink to="/attendance?tab=summary" className="submenu-link">
+                • Summary Attendance
+              </NavLink>
+              <NavLink to="/attendance?tab=individual" className="submenu-link">
+                • Individual Attendance
+              </NavLink>
+              <NavLink to="/attendance?tab=multiple" className="submenu-link">
+                • Multiple Attendance (Bulk)
+              </NavLink>
+            </div>
+          )}
+        </div>
+
+        {/* 9. SMS Management */}
+        <NavLink
+          to="/sms"
+          className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+        >
+          <div className="sidebar-link-content">
+            <MessageSquare size={18} />
+            <span>SMS Management</span>
+          </div>
+        </NavLink>
+
+        <span className="nav-section-title">Growth & Automation</span>
+
+        {/* 10. Subscription Plans (Submenus) */}
+        <div>
+          <button
+            type="button"
+            className={`sidebar-link ${location.pathname.startsWith('/subscription-plans') ? 'active' : ''}`}
+            onClick={() => toggleSubmenu('plans')}
+          >
+            <div className="sidebar-link-content">
+              <Award size={18} />
+              <span>Subscription Plans</span>
+            </div>
+            {openMenus.plans ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </button>
+          {openMenus.plans && (
+            <div className="sidebar-submenu">
+              <NavLink to="/subscription-plans?tab=plans" className="submenu-link">
+                • Subscription Plan List
+              </NavLink>
+              <NavLink to="/subscription-plans?tab=features" className="submenu-link">
+                • Subscription Feature List
+              </NavLink>
+              <NavLink to="/subscription-plans?tab=lockers" className="submenu-link">
+                • Subscription Locker List
+              </NavLink>
+            </div>
+          )}
+        </div>
+
+        {/* 11. Advertisements */}
+        <NavLink
+          to="/advertisements"
+          className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+        >
+          <div className="sidebar-link-content">
+            <Megaphone size={18} />
+            <span>Advertisements</span>
+          </div>
+        </NavLink>
+
+        {/* 12. AI Workout Management */}
+        <NavLink
+          to="/ai-workouts"
+          className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+        >
+          <div className="sidebar-link-content">
+            <Cpu size={18} />
+            <span>AI Workout Management</span>
+          </div>
+        </NavLink>
+
+        {/* 13. AI Diet Plan */}
+        <NavLink
+          to="/diet-plans"
+          className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+        >
+          <div className="sidebar-link-content">
+            <Apple size={18} />
+            <span>AI Diet Plan</span>
+          </div>
+        </NavLink>
+
+        {/* 14. Job Posting */}
+        <NavLink
+          to="/job-postings"
+          className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+        >
+          <div className="sidebar-link-content">
+            <FileSpreadsheet size={18} />
+            <span>Job Posting</span>
+          </div>
+        </NavLink>
+
+        {/* 15. Reports */}
+        <NavLink
+          to="/reports"
+          className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+        >
+          <div className="sidebar-link-content">
+            <BarChart3 size={18} />
+            <span>Reports & Analytics</span>
+          </div>
+        </NavLink>
+
+        {/* 16. System Management */}
+        <NavLink
+          to="/system-roles"
+          className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+        >
+          <div className="sidebar-link-content">
+            <ShieldCheck size={18} />
+            <span>System Management</span>
+          </div>
+        </NavLink>
       </nav>
 
       <div className="sidebar-footer">
@@ -158,11 +347,11 @@ export default function Sidebar() {
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           <span>{theme === 'dark' ? 'LIGHT MODE' : 'NIGHT MODE'}</span>
         </button>
-        <button className="sidebar-link settings-btn">
+        <NavLink to="/system-roles" className="sidebar-link settings-btn">
           <Settings size={18} />
           <span>SETTINGS</span>
-        </button>
+        </NavLink>
       </div>
-    </div>
+    </aside>
   );
 }
