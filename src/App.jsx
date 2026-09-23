@@ -25,6 +25,7 @@ import JobPosting from './pages/JobPosting';
 import Reports from './pages/Reports';
 import SystemManagement from './pages/SystemManagement';
 import ErrorBoundary from './components/ErrorBoundary';
+import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/login" element={<Login />} />
 
+            <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/members" element={<Members />} />
@@ -59,6 +61,7 @@ export default function App() {
               <Route path="/reports" element={<Reports />} />
               <Route path="/system" element={<SystemManagement />} />
               <Route path="/system-roles" element={<SystemManagement />} />
+            </Route>
             </Route>
           </Routes>
         </BrowserRouter>
