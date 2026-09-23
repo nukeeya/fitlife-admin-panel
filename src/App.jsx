@@ -4,6 +4,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { GymDataProvider } from './context/GymDataContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Members from './pages/Members';
 import MemberDetails from './pages/MemberDetails';
@@ -37,6 +38,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
             <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>

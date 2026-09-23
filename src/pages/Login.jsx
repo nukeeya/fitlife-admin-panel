@@ -9,8 +9,10 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [notice, setNotice] = useState('');
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { signIn, resetPassword } = useAuth();
   const { branding } = useGymData();
 
   const handleLogin = async (e) => {
@@ -25,6 +27,26 @@ export default function Login() {
       setLoading(false);
     } else {
       navigate('/dashboard');
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setError('');
+    setNotice('');
+
+    if (!email.trim()) {
+      setError('Enter your email address above, then click Forgot password.');
+      return;
+    }
+
+    setSending(true);
+    const { error: resetError } = await resetPassword(email.trim());
+    setSending(false);
+
+    if (resetError) {
+      setError(resetError.message);
+    } else {
+      setNotice('Reset link sent. Check your inbox (and spam folder).');
     }
   };
 
@@ -97,12 +119,23 @@ export default function Login() {
             </div>
 
             {error && <p className="login-error">{error}</p>}
+            {notice && <p className="login-notice">{notice}</p>}
 
             <button type="submit" className="login-btn" disabled={loading}>
               {loading ? 'LOGGING IN...' : 'LOGIN'}
             </button>
 
-            <p className="forgot-link">Forgot password?</p>
+            <p
+              className={`forgot-link${sending ? ' is-disabled' : ''}`}
+              onClick={sending ? undefined : handleForgotPassword}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !sending) handleForgotPassword();
+              }}
+            >
+              {sending ? 'SENDING…' : 'Forgot password?'}
+            </p>
             <p className="signup-link">
               Don't have an account? <span onClick={() => navigate('/signup')}>Sign up</span>
             </p>

@@ -2368,6 +2368,16 @@
   font-weight: 600;
 }
 
+.login-notice {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--success);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .login-btn {
   padding: 14px;
   background: var(--primary);
@@ -2404,6 +2414,11 @@
 
 .forgot-link:hover {
   color: var(--primary);
+}
+
+.forgot-link.is-disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .signup-link {

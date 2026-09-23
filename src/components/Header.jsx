@@ -8,14 +8,46 @@ import {
   UserCheck,
   Bell,
   Shield,
+  LogOut,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useGymData } from '../context/GymDataContext';
+import { useAuth } from '../context/AuthContext';
+import ConfirmDialog from './common/ConfirmDialog';
+import { downloadBackup, hasBusinessData } from '../utils/localBackup';
 
 export default function Header({ onOpenQuickCheckIn, onOpenAdmission }) {
   const { theme, toggleTheme, setIsCustomizerOpen } = useTheme();
   const { smsBalance, currentUserRole, setCurrentUserRole, roles } = useGymData();
+  const { user, signOut } = useAuth();
   const [showRoleSelect, setShowRoleSelect] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const emailLocal = (user?.email || '').split('@')[0];
+  const displayName = emailLocal
+    ? emailLocal.charAt(0).toUpperCase() + emailLocal.slice(1)
+    : 'Signed out';
+  const initials = emailLocal ? emailLocal.slice(0, 2).toUpperCase() : '?';
+
+  const finishSignOut = async (withBackup) => {
+    setIsSigningOut(true);
+    try {
+      if (withBackup) downloadBackup();
+      await signOut();
+    } finally {
+      setIsSigningOut(false);
+      setShowLogoutConfirm(false);
+    }
+  };
+
+  const handleLogoutClick = () => {
+    if (hasBusinessData()) {
+      setShowLogoutConfirm(true);
+    } else {
+      finishSignOut(false);
+    }
+  };
 
   return (
     <header className="app-header">
@@ -137,14 +169,44 @@ export default function Header({ onOpenQuickCheckIn, onOpenAdmission }) {
         </button>
 
         {/* User Pill */}
-        <div className="user-profile-pill">
-          <div className="user-avatar">AD</div>
+        <div className="user-profile-pill" title={user?.email || 'Not signed in'}>
+          <div className="user-avatar">{initials}</div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700 }}>Admin Master</span>
-            <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Dhaka Central</span>
+            <span style={{ fontSize: '12px', fontWeight: 700 }}>{displayName}</span>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+              {user?.email || 'Not signed in'}
+            </span>
           </div>
         </div>
+
+        {/* Sign Out — exports browser-local data before it is wiped */}
+        <button
+          className="header-icon-btn"
+          onClick={handleLogoutClick}
+          disabled={isSigningOut}
+          title="Sign out (downloads a backup of this device's data first)"
+        >
+          <LogOut size={18} />
+        </button>
       </div>
+
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={() => finishSignOut(true)}
+        title="Sign out?"
+        message={
+          <>
+            A JSON backup of this browser&apos;s FitLife data (members, invoices,
+            attendance and the rest) will download first, then it will be erased
+            from this device.
+          </>
+        }
+        confirmText="Download backup & sign out"
+        cancelText="Cancel"
+        type="warning"
+        isLoading={isSigningOut}
+      />
     </header>
   );
 }
