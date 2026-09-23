@@ -26,3 +26,8 @@ dist-ssr
 *.sw?
 
 .vercel
+
+# Env files (set these in Vercel project settings instead)
+.env
+.env.*
+!.env.example

@@ -1,16 +1,48 @@
-# React + Vite
+# FitLife — Gym Management Admin Panel
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Admin panel for gym management built with React 19, Vite, React Router, Recharts, and Supabase.
 
-Currently, two official plugins are available:
+## Tech stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Frontend:** React 19 + Vite, react-router-dom, recharts, lucide-react
+- **Backend/DB:** Supabase (see `database/schema.sql`, `supabase-fix*.sql`)
+- **Linting:** Oxlint (`npm run lint`)
 
-## React Compiler
+## Local development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+cp .env.example .env   # then fill in your Supabase values
+npm run dev            # http://localhost:5173
+```
 
-## Expanding the Oxlint configuration
+Required environment variables (all `VITE_`-prefixed, so they are baked into the
+client bundle — keep Supabase RLS enabled and never put a service-role key here):
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+| Variable | Description |
+| --- | --- |
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/publishable key (`VITE_SUPABASE_ANON_KEY` also supported) |
+
+`.env` is gitignored. Never commit real keys.
+
+## Deploying to Vercel
+
+1. Push this repo to GitHub.
+2. In Vercel: **Add New → Project → import the repo**. The Vite framework
+   preset is auto-detected — defaults are correct:
+   - Build command: `npm run build`
+   - Output directory: `dist`
+3. Under **Settings → Environment Variables**, add `VITE_SUPABASE_URL` and
+   `VITE_SUPABASE_PUBLISHABLE_KEY` (Production + Preview).
+4. Deploy. `vercel.json` already contains the SPA rewrite so client-side
+   routes deep-link correctly.
+
+## Scripts
+
+| Script | Purpose |
+| --- | --- |
+| `npm run dev` | Start dev server with HMR |
+| `npm run build` | Production build to `dist/` |
+| `npm run preview` | Serve the production build locally |
+| `npm run lint` | Run Oxlint |
