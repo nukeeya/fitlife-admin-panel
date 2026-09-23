@@ -40,7 +40,7 @@ export default function Payments() {
       let totalPaid = 0;
       let totalPending = 0;
       data.forEach(p => {
-        const amt = parseInt(p.amount.replace(/[৳,]/g, '')) || 0;
+        const amt = Number(String(p.amount).replace(/[^\d.-]/g, '')) || 0;
         if (p.status === 'Paid') totalPaid += amt;
         else totalPending += amt;
       });
@@ -113,7 +113,7 @@ export default function Payments() {
               <tr key={p.id}>
                 <td>{p.member}</td>
                 <td>{p.plan}</td>
-                <td>{p.amount}</td>
+                <td>৳{Number(p.amount).toLocaleString()}</td>
                 <td>{p.method}</td>
                 <td>
                   <span

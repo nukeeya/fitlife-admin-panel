@@ -5,7 +5,8 @@ Admin panel for gym management built with React 19, Vite, React Router, Recharts
 ## Tech stack
 
 - **Frontend:** React 19 + Vite, react-router-dom, recharts, lucide-react
-- **Backend/DB:** Supabase (see `database/schema.sql`, `supabase-fix*.sql`)
+- **Backend/DB:** Supabase — full schema, RLS policies, and seed data in
+  `database/schema.sql` (run the whole file in the Supabase SQL Editor)
 - **Linting:** Oxlint (`npm run lint`)
 
 ## Local development
