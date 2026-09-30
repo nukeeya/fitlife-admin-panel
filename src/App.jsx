@@ -1,10 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
-<<<<<<< Updated upstream
-=======
-import { AuthProvider } from './context/AuthContext';
->>>>>>> Stashed changes
 import { GymDataProvider } from './context/GymDataContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -27,7 +23,6 @@ import Advertisements from './pages/Advertisements';
 import GymShop from './pages/GymShop';
 import AIWorkoutManagement from './pages/AIWorkoutManagement';
 import DietPlans from './pages/DietPlans';
-<<<<<<< Updated upstream
 import JobPosting from './pages/JobPosting';
 import Reports from './pages/Reports';
 import SystemManagement from './pages/SystemManagement';
@@ -78,7 +73,7 @@ export default function App() {
     </ThemeProvider>
     </AuthProvider>
     </ErrorBoundary>
-=======
+  )
 import Payments from './pages/Payments';
 import Memberships from './pages/Memberships';
 import Reports from './pages/Reports';
@@ -110,6 +105,5 @@ export default function App() {
     </GymDataProvider>
     </ThemeProvider>
     </AuthProvider>
->>>>>>> Stashed changes
   );
 }
