@@ -1,6 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+<<<<<<< Updated upstream
+=======
+import { AuthProvider } from './context/AuthContext';
+>>>>>>> Stashed changes
 import { GymDataProvider } from './context/GymDataContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -23,6 +27,7 @@ import Advertisements from './pages/Advertisements';
 import GymShop from './pages/GymShop';
 import AIWorkoutManagement from './pages/AIWorkoutManagement';
 import DietPlans from './pages/DietPlans';
+<<<<<<< Updated upstream
 import JobPosting from './pages/JobPosting';
 import Reports from './pages/Reports';
 import SystemManagement from './pages/SystemManagement';
@@ -73,5 +78,38 @@ export default function App() {
     </ThemeProvider>
     </AuthProvider>
     </ErrorBoundary>
+=======
+import Payments from './pages/Payments';
+import Memberships from './pages/Memberships';
+import Reports from './pages/Reports';
+
+export default function App() {
+  return (
+    <AuthProvider>
+    <ThemeProvider>
+    <GymDataProvider>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<Login />} />
+        <Route element={<Layout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/approvals" element={<ApprovalManagement />} />
+          <Route path="/members" element={<Members />} />
+          <Route path="/members/:id" element={<MemberDetails />} />
+          <Route path="/attendance" element={<Attendance />} />
+          <Route path="/payments" element={<Payments />} />
+          <Route path="/trainers" element={<Trainers />} />
+          <Route path="/employees" element={<Employees />} />
+          <Route path="/memberships" element={<Memberships />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/diet-plans" element={<DietPlans />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+    </GymDataProvider>
+    </ThemeProvider>
+    </AuthProvider>
+>>>>>>> Stashed changes
   );
 }

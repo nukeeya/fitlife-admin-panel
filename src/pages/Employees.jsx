@@ -1,4 +1,5 @@
 import { useState } from 'react';
+<<<<<<< Updated upstream
 import { Search, Plus } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
 import { employees as fallbackEmployees } from '../data/gymData';
@@ -23,10 +24,25 @@ export default function Employees() {
     const matchesDept = deptFilter === 'All' || e.department?.toLowerCase() === deptFilter.toLowerCase();
     return matchesSearch && matchesDept;
   });
+=======
+import { Search } from 'lucide-react';
+import { employees as gymEmployees } from '../data/gymData';
+
+export default function Employees() {
+  const [search, setSearch] = useState('');
+  const [deptFilter, setDeptFilter] = useState('All');
+
+  const filtered = gymEmployees.filter((e) => {
+    const matchesSearch = e.name.toLowerCase().includes(search.toLowerCase()) || e.role.toLowerCase().includes(search.toLowerCase());
+    const matchesDept = deptFilter === 'All' || e.department === deptFilter;
+    return matchesSearch && matchesDept;
+  });
+
+  const totalPayroll = gymEmployees.reduce((sum, e) => sum + e.salary, 0);
+>>>>>>> Stashed changes
 
   return (
     <div className="page">
-      {/* Header */}
       <div className="page-header">
         <div className="page-title-group">
           <h1 className="page-title">Employee Management & Staff Roster</h1>
@@ -36,15 +52,14 @@ export default function Employees() {
         </div>
       </div>
 
-      {/* Filter and Stats */}
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-card)', padding: '16px 20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-base)' }}>
         <div className="header-search" style={{ width: '300px' }}>
           <Search size={16} color="var(--text-muted)" />
           <input
             type="text"
             placeholder="Search employee name or role..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
@@ -65,7 +80,6 @@ export default function Employees() {
         </div>
       </div>
 
-      {/* Employee Table */}
       <div className="activity-card">
         <div className="table-responsive">
           <table className="custom-table">

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Plus, Loader2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { useState } from 'react';
+import { Plus } from 'lucide-react';
+import { payments as gymPayments, paymentSummary } from '../data/gymData';
 
 export default function Payments() {
+<<<<<<< Updated upstream
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState({ totalRevenue: '৳0', paid: '৳0', pending: '৳0' });
@@ -60,40 +61,41 @@ export default function Payments() {
       </div>
     );
   }
+=======
+  const [payments] = useState(gymPayments);
+>>>>>>> Stashed changes
 
   return (
     <div className="page">
       <div className="page-header">
-        <div>
-          <h1 className="page-title">PAYMENTS</h1>
+        <div className="page-title-group">
+          <h1 className="page-title">Payments</h1>
           <p className="page-subtitle">
-            <span className="highlight-number">{summary.totalRevenue}</span> MONTHLY REVENUE
+            <span style={{ fontWeight: 800, color: 'var(--primary)' }}>{paymentSummary.totalRevenue}</span> Monthly Revenue
           </p>
         </div>
-        <div className="header-actions">
-          <button className="btn-primary">
-            <Plus size={16} /> RECORD PAYMENT
+        <div className="page-actions">
+          <button className="btn btn-primary">
+            <Plus size={16} /> Record Payment
           </button>
         </div>
       </div>
 
-      {/* Summary Cards */}
       <div className="stats-grid">
         <div className="stat-card">
           <span className="stat-title">TOTAL REVENUE</span>
-          <div className="stat-value">{summary.totalRevenue}</div>
+          <div className="stat-value">{paymentSummary.totalRevenue}</div>
         </div>
         <div className="stat-card">
           <span className="stat-title">PAID</span>
-          <div className="stat-value">{summary.paid}</div>
+          <div className="stat-value" style={{ color: '#10B981' }}>{paymentSummary.paid}</div>
         </div>
         <div className="stat-card">
           <span className="stat-title">PENDING</span>
-          <div className="stat-value" style={{ color: 'var(--red)' }}>{summary.pending}</div>
+          <div className="stat-value" style={{ color: '#EF4444' }}>{paymentSummary.pending}</div>
         </div>
       </div>
 
-      {/* Transactions Table */}
       <div className="table-card">
         <div className="table-header">
           <h2 className="chart-title">RECENT TRANSACTIONS</h2>
@@ -113,12 +115,14 @@ export default function Payments() {
               <tr key={p.id}>
                 <td>{p.member}</td>
                 <td>{p.plan}</td>
+<<<<<<< Updated upstream
                 <td>৳{Number(p.amount).toLocaleString()}</td>
+=======
+                <td style={{ fontWeight: 700 }}>{p.amount}</td>
+>>>>>>> Stashed changes
                 <td>{p.method}</td>
                 <td>
-                  <span
-                    className={`status-badge ${p.status === 'Paid' ? 'active' : 'expiring'}`}
-                  >
+                  <span className={`status-badge ${p.status === 'Paid' ? 'active' : 'expiring'}`}>
                     ● {p.status.toUpperCase()}
                   </span>
                 </td>

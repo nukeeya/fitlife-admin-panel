@@ -1,5 +1,10 @@
+<<<<<<< Updated upstream
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+=======
+import { NavLink, useLocation } from 'react-router-dom';
+import { useState } from 'react';
+>>>>>>> Stashed changes
 import {
   LayoutDashboard,
   Users,
@@ -19,9 +24,15 @@ import {
   BarChart3,
   ShieldCheck,
   Settings,
+<<<<<<< Updated upstream
   Flame,
   Sun,
   Moon,
+=======
+  Sun,
+  Moon,
+  Flame,
+>>>>>>> Stashed changes
   ChevronDown,
   ChevronRight,
 } from 'lucide-react';
@@ -30,6 +41,7 @@ import { useGymData } from '../context/GymDataContext';
 
 export default function Sidebar() {
   const { theme, toggleTheme } = useTheme();
+<<<<<<< Updated upstream
   const { applications, branding } = useGymData();
   const location = useLocation();
 
@@ -66,6 +78,14 @@ export default function Sidebar() {
       case 'Shield': return <ShieldCheck size={20} />;
       default: return <Flame size={20} />;
     }
+=======
+  const location = useLocation();
+  const [openMenus, setOpenMenus] = useState({});
+  const pendingAppsCount = 0;
+
+  const toggleSubmenu = (key) => {
+    setOpenMenus((prev) => ({ ...prev, [key]: !prev[key] }));
+>>>>>>> Stashed changes
   };
 
   return (
@@ -116,9 +136,7 @@ export default function Sidebar() {
             <UserCheck size={18} />
             <span>Approval Management</span>
           </div>
-          {pendingAppsCount > 0 && (
-            <span className="nav-badge-pending">{pendingAppsCount}</span>
-          )}
+  
         </NavLink>
 
         {/* 4. Locker Management (Submenus) */}
@@ -185,6 +203,7 @@ export default function Sidebar() {
           </button>
           {openMenus.accounts && (
             <div className="sidebar-submenu">
+<<<<<<< Updated upstream
               <NavLink to="/accounts?tab=invoices" className="submenu-link">
                 • Invoice List
               </NavLink>
@@ -196,11 +215,22 @@ export default function Sidebar() {
               </NavLink>
               <NavLink to="/accounts?tab=balance-sheet" className="submenu-link">
                 • Monthly Balance Sheet
+=======
+              <NavLink to="/accounts?tab=salary" className="submenu-link">
+                • Salary Management
+              </NavLink>
+              <NavLink to="/accounts?tab=expense" className="submenu-link">
+                • Expense Management
+              </NavLink>
+              <NavLink to="/accounts?tab=income" className="submenu-link">
+                • Income
+>>>>>>> Stashed changes
               </NavLink>
             </div>
           )}
         </div>
 
+<<<<<<< Updated upstream
         {/* 8. Attendance (Submenus) */}
         <div>
           <button
@@ -352,6 +382,8 @@ export default function Sidebar() {
             <span>System Management</span>
           </div>
         </NavLink>
+=======
+>>>>>>> Stashed changes
       </nav>
 
       <div className="sidebar-footer">
