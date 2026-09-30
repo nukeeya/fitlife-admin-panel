@@ -1,15 +1,13 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext();
-
-const DEMO_USER = { email: 'admin@fitlife.com', id: 'demo-user-1' };
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-<<<<<<< Updated upstream
     let mounted = true;
     try {
       supabase.auth.getSession().then(({ data }) => {
@@ -96,36 +94,6 @@ export function AuthProvider({ children }) {
     } catch (err) {
       return { data: null, error: err };
     }
-=======
-    const stored = localStorage.getItem('fitlife_user');
-    if (stored) {
-      try { setUser(JSON.parse(stored)); } catch { /* ignore */ }
-    }
-    setLoading(false);
-  }, []);
-
-  const signIn = async (email, password) => {
-    if (!password || password.length < 1) {
-      return { error: { message: 'Password is required' } };
-    }
-    const u = { ...DEMO_USER, email };
-    setUser(u);
-    localStorage.setItem('fitlife_user', JSON.stringify(u));
-    return { error: null };
-  };
-
-  const signUp = async (email, password) => {
-    const u = { ...DEMO_USER, email };
-    setUser(u);
-    localStorage.setItem('fitlife_user', JSON.stringify(u));
-    return { error: null };
-  };
-
-  const signOut = async () => {
-    setUser(null);
-    localStorage.removeItem('fitlife_user');
-    return { error: null };
->>>>>>> Stashed changes
   };
 
   return (

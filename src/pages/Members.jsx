@@ -1,29 +1,16 @@
 import { useState } from 'react';
-<<<<<<< Updated upstream
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Search, Plus } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
 import { members as fallbackMembers } from '../data/gymData';
 
 export default function Members() {
-=======
-import { useNavigate } from 'react-router-dom';
-import { Search, Plus } from 'lucide-react';
-import { useGymData } from '../context/GymDataContext';
-
-export default function Members() {
-  const { members, addMember } = useGymData();
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [planFilter, setPlanFilter] = useState('All');
->>>>>>> Stashed changes
   const navigate = useNavigate();
   const outletContext = useOutletContext();
   const openAdmission = outletContext?.openAdmission || (() => {});
   const { members: liveMembers } = useGymData();
   const allMembers = liveMembers || fallbackMembers;
 
-<<<<<<< Updated upstream
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [planFilter, setPlanFilter] = useState('All');
@@ -35,17 +22,13 @@ export default function Members() {
       m.phone?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus =
       statusFilter === 'All' || m.status?.toLowerCase() === statusFilter.toLowerCase();
-=======
-  const filtered = members.filter((m) => {
-    const matchesSearch = m.name.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || m.status === statusFilter;
->>>>>>> Stashed changes
     const matchesPlan = planFilter === 'All' || m.plan === planFilter;
     return matchesSearch && matchesStatus && matchesPlan;
   });
 
   return (
     <div className="page">
+      {/* Page Header */}
       <div className="page-header">
         <div className="page-title-group">
           <h1 className="page-title">Member Management</h1>
@@ -53,22 +36,24 @@ export default function Members() {
             Comprehensive member registry, dynamic discount audit trail, trainers & locker assignments.
           </p>
         </div>
+
         <div className="page-actions">
-          <button className="btn btn-primary">
+          <button className="btn btn-primary" onClick={openAdmission}>
             <Plus size={16} />
             Add New Member
           </button>
         </div>
       </div>
 
+      {/* Filter & Search Bar */}
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-card)', padding: '16px 20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-base)' }}>
         <div className="header-search" style={{ width: '320px' }}>
           <Search size={16} color="var(--text-muted)" />
           <input
             type="text"
             placeholder="Search by name, code, phone..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
@@ -121,7 +106,7 @@ export default function Members() {
             {filtered.map((m) => (
               <tr
                 key={m.id}
-                style={{ cursor: 'pointer' }}
+                className="clickable-row"
                 onClick={() => navigate(`/members/${m.id}`)}
               >
                 <td>

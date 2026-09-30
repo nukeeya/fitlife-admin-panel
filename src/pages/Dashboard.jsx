@@ -23,23 +23,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-<<<<<<< Updated upstream
 } from 'recharts';
-=======
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
-import {
-  stats,
-  attendanceData,
-  membershipOverview,
-  members,
-  attendanceRecords,
-} from '../data/gymData';
->>>>>>> Stashed changes
 import { useTheme } from '../context/ThemeContext';
 import { useGymData } from '../context/GymDataContext';
 
@@ -93,32 +77,6 @@ export default function Dashboard() {
     { day: 'Sat', checkins: 210, revenue: 42000 },
     { day: 'Sun', checkins: 154, revenue: 15000 },
   ];
-
-  const primaryColor = theme === 'light' ? '#0066ff' : '#C8FF00';
-  const textColor = theme === 'light' ? '#666666' : '#AAAAAA';
-
-  const chartData = attendanceData;
-
-  const membersIn = attendanceRecords
-    .filter((r) => r.status === 'In')
-    .map((r) => {
-      const member = members.find((m) => m.name === r.name);
-      return {
-        ...r,
-        avatar: member?.avatar || r.name.split(' ').map((n) => n[0]).join(''),
-        memberCode: member?.phone || '',
-        plan: member?.plan || 'N/A',
-        expiry: member?.expiry || '\u2014',
-      };
-    });
-  const membersOut = attendanceRecords.filter((r) => r.status === 'Out');
-
-  const analytics = {
-    expiringTodayCount: stats.expiringSoon,
-  };
-
-  const openAdmission = () => {};
-  const checkOutMember = () => {};
 
   return (
     <div className="page">
@@ -254,6 +212,7 @@ export default function Dashboard() {
           isLime
           changeLabel="Urgent follow-up"
         />
+      </div>
 
       {/* Analytics Charts Row */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginTop: '20px' }}>
@@ -390,19 +349,6 @@ export default function Dashboard() {
             </div>
             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Session completed</span>
           </div>
-          <div style={{ padding: '10px 0' }}>
-            {membersOut.length === 0 ? (
-              <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px' }}>No members have checked out yet.</p>
-            ) : (
-              membersOut.map((rec) => (
-                <div key={rec.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-base)' }}>
-                  <span>{rec.name}</span>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{rec.checkOut}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
 
           <div className="table-responsive">
             <table className="custom-table">

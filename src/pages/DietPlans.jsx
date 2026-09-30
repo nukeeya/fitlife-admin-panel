@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 import React, { useState, useMemo } from 'react';
 import {
   Flame,
@@ -196,77 +195,10 @@ const DEFAULT_BANGLADESHI_MEALS = [
     ]
   }
 ];
-=======
-import { useState } from 'react';
-import { Flame, Users, Clock, ChevronDown, ChevronUp } from 'lucide-react';
-import { dietPlans } from '../data/gymData';
-
-function MacroBar({ label, value, color }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px' }}>
-      <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>{label}</span>
-      <span style={{ fontWeight: 800, color }}>{value}</span>
-    </div>
-  );
-}
-
-function DietPlanCard({ plan }) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-base)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
-      <div style={{ padding: '20px', cursor: 'pointer' }} onClick={() => setExpanded(!expanded)}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-          <div>
-            <h3 style={{ fontSize: '16px', fontWeight: 800 }}>{plan.name}</h3>
-            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{plan.target}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span className="badge badge-primary">🔥 {plan.calories}</span>
-            {expanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-          <MacroBar label="PROTEIN" value={plan.protein} color="#10B981" />
-          <MacroBar label="CARBS" value={plan.carbs} color="#06B6D4" />
-          <MacroBar label="FATS" value={plan.fats} color="#F59E0B" />
-        </div>
-
-        <div style={{ display: 'flex', gap: '16px', marginTop: '12px', fontSize: '12px', color: 'var(--text-muted)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Clock size={14} /><span>{plan.duration}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Users size={14} /><span>{plan.members} MEMBERS</span>
-          </div>
-        </div>
-      </div>
-
-      {expanded && (
-        <div style={{ padding: '0 20px 20px', borderTop: '1px solid var(--border-base)' }}>
-          <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 800, padding: '16px 0 12px', color: 'var(--primary)' }}>
-            <Flame size={16} /> DAILY MEAL PLAN
-          </h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {plan.meals.map((m, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: '12px', fontSize: '12px', padding: '6px 0', borderBottom: '1px solid var(--border-base)' }}>
-                <span style={{ fontWeight: 800, color: 'var(--primary)', minWidth: '70px' }}>{m.time}</span>
-                <span style={{ color: 'var(--text-secondary)' }}>{m.meal}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
->>>>>>> Stashed changes
 
 export default function DietPlans() {
   const { members, branding, dietPlans: savedDietPlans, saveDietPlan } = useGymData();
 
-<<<<<<< Updated upstream
   // Intake & Pipeline Modal States
   const [isIntakeOpen, setIsIntakeOpen] = useState(false);
   const [isPipelineOpen, setIsPipelineOpen] = useState(false);
@@ -464,14 +396,6 @@ export default function DietPlans() {
     <div className="page" style={{ paddingBottom: '3rem' }}>
       {/* Page Header */}
       <div className="page-header" style={{ marginBottom: '1.5rem' }}>
-=======
-  const filtered = filter === 'All' ? dietPlans : dietPlans.filter((p) => p.target === filter);
-  const totalMembers = dietPlans.reduce((sum, p) => sum + p.members, 0);
-
-  return (
-    <div className="page">
-      <div className="page-header">
->>>>>>> Stashed changes
         <div className="page-title-group">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
             <span style={{
@@ -491,11 +415,7 @@ export default function DietPlans() {
           </div>
           <h1 className="page-title">AI Clinical Diet & Nutrition Engine</h1>
           <p className="page-subtitle">
-<<<<<<< Updated upstream
             Mifflin-St Jeor Biometrics • ACSM Multipliers • Peer-Reviewed Sports Nutrition • Authentic Bangladeshi Food Database
-=======
-            {dietPlans.length} PLANS · <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{totalMembers.toLocaleString()}</span> MEMBERS ON PLAN
->>>>>>> Stashed changes
           </p>
         </div>
 
@@ -534,7 +454,6 @@ export default function DietPlans() {
         </div>
       </div>
 
-<<<<<<< Updated upstream
       {/* Top Biometric & Caloric Cards */}
       <div style={{
         display: 'grid',
@@ -813,39 +732,6 @@ export default function DietPlans() {
             </div>
           ))}
         </div>
-=======
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-        {targets.map((t) => (
-          <button
-            key={t}
-            className={`btn btn-sm ${filter === t ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setFilter(t)}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-
-      <div className="stats-grid">
-        <div className="stat-card">
-          <span className="stat-title">TOTAL PLANS</span>
-          <div className="stat-value">{dietPlans.length}</div>
-        </div>
-        <div className="stat-card">
-          <span className="stat-title">ACTIVE MEMBERS</span>
-          <div className="stat-value">{totalMembers.toLocaleString()}</div>
-        </div>
-        <div className="stat-card">
-          <span className="stat-title">MOST POPULAR</span>
-          <div className="stat-value" style={{ fontSize: '20px' }}>Balanced Wellness</div>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {filtered.map((plan) => (
-          <DietPlanCard key={plan.id} plan={plan} />
-        ))}
->>>>>>> Stashed changes
       </div>
 
       {/* Scientific Rationale & Tooltip Explanation */}

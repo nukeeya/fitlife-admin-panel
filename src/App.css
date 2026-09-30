@@ -1440,309 +1440,6 @@
   cursor: not-allowed;
 }
 
-/* =============================================================================
-   STATS GRID & STAT CARDS
-   ============================================================================= */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
-}
-
-.stat-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-base);
-  border-radius: var(--radius-lg);
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  box-shadow: var(--shadow-card);
-  transition: var(--transition-spring);
-  position: relative;
-  overflow: hidden;
-}
-
-.stat-card:hover {
-  transform: translateY(-4px) scale(1.02);
-  border-color: var(--primary);
-  box-shadow: 0 12px 28px -4px var(--primary-glow);
-}
-
-.stat-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.stat-title {
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  letter-spacing: 0.6px;
-}
-
-.stat-icon {
-  color: var(--primary);
-  transition: var(--transition-spring);
-}
-
-.stat-card:hover .stat-icon {
-  transform: scale(1.2) rotate(8deg);
-  color: var(--primary);
-}
-
-.stat-value {
-  font-size: 26px;
-  font-weight: 800;
-  color: var(--text-primary);
-  letter-spacing: -0.5px;
-  line-height: 1;
-}
-
-.stat-value.lime {
-  color: var(--primary);
-}
-
-.stat-change {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.change-positive {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--success);
-}
-
-.change-label {
-  font-size: 11px;
-  color: var(--text-muted);
-  font-weight: 600;
-}
-
-/* =============================================================================
-   CHART CARDS
-   ============================================================================= */
-.chart-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-base);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transition: var(--transition-smooth);
-}
-
-.chart-card.medium {
-  grid-column: span 1;
-}
-
-.chart-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-base);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.chart-title {
-  font-size: 13px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--text-primary);
-}
-
-.chart-body {
-  padding: 20px;
-}
-
-/* =============================================================================
-   DONUT CHART
-   ============================================================================= */
-.donut-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  position: relative;
-}
-
-.donut-center {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -60%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  pointer-events: none;
-}
-
-.donut-total {
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--text-primary);
-  line-height: 1;
-}
-
-.donut-label {
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  letter-spacing: 1px;
-  margin-top: 2px;
-}
-
-/* =============================================================================
-   DATA TABLES (Recent Members, etc.)
-   ============================================================================= */
-.table-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-base);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
-  overflow: hidden;
-  transition: var(--transition-smooth);
-}
-
-.table-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-base);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.view-all-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--primary);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: var(--transition-spring);
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-}
-
-.view-all-btn:hover {
-  background: var(--primary-glow);
-  transform: translateX(2px);
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  text-align: left;
-}
-
-.data-table th {
-  background: var(--bg-surface);
-  color: var(--text-muted);
-  font-weight: 700;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border-base);
-}
-
-.data-table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border-base);
-  color: var(--text-primary);
-  vertical-align: middle;
-  transition: background-color 0.2s ease;
-}
-
-.data-table tr {
-  transition: background-color 0.2s ease;
-}
-
-.data-table tr:hover td {
-  background: var(--bg-surface);
-}
-
-/* =============================================================================
-   STATUS BADGES & AVATAR
-   ============================================================================= */
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.status-badge.active {
-  background: rgba(16, 185, 129, 0.15);
-  color: #10B981;
-}
-
-.status-badge.expiring {
-  background: rgba(245, 158, 11, 0.15);
-  color: #F59E0B;
-}
-
-.status-badge.expired {
-  background: rgba(239, 68, 68, 0.15);
-  color: #EF4444;
-}
-
-.avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-light);
-  color: var(--primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 800;
-  flex-shrink: 0;
-}
-
-/* =============================================================================
-   LOADING & LOGIN
-   ============================================================================= */
-.loading-screen {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  gap: 16px;
-  background: var(--bg-base);
-  color: var(--text-primary);
-}
-
-.spinner {
-  width: 36px;
-  height: 36px;
-  border: 3px solid var(--border-base);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
 .spin {
   animation: spin 1s linear infinite;
 }
@@ -2524,7 +2221,6 @@
 
 /* =============================================================================
    LOGIN & AUTHENTICATION SCREENS
-   LOGIN PAGE
    ============================================================================= */
 .login-page {
   display: flex;
@@ -2559,23 +2255,6 @@
   max-width: 600px;
 }
 
-.login-left {
-  flex: 1;
-  background: linear-gradient(135deg, #080808 0%, #1a1a2e 50%, #0a0a12 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.login-overlay {
-  position: relative;
-  z-index: 2;
-  text-align: center;
-  padding: 40px;
-}
-
 .login-hero-text {
   display: flex;
   flex-direction: column;
@@ -2588,16 +2267,6 @@
   color: var(--primary);
   letter-spacing: 2px;
   line-height: 1;
-  gap: 20px;
-}
-
-.login-brand {
-  font-family: 'Anton', 'Bebas Neue', sans-serif;
-  font-size: 72px;
-  letter-spacing: 8px;
-  color: var(--primary);
-  line-height: 1;
-  text-shadow: 0 0 40px var(--primary-glow);
 }
 
 .login-tagline {
@@ -2606,30 +2275,22 @@
   color: #FFFFFF;
   line-height: 1.2;
   letter-spacing: -0.5px;
-  line-height: 1.3;
-  letter-spacing: 2px;
 }
 
 .login-sub {
   font-size: 16px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.7);
-  color: var(--text-muted);
-  font-weight: 600;
   line-height: 1.5;
 }
 
 .login-right {
   flex: 1;
-  width: 480px;
-  min-width: 400px;
-  background: var(--bg-card);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 40px;
   background: var(--bg-card);
-  border-left: 1px solid var(--border-base);
 }
 
 .login-form-container {
@@ -2642,14 +2303,6 @@
 
 .login-welcome {
   font-size: 26px;
-  max-width: 360px;
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-}
-
-.login-welcome {
-  font-size: 24px;
   font-weight: 800;
   color: var(--text-primary);
   letter-spacing: -0.5px;
@@ -2659,7 +2312,6 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  gap: 18px;
 }
 
 .login-form .form-group {
@@ -2668,8 +2320,7 @@
   gap: 6px;
 }
 
-.login-form .form-group label,
-.login-form label {
+.login-form .form-group label {
   font-size: 12px;
   font-weight: 700;
   color: var(--text-secondary);
@@ -2681,15 +2332,6 @@
   border: 1px solid var(--border-base);
   border-radius: var(--radius-md);
   padding: 12px 16px;
-  letter-spacing: 0.5px;
-}
-
-.login-form input[type='email'],
-.login-form input[type='password'] {
-  background: var(--bg-input);
-  border: 1px solid var(--border-base);
-  border-radius: var(--radius-md);
-  padding: 12px 14px;
   font-size: 14px;
   color: var(--text-primary);
   outline: none;
@@ -2697,10 +2339,6 @@
 }
 
 .login-form .form-group input:focus {
-  width: 100%;
-}
-
-.login-form input:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-glow);
 }
@@ -2754,31 +2392,10 @@
   margin-top: 8px;
 }
 
-.checkbox-label input[type='checkbox'] {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--primary);
-}
-
-.login-btn {
-  width: 100%;
-  padding: 14px;
-  background: var(--primary);
-  color: #000000;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 1px;
-  cursor: pointer;
-  transition: var(--transition-spring);
-}
-
 .login-btn:hover {
   background: var(--primary-hover);
   transform: translateY(-2px);
   box-shadow: 0 4px 15px var(--primary-glow);
-  box-shadow: 0 6px 20px var(--primary-glow);
 }
 
 .login-btn:disabled {
@@ -2795,21 +2412,6 @@
   transition: color var(--transition-smooth);
 }
 
-.login-error {
-  color: var(--danger);
-  font-size: 13px;
-  font-weight: 600;
-  text-align: center;
-}
-
-.forgot-link {
-  font-size: 13px;
-  color: var(--text-muted);
-  text-align: center;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
 .forgot-link:hover {
   color: var(--primary);
 }
@@ -2822,11 +2424,6 @@
 .signup-link {
   font-size: 13px;
   color: var(--text-secondary);
-}
-
-.signup-link {
-  font-size: 13px;
-  color: var(--text-muted);
   text-align: center;
 }
 
@@ -2858,108 +2455,6 @@
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
-}
-
-/* ============================================================================= */
-/* MEMBERSHIP PLANS GRID                                                        */
-/* ============================================================================= */
-.plans-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-}
-
-.plan-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-base);
-  border-radius: var(--radius-lg);
-  padding: 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  position: relative;
-  transition: var(--transition-spring);
-}
-
-.plan-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-card);
-}
-
-.plan-card.popular {
-  border-color: var(--primary);
-  box-shadow: 0 0 20px var(--primary-glow);
-}
-
-.popular-badge {
-  position: absolute;
-  top: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--primary);
-  color: #000;
-  font-size: 10px;
-  font-weight: 800;
-  padding: 4px 14px;
-  border-radius: var(--radius-full);
-  letter-spacing: 0.5px;
-}
-
-.plan-name {
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--text-primary);
-}
-
-.plan-price {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-}
-
-.price-amount {
-  font-size: 32px;
-  font-weight: 800;
-  color: var(--primary);
-}
-
-.price-period {
-  font-size: 14px;
-  color: var(--text-muted);
-}
-
-.plan-features {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.plan-features li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.check-icon {
-  color: #10B981;
-}
-
-.plan-btn {
-  width: 100%;
-  margin-top: auto;
-}
-
-.btn-outline {
-  background: transparent;
-  border: 1px solid var(--border-base);
-  color: var(--text-primary);
-  padding: 10px 16px;
-  border-radius: var(--radius-md);
-  font-size: 13px;
-  font-weight: 700;
   cursor: pointer;
   transition: var(--transition-spring);
 }
@@ -3181,7 +2676,3 @@
   }
 }
 
-.btn-outline:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}

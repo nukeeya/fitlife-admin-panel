@@ -73,37 +73,5 @@ export default function App() {
     </ThemeProvider>
     </AuthProvider>
     </ErrorBoundary>
-  )
-import Payments from './pages/Payments';
-import Memberships from './pages/Memberships';
-import Reports from './pages/Reports';
-
-export default function App() {
-  return (
-    <AuthProvider>
-    <ThemeProvider>
-    <GymDataProvider>
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={<Login />} />
-        <Route element={<Layout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/approvals" element={<ApprovalManagement />} />
-          <Route path="/members" element={<Members />} />
-          <Route path="/members/:id" element={<MemberDetails />} />
-          <Route path="/attendance" element={<Attendance />} />
-          <Route path="/payments" element={<Payments />} />
-          <Route path="/trainers" element={<Trainers />} />
-          <Route path="/employees" element={<Employees />} />
-          <Route path="/memberships" element={<Memberships />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/diet-plans" element={<DietPlans />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
-    </GymDataProvider>
-    </ThemeProvider>
-    </AuthProvider>
   );
 }
