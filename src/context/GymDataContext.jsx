@@ -23,6 +23,7 @@ import {
   mapDietPlan,
   mapWorkoutPlan,
   mapProgressLog,
+  mapShopProduct,
   FALLBACK_DATA,
 } from '../lib/supabaseData';
 
