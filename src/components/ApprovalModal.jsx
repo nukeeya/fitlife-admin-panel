@@ -51,9 +51,9 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
 
   if (!application) return null;
 
-  const handleApprove = (e) => {
+  const handleApprove = async (e) => {
     e.preventDefault();
-    approveApplication({
+    const ok = await approveApplication({
       appId: application.id,
       planId,
       discountType: hasDiscountPrivilege ? discountType : 'flat',
@@ -61,6 +61,11 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
       discountReason,
       paymentMethod,
     });
+
+    if (!ok) {
+      alert('Failed to approve application — the member record could not be saved. Please try again.');
+      return;
+    }
 
     setIsSuccess(true);
     setTimeout(() => {

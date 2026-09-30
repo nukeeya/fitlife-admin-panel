@@ -69,14 +69,14 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
     if (errorMsg) setErrorMsg('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.phone.trim()) {
       setErrorMsg('Please enter both member name and phone number.');
       return;
     }
 
-    addMember({
+    const created = await addMember({
       name: formData.name.trim(),
       email: formData.email.trim(),
       phone: formData.phone.trim(),
@@ -90,6 +90,11 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
       paymentMethod: formData.paymentMethod,
       paidAmount: formData.paidAmount !== '' ? Number(formData.paidAmount) : pricing.netPayable,
     });
+
+    if (!created) {
+      setErrorMsg('Failed to save the member record. Please check your connection and try again.');
+      return;
+    }
 
     setIsSuccess(true);
     setTimeout(() => {

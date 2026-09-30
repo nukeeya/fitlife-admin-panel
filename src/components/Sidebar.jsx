@@ -12,6 +12,7 @@ import {
   MessageSquare,
   Award,
   Megaphone,
+  ShoppingBag,
   Cpu,
   Apple,
   FileSpreadsheet,
@@ -286,7 +287,18 @@ export default function Sidebar() {
           </div>
         </NavLink>
 
-        {/* 12. AI Workout Management */}
+        {/* 12. Gym Shop */}
+        <NavLink
+          to="/gym-shop"
+          className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+        >
+          <div className="sidebar-link-content">
+            <ShoppingBag size={18} />
+            <span>Gym Shop</span>
+          </div>
+        </NavLink>
+
+        {/* 13. AI Workout Management */}
         <NavLink
           to="/ai-workouts"
           className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}

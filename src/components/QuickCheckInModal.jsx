@@ -22,8 +22,10 @@ export default function QuickCheckInModal({ isOpen, onClose }) {
   );
 
   const isMemberCheckedIn = (memberId) => {
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     return attendance.find(
-      (a) => a.memberId === memberId && a.date === '2026-09-01' && a.status === 'In'
+      (a) => a.memberId === memberId && a.date === todayStr && a.status === 'In'
     );
   };
 

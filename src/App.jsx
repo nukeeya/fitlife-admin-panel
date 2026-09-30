@@ -20,6 +20,7 @@ import Memberships from './pages/Memberships';
 import SMSManagement from './pages/SMSManagement';
 import SubscriptionPlans from './pages/SubscriptionPlans';
 import Advertisements from './pages/Advertisements';
+import GymShop from './pages/GymShop';
 import AIWorkoutManagement from './pages/AIWorkoutManagement';
 import DietPlans from './pages/DietPlans';
 import JobPosting from './pages/JobPosting';
@@ -57,6 +58,7 @@ export default function App() {
               <Route path="/sms" element={<SMSManagement />} />
               <Route path="/subscription-plans" element={<SubscriptionPlans />} />
               <Route path="/advertisements" element={<Advertisements />} />
+              <Route path="/gym-shop" element={<GymShop />} />
               <Route path="/ai-workouts" element={<AIWorkoutManagement />} />
               <Route path="/diet-plans" element={<DietPlans />} />
               <Route path="/job-postings" element={<JobPosting />} />

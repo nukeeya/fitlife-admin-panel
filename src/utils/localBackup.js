@@ -1,9 +1,10 @@
 /**
- * Browser-local data backup.
+ * Browser-local data backup (legacy).
  *
- * GymDataContext never talks to Supabase — members, invoices, attendance etc.
- * live only in localStorage. Sign-out wipes those keys, so we export them first
- * or the data is gone for good.
+ * Business data now lives in Supabase and survives sign-out, but old localStorage
+ * backups from the localStorage era may still exist. The Header backup button now
+ * exports the live DB snapshot via refresh() + JSON instead — kept for backward
+ * compatibility so any residual fitlife-* keys can still be recovered.
  */
 
 const PREFIX = 'fitlife-';

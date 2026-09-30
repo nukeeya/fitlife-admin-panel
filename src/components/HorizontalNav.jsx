@@ -12,6 +12,7 @@ import {
   MessageSquare,
   Award,
   Megaphone,
+  ShoppingBag,
   Cpu,
   Apple,
   FileSpreadsheet,
@@ -172,6 +173,11 @@ export default function HorizontalNav() {
       <NavLink to="/advertisements" className="h-nav-link">
         <Megaphone size={16} />
         <span>Ads</span>
+      </NavLink>
+
+      <NavLink to="/gym-shop" className="h-nav-link">
+        <ShoppingBag size={16} />
+        <span>Shop</span>
       </NavLink>
 
       <NavLink to="/ai-workouts" className="h-nav-link">

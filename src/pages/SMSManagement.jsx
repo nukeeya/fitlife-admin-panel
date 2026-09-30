@@ -43,7 +43,7 @@ export default function SMSManagement() {
 
   const [errorNotice, setErrorNotice] = useState('');
 
-  const handleSendCampaign = (e) => {
+  const handleSendCampaign = async (e) => {
     e.preventDefault();
     if (!campaignTitle || !messageText) {
       setErrorNotice('Please fill in both campaign title and broadcast message.');
@@ -51,7 +51,7 @@ export default function SMSManagement() {
     }
     setErrorNotice('');
 
-    const success = sendSMS({
+    const success = await sendSMS({
       title: campaignTitle,
       recipientType,
       message: messageText,
@@ -62,6 +62,8 @@ export default function SMSManagement() {
       setCampaignTitle('');
       setMessageText('');
       setTimeout(() => setIsSuccess(false), 3000);
+    } else {
+      setErrorNotice('Failed to send campaign — please try again.');
     }
   };
 
