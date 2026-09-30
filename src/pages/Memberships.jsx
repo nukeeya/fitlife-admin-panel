@@ -1,7 +1,11 @@
 import { Check } from 'lucide-react';
-import { membershipPlans } from '../data/gymData';
+import { useNavigate } from 'react-router-dom';
+import { useGymData } from '../context/GymDataContext';
 
 export default function Memberships() {
+  const navigate = useNavigate();
+  const { plans } = useGymData();
+
   return (
     <div className="page">
       <div className="page-header">
@@ -12,26 +16,29 @@ export default function Memberships() {
       </div>
 
       <div className="plans-grid">
-        {membershipPlans.map((plan) => (
+        {plans.map((plan) => (
           <div
-            key={plan.name}
+            key={plan.id ?? plan.name}
             className={`plan-card ${plan.popular ? 'popular' : ''}`}
           >
             {plan.popular && <div className="popular-badge">MOST POPULAR</div>}
             <h3 className="plan-name">{plan.name}</h3>
             <div className="plan-price">
-              <span className="price-amount">{plan.price}</span>
+              <span className="price-amount">৳{Number(plan.price || 0).toLocaleString()}</span>
               <span className="price-period">{plan.period}</span>
             </div>
             <ul className="plan-features">
-              {plan.features.map((f) => (
+              {(plan.features || []).map((f) => (
                 <li key={f}>
                   <Check size={16} className="check-icon" />
                   {f}
                 </li>
               ))}
             </ul>
-            <button className={plan.popular ? 'btn-primary plan-btn' : 'btn-outline plan-btn'}>
+            <button
+              className={plan.popular ? 'btn-primary plan-btn' : 'btn-outline plan-btn'}
+              onClick={() => navigate('/subscription-plans')}
+            >
               EDIT PLAN
             </button>
           </div>
