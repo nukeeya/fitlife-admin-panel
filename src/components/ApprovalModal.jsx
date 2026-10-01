@@ -122,7 +122,7 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
               >
                 {plans.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} ({p.period}) — ৳{p.price.toLocaleString()}
+                    {p.name} — ৳{p.price.toLocaleString()}
                   </option>
                 ))}
               </select>

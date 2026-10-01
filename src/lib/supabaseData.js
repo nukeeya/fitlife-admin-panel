@@ -16,18 +16,28 @@ import { supabase } from './supabase';
 export const FALLBACK_DATA = {
   plans: [
     {
-      id: 1, code: 'basic', name: 'Basic', price: 2000, period: '/month', durationDays: 30,
-      features: ['Gym Access', 'Locker Access', 'Group Classes'],
+      id: 1, code: '1-month', name: '1 Month', price: 7000, period: '', durationDays: 30,
+      features: [],
       lockerZone: null, popular: false, vatPercent: 5,
     },
     {
-      id: 2, code: 'standard', name: 'Standard', price: 3500, period: '/month', durationDays: 30,
-      features: ['Gym Access', 'Locker Access', 'Group Classes', 'Cardio Zone', '1 Trainer Session'],
+      id: 2, code: '3-months', name: '3 Months', price: 18000, period: '', durationDays: 90,
+      features: [],
       lockerZone: null, popular: true, vatPercent: 5,
     },
     {
-      id: 3, code: 'premium', name: 'Premium', price: 5000, period: '/month', durationDays: 30,
-      features: ['Full Gym Access', 'Personal Trainer', 'Nutrition Guidance', 'All Classes', 'Premium Locker'],
+      id: 3, code: '6-months', name: '6 Months', price: 30000, period: '', durationDays: 180,
+      features: [],
+      lockerZone: null, popular: false, vatPercent: 5,
+    },
+    {
+      id: 4, code: '1-year', name: '1 Year', price: 50000, period: '', durationDays: 365,
+      features: [],
+      lockerZone: null, popular: false, vatPercent: 5,
+    },
+    {
+      id: 5, code: '1-day-trial', name: '1 Day Trial', price: 500, period: '', durationDays: 1,
+      features: ['No Admission Fee'],
       lockerZone: null, popular: false, vatPercent: 5,
     },
   ],
@@ -163,7 +173,7 @@ export function mapPlan(row, featuresByPlanId = {}) {
     code: row.code,
     name: row.name,
     price: Number(row.base_price),
-    period: row.billing_period === 'yearly' ? '/year' : row.billing_period === 'quarterly' ? '/quarter' : '/month',
+    period: '',
     durationDays: row.duration_days,
     features: featuresByPlanId[row.id] || [],
     lockerZone: null,

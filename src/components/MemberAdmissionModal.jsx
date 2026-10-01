@@ -189,7 +189,8 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
               >
                 {plans.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} ({p.period}) — ৳{p.price.toLocaleString()} ({p.lockerZone} Included)
+                    {p.name} — ৳{p.price.toLocaleString()}
+                    {p.features?.includes('No Admission Fee') ? ' — No Admission Fee' : ''}
                   </option>
                 ))}
               </select>

@@ -8,7 +8,7 @@ export default function Members() {
   const navigate = useNavigate();
   const outletContext = useOutletContext();
   const openAdmission = outletContext?.openAdmission || (() => {});
-  const { members: liveMembers } = useGymData();
+  const { members: liveMembers, plans } = useGymData();
   const allMembers = liveMembers || fallbackMembers;
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -82,10 +82,9 @@ export default function Members() {
               onChange={(e) => setPlanFilter(e.target.value)}
             >
               <option value="All">All Packages</option>
-              <option value="Basic Membership">Basic Membership</option>
-              <option value="Standard Fitness">Standard Fitness</option>
-              <option value="Premium Pro">Premium Pro</option>
-              <option value="Elite VIP Athlete">Elite VIP Athlete</option>
+              {plans.map((plan) => (
+                <option key={plan.id} value={plan.name}>{plan.name}</option>
+              ))}
             </select>
           </div>
         </div>
