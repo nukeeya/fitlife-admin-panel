@@ -183,7 +183,9 @@ export default function ApprovalManagement() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div className="avatar-initials" style={{ width: '40px', height: '40px', fontSize: '13px' }}>
-                      {app.photo || app.name.slice(0, 2).toUpperCase()}
+                      {app.photo?.startsWith('http')
+                        ? <img src={app.photo} alt="" style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }} />
+                        : app.photo || app.name.slice(0, 2).toUpperCase()}
                     </div>
                     <div>
                       <h3 style={{ fontSize: '15px', fontWeight: 800 }}>{app.name}</h3>
@@ -288,7 +290,11 @@ export default function ApprovalManagement() {
                     <tr key={app.id}>
                       <td>
                         <div className="member-cell">
-                          <div className="avatar-initials">{app.photo || app.name.slice(0, 2).toUpperCase()}</div>
+                          <div className="avatar-initials">
+                            {app.photo?.startsWith('http')
+                              ? <img src={app.photo} alt="" style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }} />
+                              : app.photo || app.name.slice(0, 2).toUpperCase()}
+                          </div>
                           <div>
                             <span style={{ fontWeight: 700 }}>{app.name}</span>
                             <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{app.code} • {app.gender}</div>

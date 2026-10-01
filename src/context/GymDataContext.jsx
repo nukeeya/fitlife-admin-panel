@@ -105,6 +105,7 @@ export function GymDataProvider({ children }) {
       ...(raw.members || []).map((row) => row.avatar),
       ...(raw.trainers || []).map((row) => row.avatar),
       ...(raw.employees || []).map((row) => row.avatar),
+      ...(raw.applications || []).map((row) => row.avatar),
     ];
 
     const refreshPhotoUrls = () => resolveProfilePhotoUrls(paths)
@@ -304,8 +305,15 @@ export function GymDataProvider({ children }) {
 
   const applications = useMemo(() => {
     if (!raw?.applications) return INITIAL_DATA.applications;
-    return raw.applications.map((r) => mapApplication(r, plans));
-  }, [raw, plans]);
+    return raw.applications.map((r) => {
+      const application = mapApplication(r, plans);
+      return {
+        ...application,
+        photo: profilePhotoUrls[r.avatar] || application.photo,
+        avatar: r.avatar || null,
+      };
+    });
+  }, [raw, plans, profilePhotoUrls]);
 
   const smsCampaigns = useMemo(() => (raw?.smsCampaigns ? raw.smsCampaigns.map(mapSmsCampaign) : INITIAL_DATA.smsCampaigns), [raw]);
   const ads = useMemo(() => (raw?.ads ? raw.ads.map(mapAd) : INITIAL_DATA.ads), [raw]);
@@ -552,6 +560,7 @@ export function GymDataProvider({ children }) {
       email: app.email,
       phone: app.phone,
       gender: app.gender,
+      avatar: app.avatar,
       planId: planId || app.desiredPlanId || 1,
       discountType: discountType || 'flat',
       discountValue: discountValue || 0,

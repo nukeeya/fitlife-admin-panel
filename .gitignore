@@ -1,4 +1,12 @@
 admission-form
+!admission-form/
+admission-form/*
+!admission-form/src/
+admission-form/src/*
+!admission-form/src/App.css
+!admission-form/src/components/
+admission-form/src/components/*
+!admission-form/src/components/AdmissionForm.jsx
 
 # Logs
 logs

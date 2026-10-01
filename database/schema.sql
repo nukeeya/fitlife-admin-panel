@@ -235,6 +235,7 @@ create table public.admission_submissions (
   plan               text not null,                      -- slug: 'basic' | 'standard' | 'premium'
   first_name         text not null,
   last_name          text not null,
+  avatar             text,
   email              text,
   phone              text not null,
   date_of_birth      date,

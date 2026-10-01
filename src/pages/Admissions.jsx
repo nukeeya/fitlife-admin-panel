@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Search, CheckCircle, XCircle, Loader2, User, Heart, MapPin, Dumbbell, Eye, X, AlertCircle } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Loader2, User, Heart, MapPin, Eye } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { resolveProfilePhotoUrls } from '../lib/profilePhotos';
 import Modal from '../components/common/Modal';
 
 export default function Admissions() {
@@ -21,10 +22,18 @@ export default function Admissions() {
       .order('submitted_at', { ascending: false });
 
     if (!error && data) {
+      let photoUrls = {};
+      try {
+        photoUrls = await resolveProfilePhotoUrls(data.map((submission) => submission.avatar));
+      } catch (photoError) {
+        console.error('[Admissions] profile photo URL resolution failed:', photoError);
+      }
       setSubmissions(data.map(s => ({
         ...s,
         name: `${s.first_name} ${s.last_name}`,
         avatar: `${s.first_name?.[0]}${s.last_name?.[0]}`,
+        avatarPath: s.avatar || null,
+        avatarUrl: photoUrls[s.avatar] || null,
         submittedDate: new Date(s.submitted_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase(),
       })));
     }
@@ -51,6 +60,7 @@ export default function Admissions() {
         expiry: expiryDate.toISOString().split('T')[0],
         status: 'Active',
         visits: 0,
+        avatar: sub.avatarPath,
         blood_group: sub.blood_group,
         height: sub.height,
         weight: sub.weight,
@@ -174,7 +184,11 @@ export default function Admissions() {
               <tr key={s.id}>
                 <td>
                   <div className="member-cell">
-                    <div className="avatar">{s.avatar}</div>
+                    <div className="avatar">
+                      {s.avatarUrl
+                        ? <img src={s.avatarUrl} alt="" style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }} />
+                        : s.avatar}
+                    </div>
                     {s.name}
                   </div>
                 </td>
@@ -277,6 +291,16 @@ export default function Admissions() {
             <div className="detail-section">
               <h3><User size={16} /> PERSONAL INFORMATION</h3>
               <div className="detail-grid">
+                {selectedSubmission.avatarUrl && (
+                  <div className="full-width">
+                    <span className="detail-label">Profile Picture</span>
+                    <img
+                      src={selectedSubmission.avatarUrl}
+                      alt={`${selectedSubmission.name} profile`}
+                      style={{ display: 'block', width: '96px', height: '96px', marginTop: '8px', borderRadius: '50%', objectFit: 'cover' }}
+                    />
+                  </div>
+                )}
                 <div><span className="detail-label">Name</span><span className="detail-value">{selectedSubmission.name}</span></div>
                 <div><span className="detail-label">Email</span><span className="detail-value">{selectedSubmission.email || '—'}</span></div>
                 <div><span className="detail-label">Phone</span><span className="detail-value">{selectedSubmission.phone}</span></div>
