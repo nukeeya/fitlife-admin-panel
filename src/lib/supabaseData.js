@@ -18,27 +18,27 @@ export const FALLBACK_DATA = {
     {
       id: 1, code: '1-month', name: '1 Month', price: 7000, period: '', durationDays: 30,
       features: [],
-      lockerZone: null, popular: false, vatPercent: 5,
+      lockerZone: null, popular: false, vatPercent: 5, status: 'Active',
     },
     {
       id: 2, code: '3-months', name: '3 Months', price: 18000, period: '', durationDays: 90,
       features: [],
-      lockerZone: null, popular: true, vatPercent: 5,
+      lockerZone: null, popular: true, vatPercent: 5, status: 'Active',
     },
     {
       id: 3, code: '6-months', name: '6 Months', price: 30000, period: '', durationDays: 180,
       features: [],
-      lockerZone: null, popular: false, vatPercent: 5,
+      lockerZone: null, popular: false, vatPercent: 5, status: 'Active',
     },
     {
       id: 4, code: '1-year', name: '1 Year', price: 50000, period: '', durationDays: 365,
       features: [],
-      lockerZone: null, popular: false, vatPercent: 5,
+      lockerZone: null, popular: false, vatPercent: 5, status: 'Active',
     },
     {
       id: 5, code: '1-day-trial', name: '1 Day Trial', price: 500, period: '', durationDays: 1,
       features: ['No Admission Fee'],
-      lockerZone: null, popular: false, vatPercent: 5,
+      lockerZone: null, popular: false, vatPercent: 5, status: 'Active',
     },
   ],
   members: [],
@@ -179,6 +179,7 @@ export function mapPlan(row, featuresByPlanId = {}) {
     lockerZone: null,
     popular: !!row.is_popular,
     vatPercent: Number(row.vat_percentage ?? 5),
+    status: row.status || 'Active',
   };
 }
 

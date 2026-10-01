@@ -4,7 +4,7 @@ import { useGymData } from '../context/GymDataContext';
 
 export default function Memberships() {
   const navigate = useNavigate();
-  const { plans } = useGymData();
+  const { activePlans } = useGymData();
 
   return (
     <div className="page">
@@ -16,7 +16,7 @@ export default function Memberships() {
       </div>
 
       <div className="plans-grid">
-        {plans.map((plan) => (
+        {activePlans.map((plan) => (
           <div
             key={plan.id ?? plan.name}
             className={`plan-card ${plan.popular ? 'popular' : ''}`}

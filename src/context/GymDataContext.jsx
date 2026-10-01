@@ -133,6 +133,10 @@ export function GymDataProvider({ children }) {
     }
     return raw.plans.map((r) => mapPlan(r, features));
   }, [raw]);
+  const activePlans = useMemo(
+    () => plans.filter((plan) => plan.status === 'Active'),
+    [plans]
+  );
 
   const roles = useMemo(() => {
     if (!raw?.roles) return INITIAL_DATA.roles;
@@ -424,14 +428,14 @@ export function GymDataProvider({ children }) {
     paidAmount = null,
     avatar = null,
   }) => {
-    const selectedPlan = plans.find((p) => p.id === Number(planId)) || plans[0];
+    const selectedPlan = activePlans.find((p) => p.id === Number(planId)) || activePlans[0];
     if (!selectedPlan || !raw) return null;
 
     const pricing = calculatePricing({
       basePrice: selectedPlan.price,
       discountType,
       discountValue,
-      vatPercent: selectedPlan.vatPercent || 5,
+      vatPercent: 0,
     });
 
     const actualPaid = paidAmount !== null && paidAmount !== undefined ? Number(paidAmount) : pricing.netPayable;
@@ -1106,6 +1110,7 @@ export function GymDataProvider({ children }) {
         applications,
         pendingApprovals,
         plans,
+        activePlans,
         lockers,
         trainers,
         employees,

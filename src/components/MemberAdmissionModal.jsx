@@ -7,7 +7,7 @@ import Modal from './common/Modal';
 
 export default function MemberAdmissionModal({ isOpen, onClose }) {
   const {
-    plans,
+    activePlans,
     lockers,
     trainers,
     calculatePricing,
@@ -22,7 +22,7 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
     email: '',
     phone: '',
     gender: 'Male',
-    planId: plans[0]?.id || 1,
+    planId: activePlans[0]?.id || 1,
     trainerName: 'None',
     lockerNumber: 'None',
     discountType: 'percentage', // 'percentage' | 'flat'
@@ -30,7 +30,7 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
     discountReason: '',
     paymentMethod: 'bKASH',
     paidAmount: '',
-  }), [plans]);
+  }), [activePlans]);
 
   // Form State
   const [formData, setFormData] = useState(defaultFormState);
@@ -55,8 +55,8 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
 
   // Selected plan
   const selectedPlan = useMemo(() => {
-    return plans.find((p) => p.id === Number(formData.planId)) || plans[0];
-  }, [plans, formData.planId]);
+    return activePlans.find((p) => p.id === Number(formData.planId)) || activePlans[0];
+  }, [activePlans, formData.planId]);
 
   // Live Dynamic Price Calculation
   const pricing = useMemo(() => {
@@ -64,7 +64,7 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
       basePrice: selectedPlan?.price || 0,
       discountType: formData.discountType,
       discountValue: hasDiscountPrivilege ? formData.discountValue : 0,
-      vatPercent: selectedPlan?.vatPercent || 5,
+      vatPercent: 0,
     });
   }, [selectedPlan, formData.discountType, formData.discountValue, hasDiscountPrivilege, calculatePricing]);
 
@@ -204,7 +204,7 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
                 value={formData.planId}
                 onChange={(e) => handleChange('planId', Number(e.target.value))}
               >
-                {plans.map((p) => (
+                {activePlans.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name} — ৳{p.price.toLocaleString()}
                     {p.features?.includes('No Admission Fee') ? ' — No Admission Fee' : ''}
@@ -381,11 +381,6 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
             <div className="calc-row">
               <span>Price After Discount:</span>
               <span>৳{pricing.priceAfterDiscount.toLocaleString()}</span>
-            </div>
-
-            <div className="calc-row">
-              <span>Tax / VAT ({pricing.vatPercent}%):</span>
-              <span>+ ৳{pricing.taxAmount.toLocaleString()}</span>
             </div>
 
             <div className="calc-row total-row">

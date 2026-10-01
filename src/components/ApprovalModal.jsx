@@ -5,7 +5,7 @@ import Modal from './common/Modal';
 
 export default function ApprovalModal({ application, isOpen, onClose }) {
   const {
-    plans,
+    activePlans,
     calculatePricing,
     canRoleApplyDiscount,
     currentUserRole,
@@ -13,39 +13,42 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
     approveApplication,
   } = useGymData();
 
-  const [planId, setPlanId] = useState(application?.desiredPlanId || 1);
+  const [planId, setPlanId] = useState(application?.desiredPlanId || activePlans[0]?.id || 1);
   const [discountType, setDiscountType] = useState('percentage');
   const [discountValue, setDiscountValue] = useState(10);
   const [discountReason, setDiscountReason] = useState('Online Application Early Bird Promo');
   const [paymentMethod, setPaymentMethod] = useState('bKASH');
   const [isSuccess, setIsSuccess] = useState(false);
+  const desiredPlanId = application?.desiredPlanId;
+  const hasApplication = Boolean(application);
 
   // Synchronize state with current application to prevent cross-record contamination
   useEffect(() => {
-    if (application && isOpen) {
-      setPlanId(application.desiredPlanId || 1);
+    if (hasApplication && isOpen) {
+      const requestedPlanIsActive = activePlans.some((plan) => plan.id === desiredPlanId);
+      setPlanId(requestedPlanIsActive ? desiredPlanId : activePlans[0]?.id || 1);
       setDiscountType('percentage');
       setDiscountValue(10);
       setDiscountReason('Online Application Early Bird Promo');
       setPaymentMethod('bKASH');
       setIsSuccess(false);
     }
-  }, [application?.id, isOpen]);
+  }, [application?.id, isOpen, desiredPlanId, activePlans, hasApplication]);
 
   const hasDiscountPrivilege = canRoleApplyDiscount();
   const currentRoleObj = roles.find((r) => r.name === currentUserRole);
   const maxDiscountAllowed = currentRoleObj?.maxDiscountPercentage ?? 100;
 
   const selectedPlan = useMemo(() => {
-    return plans.find((p) => p.id === Number(planId)) || plans[0];
-  }, [plans, planId]);
+    return activePlans.find((p) => p.id === Number(planId)) || activePlans[0];
+  }, [activePlans, planId]);
 
   const pricing = useMemo(() => {
     return calculatePricing({
       basePrice: selectedPlan?.price || 0,
       discountType,
       discountValue: hasDiscountPrivilege ? discountValue : 0,
-      vatPercent: selectedPlan?.vatPercent || 5,
+      vatPercent: 0,
     });
   }, [selectedPlan, discountType, discountValue, hasDiscountPrivilege, calculatePricing]);
 
@@ -120,7 +123,7 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
                 value={planId}
                 onChange={(e) => setPlanId(Number(e.target.value))}
               >
-                {plans.map((p) => (
+                {activePlans.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name} — ৳{p.price.toLocaleString()}
                   </option>
@@ -237,11 +240,6 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
             <div className="calc-row">
               <span>Authorized Discount ({pricing.discountType === 'percentage' ? `${pricing.discountValue}%` : `৳${pricing.discountValue}`}):</span>
               <span style={{ color: 'var(--danger)', fontWeight: 700 }}>- ৳{pricing.discountAmount.toLocaleString()}</span>
-            </div>
-
-            <div className="calc-row">
-              <span>Government Tax / VAT ({pricing.vatPercent}%):</span>
-              <span>+ ৳{pricing.taxAmount.toLocaleString()}</span>
             </div>
 
             <div className="calc-row total-row">
