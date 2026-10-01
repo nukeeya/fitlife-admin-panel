@@ -12,7 +12,9 @@ import {
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
 import { supabase } from '../lib/supabase';
+import { uploadProfilePhoto } from '../lib/profilePhotos';
 import Modal from '../components/common/Modal';
+import ProfilePhotoField from '../components/ProfilePhotoField';
 
 export default function Employees() {
   const { employees: liveEmployees, branding, refresh } = useGymData();
@@ -38,6 +40,7 @@ export default function Employees() {
     joined_date: new Date().toISOString().slice(0, 10),
     monthly_salary: '',
     status: 'Active',
+    profilePhoto: null,
   };
   const [formData, setFormData] = useState(initialForm);
 
@@ -110,6 +113,7 @@ export default function Employees() {
       joined_date: emp.joined || new Date().toISOString().slice(0, 10),
       monthly_salary: emp.salary || '',
       status: emp.status || 'Active',
+      profilePhoto: null,
     });
     setShowAddModal(true);
   };
@@ -118,6 +122,7 @@ export default function Employees() {
     e.preventDefault();
     setSubmitting(true);
     try {
+      const uploadedPhoto = await uploadProfilePhoto(formData.profilePhoto, 'employees');
       if (editingEmployee) {
         // Update existing
         const { error } = await supabase
@@ -131,6 +136,7 @@ export default function Employees() {
             joined_date: formData.joined_date,
             monthly_salary: Number(formData.monthly_salary) || 0,
             status: formData.status,
+            ...(uploadedPhoto ? { avatar: uploadedPhoto } : {}),
           })
           .eq('id', editingEmployee.id);
         if (error) throw error;
@@ -138,7 +144,7 @@ export default function Employees() {
       } else {
         // Create new
         const codeSuffix = String(Date.now()).slice(-4);
-        const avatar = formData.name
+        const avatar = uploadedPhoto || formData.name
           .split(' ')
           .map((n) => n[0])
           .join('')
@@ -166,7 +172,7 @@ export default function Employees() {
       setTimeout(() => setNotice(''), 3500);
     } catch (err) {
       console.error('Save employee failed:', err);
-      alert('Failed to save staff profile. Please try again.');
+      alert(err.message || 'Failed to save staff profile. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -358,7 +364,11 @@ export default function Employees() {
                       <tr key={e.id}>
                         <td>
                           <div className="member-cell">
-                            <div className="avatar-initials">{e.avatar || e.name.slice(0, 2).toUpperCase()}</div>
+                            <div className="avatar-initials" style={{ overflow: 'hidden' }}>
+                              {e.avatar?.startsWith('http') ? (
+                                <img src={e.avatar} alt={`${e.name} profile`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : e.avatar || e.name.slice(0, 2).toUpperCase()}
+                            </div>
                             <div className="member-cell-info">
                               <span className="member-cell-name" style={{ fontWeight: 700 }}>{e.name}</span>
                               <span className="member-cell-code">{e.code}</span>
@@ -585,6 +595,11 @@ export default function Employees() {
         size="md"
       >
         <form onSubmit={handleSaveEmployee} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <ProfilePhotoField
+            file={formData.profilePhoto}
+            currentPhotoUrl={editingEmployee?.avatar}
+            onFileChange={(profilePhoto) => setFormData((current) => ({ ...current, profilePhoto }))}
+          />
           <div className="form-group">
             <label className="form-label">Full Name</label>
             <input

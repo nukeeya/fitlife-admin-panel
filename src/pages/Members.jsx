@@ -110,7 +110,11 @@ export default function Members() {
               >
                 <td>
                   <div className="member-cell">
-                    <div className="avatar">{m.avatar}</div>
+                    <div className="avatar" style={{ overflow: 'hidden' }}>
+                      {m.avatar?.startsWith('http') ? (
+                        <img src={m.avatar} alt={`${m.name} profile`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : m.avatar}
+                    </div>
                     {m.name}
                   </div>
                 </td>

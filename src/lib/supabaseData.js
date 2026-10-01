@@ -295,6 +295,7 @@ export function mapMemberBase(row) {
     expiry: row.expiry,
     status: row.status,
     visits: row.visits ?? 0,
+    avatar: row.avatar || initialsOf(`${row.first_name} ${row.last_name}`),
     trainerId: row.trainer_id || null,
     lockerId: row.locker_id || null,
   };
@@ -471,7 +472,7 @@ export async function fetchAllData() {
 
 export const db = {
   // Members ------------------------------------------------------------------
-  async insertMember({ name, email, phone, gender, planName, trainerId, lockerId, status = 'Active', joined, expiry, visits = 0 }) {
+  async insertMember({ name, email, phone, gender, planName, trainerId, lockerId, avatar = null, status = 'Active', joined, expiry, visits = 0 }) {
     const { firstName, lastName } = splitName(name);
     return supabase
       .from('members')
@@ -484,6 +485,7 @@ export const db = {
         plan: planName,
         trainer_id: trainerId || null,
         locker_id: lockerId || null,
+        avatar,
         status,
         joined: joined || todayStr(),
         expiry: expiry || addDays(todayStr(), 30),

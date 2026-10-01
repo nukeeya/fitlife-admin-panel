@@ -14,7 +14,9 @@ import {
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
 import { supabase } from '../lib/supabase';
+import { uploadProfilePhoto } from '../lib/profilePhotos';
 import Modal from '../components/common/Modal';
+import ProfilePhotoField from '../components/ProfilePhotoField';
 
 export default function Trainers() {
   const { trainers: liveTrainers, members: liveMembers, refresh } = useGymData();
@@ -41,6 +43,7 @@ export default function Trainers() {
     rating: '5.0',
     salary: '',
     available: true,
+    profilePhoto: null,
   };
   const [formData, setFormData] = useState(initialForm);
 
@@ -68,6 +71,7 @@ export default function Trainers() {
       rating: String(t.rating || '5.0'),
       salary: t.salary || '',
       available: t.available !== false,
+      profilePhoto: null,
     });
     setShowModal(true);
   };
@@ -76,6 +80,7 @@ export default function Trainers() {
     e.preventDefault();
     setSubmitting(true);
     try {
+      const uploadedPhoto = await uploadProfilePhoto(formData.profilePhoto, 'trainers');
       if (editingTrainer) {
         const { error } = await supabase
           .from('trainers')
@@ -87,13 +92,14 @@ export default function Trainers() {
             rating: Number(formData.rating) || 5.0,
             monthly_salary: Number(formData.salary) || 0,
             is_available: formData.available,
+            ...(uploadedPhoto ? { avatar: uploadedPhoto } : {}),
           })
           .eq('id', editingTrainer.id);
 
         if (error) throw error;
         setNotice(`Coach profile for "${formData.name}" updated successfully.`);
       } else {
-        const avatar = formData.name
+        const avatar = uploadedPhoto || formData.name
           .split(' ')
           .map((n) => n[0])
           .join('')
@@ -120,7 +126,7 @@ export default function Trainers() {
       setTimeout(() => setNotice(''), 3500);
     } catch (err) {
       console.error('Save trainer error:', err);
-      alert('Failed to save coach profile. Check console.');
+      alert(err.message || 'Failed to save coach profile. Check console.');
     } finally {
       setSubmitting(false);
     }
@@ -254,8 +260,10 @@ export default function Trainers() {
             return (
               <div key={t.id} className="trainer-card">
                 <div className="trainer-header">
-                  <div className="avatar-initials" style={{ width: '48px', height: '48px', fontSize: '16px' }}>
-                    {t.avatar || t.name.slice(0, 2).toUpperCase()}
+                  <div className="avatar-initials" style={{ width: '48px', height: '48px', fontSize: '16px', overflow: 'hidden' }}>
+                    {t.avatar?.startsWith('http') ? (
+                      <img src={t.avatar} alt={`${t.name} profile`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : t.avatar || t.name.slice(0, 2).toUpperCase()}
                   </div>
                   <div>
                     <h3 style={{ fontSize: '16px', fontWeight: 800, margin: 0 }}>{t.name}</h3>
@@ -323,6 +331,11 @@ export default function Trainers() {
         size="md"
       >
         <form onSubmit={handleSaveTrainer} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <ProfilePhotoField
+            file={formData.profilePhoto}
+            currentPhotoUrl={editingTrainer?.avatar}
+            onFileChange={(profilePhoto) => setFormData((current) => ({ ...current, profilePhoto }))}
+          />
           <div className="form-group">
             <label className="form-label">Coach Name</label>
             <input

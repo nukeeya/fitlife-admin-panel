@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Calculator, ShieldAlert, Sparkles, CheckCircle2 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
+import ProfilePhotoField from './ProfilePhotoField';
+import { uploadProfilePhoto } from '../lib/profilePhotos';
 import Modal from './common/Modal';
 
 export default function MemberAdmissionModal({ isOpen, onClose }) {
@@ -32,6 +34,7 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
 
   // Form State
   const [formData, setFormData] = useState(defaultFormState);
+  const [profilePhoto, setProfilePhoto] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -39,6 +42,7 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
   useEffect(() => {
     if (isOpen) {
       setFormData(defaultFormState);
+      setProfilePhoto(null);
       setIsSuccess(false);
       setErrorMsg('');
     }
@@ -76,23 +80,32 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
       return;
     }
 
-    const created = await addMember({
-      name: formData.name.trim(),
-      email: formData.email.trim(),
-      phone: formData.phone.trim(),
-      gender: formData.gender,
-      planId: formData.planId,
-      trainerName: formData.trainerName,
-      lockerNumber: formData.lockerNumber,
-      discountType: hasDiscountPrivilege ? formData.discountType : 'flat',
-      discountValue: hasDiscountPrivilege ? formData.discountValue : 0,
-      discountReason: formData.discountReason,
-      paymentMethod: formData.paymentMethod,
-      paidAmount: formData.paidAmount !== '' ? Number(formData.paidAmount) : pricing.netPayable,
-    });
+    let uploadedPhoto = null;
+    try {
+      uploadedPhoto = await uploadProfilePhoto(profilePhoto, 'members');
+      const created = await addMember({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        gender: formData.gender,
+        planId: formData.planId,
+        trainerName: formData.trainerName,
+        lockerNumber: formData.lockerNumber,
+        discountType: hasDiscountPrivilege ? formData.discountType : 'flat',
+        discountValue: hasDiscountPrivilege ? formData.discountValue : 0,
+        discountReason: formData.discountReason,
+        paymentMethod: formData.paymentMethod,
+        paidAmount: formData.paidAmount !== '' ? Number(formData.paidAmount) : pricing.netPayable,
+        avatar: uploadedPhoto,
+      });
 
-    if (!created) {
-      setErrorMsg('Failed to save the member record. Please check your connection and try again.');
+      if (!created) {
+        setErrorMsg('Failed to save the member record. Please check your connection and try again.');
+        return;
+      }
+    } catch (err) {
+      console.error('Member admission failed:', err);
+      setErrorMsg(err.message || 'Failed to save the member record. Please try again.');
       return;
     }
 
@@ -131,6 +144,10 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
 
           {/* Form Fields Grid */}
           <div className="form-grid">
+            <ProfilePhotoField
+              file={profilePhoto}
+              onFileChange={setProfilePhoto}
+            />
             <div className="form-group">
               <label className="form-label">Full Name *</label>
               <input

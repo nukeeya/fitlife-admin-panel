@@ -26,6 +26,7 @@ import {
   mapShopProduct,
   FALLBACK_DATA,
 } from '../lib/supabaseData';
+import { resolveProfilePhotoUrls } from '../lib/profilePhotos';
 
 const GymDataContext = createContext();
 
@@ -56,6 +57,7 @@ export function GymDataProvider({ children }) {
   const [loadError, setLoadError] = useState(null);
   const [branding, setBranding] = useState(DEFAULT_BRANDING);
   const [smsBalanceOverride, setSmsBalanceOverride] = useState(null);
+  const [profilePhotoUrls, setProfilePhotoUrls] = useState({});
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -95,6 +97,33 @@ export function GymDataProvider({ children }) {
     loadAll();
   }, [loadAll, user?.id]);
 
+  useEffect(() => {
+    if (!raw) return undefined;
+
+    let cancelled = false;
+    const paths = [
+      ...(raw.members || []).map((row) => row.avatar),
+      ...(raw.trainers || []).map((row) => row.avatar),
+      ...(raw.employees || []).map((row) => row.avatar),
+    ];
+
+    const refreshPhotoUrls = () => resolveProfilePhotoUrls(paths)
+      .then((urls) => {
+        if (!cancelled) setProfilePhotoUrls(urls);
+      })
+      .catch((err) => {
+        console.error('[GymDataContext] profile photo URL resolution failed:', err);
+        if (!cancelled) setProfilePhotoUrls({});
+      });
+    refreshPhotoUrls();
+    const refreshTimer = window.setInterval(refreshPhotoUrls, 12 * 60 * 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(refreshTimer);
+    };
+  }, [raw]);
+
   // --- Derived camelCase slices (with graceful fallback) ----------------------
   const plans = useMemo(() => {
     if (!raw?.plans) return INITIAL_DATA.plans;
@@ -114,8 +143,24 @@ export function GymDataProvider({ children }) {
     return raw.roles.map((r) => mapRole(r, counts));
   }, [raw]);
 
-  const trainers = useMemo(() => (raw?.trainers ? raw.trainers.map(mapTrainer) : INITIAL_DATA.trainers), [raw]);
-  const employees = useMemo(() => (raw?.employees ? raw.employees.map(mapEmployee) : INITIAL_DATA.employees), [raw]);
+  const trainers = useMemo(() => (raw?.trainers
+    ? raw.trainers.map((row) => {
+      const trainer = mapTrainer(row);
+      return {
+        ...trainer,
+        avatar: profilePhotoUrls[row.avatar] || (row.avatar?.startsWith('http') ? row.avatar : initialsOf(row.name)),
+      };
+    })
+    : INITIAL_DATA.trainers), [raw, profilePhotoUrls]);
+  const employees = useMemo(() => (raw?.employees
+    ? raw.employees.map((row) => {
+      const employee = mapEmployee(row);
+      return {
+        ...employee,
+        avatar: profilePhotoUrls[row.avatar] || (row.avatar?.startsWith('http') ? row.avatar : initialsOf(row.name)),
+      };
+    })
+    : INITIAL_DATA.employees), [raw, profilePhotoUrls]);
 
   const lockers = useMemo(() => {
     if (!raw?.lockers) return INITIAL_DATA.lockers;
@@ -176,7 +221,8 @@ export function GymDataProvider({ children }) {
         ...base,
         name: `${row.first_name} ${row.last_name}`.trim(),
         planId: plan?.id || null,
-        avatar: initialsOf(`${row.first_name} ${row.last_name}`),
+        avatar: profilePhotoUrls[row.avatar]
+          || (row.avatar?.startsWith('http') ? row.avatar : initialsOf(`${row.first_name} ${row.last_name}`)),
         trainer: trainer?.name || 'None',
         lockerNumber: locker?.number || 'None',
         balanceDue: fin?.due || 0,
@@ -184,7 +230,7 @@ export function GymDataProvider({ children }) {
         discountApplied,
       };
     });
-  }, [raw, plans, trainers, lockers]);
+  }, [raw, plans, trainers, lockers, profilePhotoUrls]);
 
   const invoices = useMemo(() => {
     if (!raw?.invoices || !raw?.members) return INITIAL_DATA.invoices;
@@ -376,6 +422,7 @@ export function GymDataProvider({ children }) {
     discountReason = '',
     paymentMethod = 'CASH',
     paidAmount = null,
+    avatar = null,
   }) => {
     const selectedPlan = plans.find((p) => p.id === Number(planId)) || plans[0];
     if (!selectedPlan || !raw) return null;
@@ -409,7 +456,7 @@ export function GymDataProvider({ children }) {
       expiry,
       status: 'Active',
       visits: 0,
-      avatar: initialsOf(name),
+      avatar: avatar || initialsOf(name),
       trainer: trainerName,
       lockerNumber: lockerNumber || 'None',
       balanceDue: due,
@@ -419,7 +466,16 @@ export function GymDataProvider({ children }) {
 
     const result = await commit({
       optimistic: () => {
-        setRaw((prev) => (prev ? { ...prev, members: [{ id: tempId, first_name: name, last_name: '', member_code: 'FLM-…' }, ...prev.members] } : prev));
+        setRaw((prev) => (prev ? {
+          ...prev,
+          members: [{
+            id: tempId,
+            first_name: name,
+            last_name: '',
+            avatar,
+            member_code: 'FLM-…',
+          }, ...prev.members],
+        } : prev));
       },
       persist: async () => {
         // 1. member
@@ -429,6 +485,7 @@ export function GymDataProvider({ children }) {
           phone,
           gender,
           planName: selectedPlan.name,
+          avatar,
           trainerId: trainer?.id,
           lockerId: locker?.id,
           joined,

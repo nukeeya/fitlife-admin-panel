@@ -284,6 +284,7 @@ create table public.members (
 
   trainer_id      bigint references public.trainers(id) on delete set null,
   locker_id       bigint references public.lockers(id) on delete set null,
+  avatar          text,
 
   status          text not null default 'Active' check (status in ('Active','Inactive','Expiring','Expired')),
   joined          date not null default current_date,
