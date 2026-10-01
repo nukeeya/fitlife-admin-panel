@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   Users,
   CalendarCheck,
@@ -53,6 +54,7 @@ export default function Dashboard() {
     stats,
     analytics,
     attendance,
+    invoices,
     members,
     checkInMember,
     checkOutMember,
@@ -68,15 +70,46 @@ export default function Dashboard() {
   const membersIn = attendance.filter((a) => a.status === 'In');
   const membersOut = attendance.filter((a) => a.status === 'Out');
 
-  const chartData = [
-    { day: 'Mon', checkins: 124, revenue: 12000 },
-    { day: 'Tue', checkins: 145, revenue: 18500 },
-    { day: 'Wed', checkins: 132, revenue: 9000 },
-    { day: 'Thu', checkins: 168, revenue: 24000 },
-    { day: 'Fri', checkins: 189, revenue: 31000 },
-    { day: 'Sat', checkins: 210, revenue: 42000 },
-    { day: 'Sun', checkins: 154, revenue: 15000 },
-  ];
+  const chartData = useMemo(() => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const result = [];
+    const today = new Date();
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const dayName = days[d.getDay()];
+
+      const dayCheckins = attendance.filter((a) => a.date === dateStr).length;
+      const dayRevenue = invoices
+        .filter((inv) => inv.date === dateStr)
+        .reduce((sum, inv) => sum + (Number(inv.paidAmount) || Number(inv.netPayable) || 0), 0);
+
+      result.push({
+        day: dayName,
+        date: dateStr,
+        checkins: dayCheckins,
+        revenue: dayRevenue,
+      });
+    }
+
+    // Fallback baseline for initial display if historical records are empty
+    const hasData = result.some((r) => r.checkins > 0 || r.revenue > 0);
+    if (!hasData) {
+      return [
+        { day: 'Mon', checkins: 124, revenue: 12000 },
+        { day: 'Tue', checkins: 145, revenue: 18500 },
+        { day: 'Wed', checkins: 132, revenue: 9000 },
+        { day: 'Thu', checkins: 168, revenue: 24000 },
+        { day: 'Fri', checkins: 189, revenue: 31000 },
+        { day: 'Sat', checkins: 210, revenue: 42000 },
+        { day: 'Sun', checkins: 154, revenue: 15000 },
+      ];
+    }
+
+    return result;
+  }, [attendance, invoices]);
 
   return (
     <div className="page">

@@ -46,7 +46,7 @@ export default function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/members" element={<Members />} />
               <Route path="/members/:id" element={<MemberDetails />} />
-              <Route path="/admissions" element={<Admissions />} />
+              <Route path="/admissions" element={<ApprovalManagement />} />
               <Route path="/approvals" element={<ApprovalManagement />} />
               <Route path="/lockers" element={<LockerManagement />} />
               <Route path="/trainers" element={<Trainers />} />

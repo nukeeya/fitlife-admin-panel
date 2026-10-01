@@ -125,7 +125,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
         >
           <div className="sidebar-link-content">
             <UserCheck size={18} />
-            <span>Approval Management</span>
+            <span>Admissions & Approvals</span>
           </div>
           {pendingAppsCount > 0 && (
             <span className="nav-badge-pending">{pendingAppsCount}</span>
