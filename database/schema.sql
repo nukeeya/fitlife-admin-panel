@@ -252,7 +252,10 @@ create table public.admission_submissions (
   rejection_reason   text,   -- shown in ApprovalManagement after reject
   submitted_at       timestamptz not null default now(),
   reviewed_at        timestamptz,
-  reviewed_by        bigint references public.users(id)
+  reviewed_by        bigint references public.users(id),
+  -- required: trg_submissions_updated_at (section 12) assigns NEW.updated_at on
+  -- every UPDATE — without this column every approve/reject write fails.
+  updated_at         timestamptz default now()
 );
 
 -- Member record. Created by staff approving an admission_submissions row.

@@ -480,7 +480,7 @@ export function GymDataProvider({ children }) {
   // --- Applications --------------------------------------------------------------
   const approveApplication = async ({ appId, planId, discountType, discountValue, discountReason, paymentMethod }) => {
     const app = applications.find((a) => a.id === appId);
-    if (!app) return false;
+    if (!app) return { ok: false, message: 'Application not found (it may already be reviewed).' };
 
     const created = await addMember({
       name: app.name,
@@ -496,34 +496,53 @@ export function GymDataProvider({ children }) {
 
     // Don't mark Approved unless the member + invoice actually persisted —
     // otherwise the application would show approved with no member record.
-    if (!created) return false;
+    if (!created) return { ok: false, message: 'Member/invoice records could not be saved — see the browser console.' };
 
-    await db.updateApplication(appId, { status: 'Approved', reviewed_at: new Date().toISOString() });
+    const { error: approveErr } = await db.updateApplication(appId, {
+      status: 'Approved',
+      reviewed_at: new Date().toISOString(),
+    });
+    if (approveErr) {
+      // Surface the failure instead of silently leaving the row Pending.
+      console.error('[GymDataContext] Could not mark application Approved:', approveErr.message);
+      await loadAll();
+      return { ok: false, message: approveErr.message };
+    }
     await loadAll();
-    return true;
+    return { ok: true };
   };
 
   const rejectApplication = async (appId, reason = 'Did not meet criteria') => {
-    await commit({
-      optimistic: () =>
-        setRaw((prev) =>
-          prev
-            ? {
-                ...prev,
-                applications: prev.applications.map((a) =>
-                  a.id === appId ? { ...a, status: 'Rejected', rejection_reason: reason } : a
-                ),
-              }
-            : prev
-        ),
-      persist: () =>
-        db.updateApplication(appId, {
-          status: 'Rejected',
-          reviewed_at: new Date().toISOString(),
-          rejection_reason: reason,
-        }),
-      reloadAll: true,
-    });
+    try {
+      const result = await commit({
+        optimistic: () =>
+          setRaw((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  applications: prev.applications.map((a) =>
+                    a.id === appId ? { ...a, status: 'Rejected', rejection_reason: reason } : a
+                  ),
+                }
+              : prev
+          ),
+        persist: () =>
+          db.updateApplication(appId, {
+            status: 'Rejected',
+            reviewed_at: new Date().toISOString(),
+            rejection_reason: reason,
+          }),
+        reloadAll: true,
+      });
+      // commit() already reloaded (rolled back) on a DB error — report it so the
+      // UI can tell the user instead of the application silently staying Pending.
+      if (result?.error) return { ok: false, message: result.error.message };
+      return { ok: true };
+    } catch (err) {
+      console.error('[GymDataContext] Reject failed:', err);
+      await loadAll();
+      return { ok: false, message: err?.message || 'Unexpected error' };
+    }
   };
 
   // --- Attendance --------------------------------------------------------------------

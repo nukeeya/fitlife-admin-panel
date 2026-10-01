@@ -28,10 +28,21 @@ export default function ApprovalManagement() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleReject = (app) => {
+  const handleReject = async (app) => {
     const reason = prompt(`Enter rejection reason for ${app.name}:`, 'Incomplete documentation');
-    if (reason) {
-      rejectApplication(app.id, reason);
+    if (!reason) return;
+
+    try {
+      const res = await rejectApplication(app.id, reason);
+      if (!res?.ok) {
+        alert(
+          `Failed to reject ${app.name} — ${res?.message || 'unexpected error'}\n\nThe application was left as Pending. Please check the browser console for details.`
+        );
+      }
+    } catch (err) {
+      alert(
+        `Failed to reject ${app.name} — ${err?.message || 'unexpected error'}\n\nThe application was left as Pending. Please check the browser console for details.`
+      );
     }
   };
 
@@ -49,7 +60,7 @@ export default function ApprovalManagement() {
 
       {/* Filter & Search */}
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-card)', padding: '16px 20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-base)' }}>
-        <div className="header-search" style={{ width: '320px' }}>
+        <div className="header-search" style={{ flex: '1 1 240px', maxWidth: 360 }}>
           <Search size={16} color="var(--text-muted)" />
           <input
             type="text"
@@ -73,7 +84,7 @@ export default function ApprovalManagement() {
       </div>
 
       {/* Applications Cards Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
         {filtered.length === 0 ? (
           <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-base)' }}>
             No {statusFilter.toLowerCase()} applications found.

@@ -53,25 +53,34 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
 
   const handleApprove = async (e) => {
     e.preventDefault();
-    const ok = await approveApplication({
-      appId: application.id,
-      planId,
-      discountType: hasDiscountPrivilege ? discountType : 'flat',
-      discountValue: hasDiscountPrivilege ? discountValue : 0,
-      discountReason,
-      paymentMethod,
-    });
+    try {
+      const res = await approveApplication({
+        appId: application.id,
+        planId,
+        discountType: hasDiscountPrivilege ? discountType : 'flat',
+        discountValue: hasDiscountPrivilege ? discountValue : 0,
+        discountReason,
+        paymentMethod,
+      });
 
-    if (!ok) {
-      alert('Failed to approve application — the member record could not be saved. Please try again.');
-      return;
+      if (!res?.ok) {
+        alert(
+          `Failed to approve application — ${res?.message || 'the records could not be saved.'}\n\nThe application was left as Pending. Please check the browser console for details and try again.`
+        );
+        return;
+      }
+
+      setIsSuccess(true);
+      setTimeout(() => {
+        setIsSuccess(false);
+        onClose();
+      }, 1200);
+    } catch (err) {
+      console.error('[ApprovalModal] approve failed:', err);
+      alert(
+        `Failed to approve application — ${err?.message || 'unexpected error'}\n\nThe application was left as Pending. Please check the browser console for details.`
+      );
     }
-
-    setIsSuccess(true);
-    setTimeout(() => {
-      setIsSuccess(false);
-      onClose();
-    }, 1200);
   };
 
   return (

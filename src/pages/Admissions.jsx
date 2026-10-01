@@ -61,10 +61,11 @@ export default function Admissions() {
       if (memberError) throw memberError;
 
       // Update submission status
-      await supabase
+      const { error: statusError } = await supabase
         .from('admission_submissions')
         .update({ status: 'Approved', reviewed_at: new Date().toISOString() })
         .eq('id', sub.id);
+      if (statusError) throw statusError;
 
       // Refresh list
       await fetchSubmissions();
@@ -79,10 +80,11 @@ export default function Admissions() {
   async function handleReject(sub) {
     setProcessing(sub.id);
     try {
-      await supabase
+      const { error: statusError } = await supabase
         .from('admission_submissions')
         .update({ status: 'Rejected', reviewed_at: new Date().toISOString() })
         .eq('id', sub.id);
+      if (statusError) throw statusError;
 
       await fetchSubmissions();
       setSelectedSubmission(null);
