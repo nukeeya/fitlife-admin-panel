@@ -351,12 +351,16 @@ export function GymDataProvider({ children }) {
   };
 
   // --- Current role -----------------------------------------------------------
-  const [currentUserRole, setCurrentUserRole] = useState('Super Admin');
+  const ADMIN_ROLE_NAME = 'Super Admin';
+  const [currentUserRole, setCurrentRole] = useState(ADMIN_ROLE_NAME);
 
-  const canRoleApplyDiscount = () => {
-    const roleObj = roles.find((r) => r.name === currentUserRole);
-    return roleObj ? roleObj.canApplyDiscount : true;
+  const setCurrentUserRole = (role) => {
+    if (role === ADMIN_ROLE_NAME) {
+      setCurrentRole(role);
+    }
   };
+
+  const canRoleApplyDiscount = () => currentUserRole === ADMIN_ROLE_NAME;
 
   // --- addMember: creates member + discount + invoice (+ optional locker) ------
   const addMember = async ({

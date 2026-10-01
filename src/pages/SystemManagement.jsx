@@ -1,15 +1,8 @@
 import { useState } from 'react';
 import {
   ShieldCheck,
-  ShieldAlert,
-  Percent,
   Check,
-  X,
-  Plus,
-  Users,
-  Lock,
   Building2,
-  Image as ImageIcon,
   Flame,
   Dumbbell,
   Award,
@@ -19,9 +12,6 @@ import {
   RotateCcw,
   CheckCircle2,
   Sparkles,
-  Phone,
-  Mail,
-  MapPin,
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
 
@@ -30,7 +20,6 @@ export default function SystemManagement() {
     roles,
     updateRolePermission,
     currentUserRole,
-    setCurrentUserRole,
     branding,
     updateBranding,
     resetBranding,
@@ -457,26 +446,13 @@ export default function SystemManagement() {
           ========================================================================= */}
       {activeTab === 'roles' && (
         <>
-          {/* Active Role Simulation Switcher */}
           <div style={{ background: 'var(--bg-card)', padding: '16px 20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-base)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <ShieldCheck size={20} color="var(--primary)" />
               <div>
-                <span style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)' }}>CURRENT SIMULATED USER ROLE:</span>
+                <span style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)' }}>CURRENT USER ROLE:</span>
                 <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--primary)' }}>{currentUserRole}</div>
               </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              {roles.map((r) => (
-                <button
-                  key={r.id}
-                  className={`btn btn-sm ${currentUserRole === r.name ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => setCurrentUserRole(r.name)}
-                >
-                  Simulate: {r.name}
-                </button>
-              ))}
             </div>
           </div>
 

@@ -7,7 +7,6 @@ import {
   MessageSquare,
   UserCheck,
   Bell,
-  Shield,
   LogOut,
   Menu,
   Plus,
@@ -20,9 +19,8 @@ import { downloadBackup, hasBusinessData } from '../utils/localBackup';
 
 export default function Header({ onOpenQuickCheckIn, onOpenAdmission, onToggleSidebar }) {
   const { theme, toggleTheme, setIsCustomizerOpen } = useTheme();
-  const { smsBalance, currentUserRole, setCurrentUserRole, roles } = useGymData();
+  const { smsBalance } = useGymData();
   const { user, signOut } = useAuth();
-  const [showRoleSelect, setShowRoleSelect] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
@@ -95,65 +93,6 @@ export default function Header({ onOpenQuickCheckIn, onOpenAdmission, onToggleSi
         <div className="badge-sms" title="Remaining SMS Campaign Credits">
           <MessageSquare size={14} />
           <span className="btn-label">{smsBalance.toLocaleString()} SMS</span>
-        </div>
-
-        {/* Role Switcher */}
-        <div style={{ position: 'relative' }}>
-          <button
-            className="badge-role"
-            onClick={() => setShowRoleSelect(!showRoleSelect)}
-            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-            title="Switch User Role to test Role-Based Discount Privileges"
-          >
-            <Shield size={12} />
-            <span className="btn-label">{currentUserRole}</span>
-          </button>
-
-          {showRoleSelect && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '100%',
-                right: 0,
-                marginTop: '8px',
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border-base)',
-                borderRadius: '8px',
-                padding: '6px',
-                minWidth: '180px',
-                zIndex: 100,
-                boxShadow: 'var(--shadow-card)',
-              }}
-            >
-              <div style={{ fontSize: '11px', fontWeight: 800, padding: '4px 8px', color: 'var(--text-muted)' }}>
-                SWITCH ROLE (RBAC):
-              </div>
-              {roles.map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => {
-                    setCurrentUserRole(r.name);
-                    setShowRoleSelect(false);
-                  }}
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '6px 8px',
-                    fontSize: '12px',
-                    fontWeight: r.name === currentUserRole ? 700 : 500,
-                    color: r.name === currentUserRole ? 'var(--primary)' : 'var(--text-primary)',
-                    background: 'transparent',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {r.name} {r.canApplyDiscount ? '✓ Discount' : '✗ No Disc'}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Dark/Light Theme Toggle */}
