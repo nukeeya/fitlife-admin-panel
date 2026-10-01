@@ -215,7 +215,7 @@ export default function Dashboard() {
       </div>
 
       {/* Analytics Charts Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginTop: '20px' }}>
+      <div className="split-grid" style={{ marginTop: '20px' }}>
         <div style={{ background: 'var(--bg-card)', padding: '20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-base)' }}>
           <h2 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '14px' }}>
             Weekly Check-Ins & Revenue Trend

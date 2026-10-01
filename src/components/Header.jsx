@@ -9,6 +9,8 @@ import {
   Bell,
   Shield,
   LogOut,
+  Menu,
+  Plus,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useGymData } from '../context/GymDataContext';
@@ -16,7 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import ConfirmDialog from './common/ConfirmDialog';
 import { downloadBackup, hasBusinessData } from '../utils/localBackup';
 
-export default function Header({ onOpenQuickCheckIn, onOpenAdmission }) {
+export default function Header({ onOpenQuickCheckIn, onOpenAdmission, onToggleSidebar }) {
   const { theme, toggleTheme, setIsCustomizerOpen } = useTheme();
   const { smsBalance, currentUserRole, setCurrentUserRole, roles } = useGymData();
   const { user, signOut } = useAuth();
@@ -52,6 +54,15 @@ export default function Header({ onOpenQuickCheckIn, onOpenAdmission }) {
   return (
     <header className="app-header">
       <div className="header-left">
+        {/* Mobile: opens the off-canvas sidebar drawer */}
+        <button
+          className="header-icon-btn menu-toggle"
+          onClick={onToggleSidebar}
+          title="Open navigation menu"
+        >
+          <Menu size={18} />
+        </button>
+
         <div className="header-search">
           <Search size={16} color="var(--text-muted)" />
           <input
@@ -65,7 +76,8 @@ export default function Header({ onOpenQuickCheckIn, onOpenAdmission }) {
           onClick={onOpenAdmission}
           title="New Member Admission"
         >
-          + New Admission
+          <Plus size={14} />
+          <span className="btn-label">New Admission</span>
         </button>
 
         <button
@@ -74,7 +86,7 @@ export default function Header({ onOpenQuickCheckIn, onOpenAdmission }) {
           title="Quick Member Check-In"
         >
           <UserCheck size={14} />
-          Quick Check-In
+          <span className="btn-label">Quick Check-In</span>
         </button>
       </div>
 
@@ -82,7 +94,7 @@ export default function Header({ onOpenQuickCheckIn, onOpenAdmission }) {
         {/* SMS Balance Indicator */}
         <div className="badge-sms" title="Remaining SMS Campaign Credits">
           <MessageSquare size={14} />
-          <span>{smsBalance.toLocaleString()} SMS</span>
+          <span className="btn-label">{smsBalance.toLocaleString()} SMS</span>
         </div>
 
         {/* Role Switcher */}
@@ -94,7 +106,7 @@ export default function Header({ onOpenQuickCheckIn, onOpenAdmission }) {
             title="Switch User Role to test Role-Based Discount Privileges"
           >
             <Shield size={12} />
-            {currentUserRole}
+            <span className="btn-label">{currentUserRole}</span>
           </button>
 
           {showRoleSelect && (

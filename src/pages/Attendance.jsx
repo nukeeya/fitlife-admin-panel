@@ -107,7 +107,7 @@ export default function Attendance() {
               <span className="badge badge-success">{filteredPresent.length} Present</span>
             </div>
 
-            <div className="header-search" style={{ width: '260px' }}>
+            <div className="header-search" style={{ flex: '1 1 220px', maxWidth: 360 }}>
               <Search size={14} color="var(--text-muted)" />
               <input
                 type="text"

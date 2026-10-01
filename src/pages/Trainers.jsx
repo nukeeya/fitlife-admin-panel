@@ -33,7 +33,7 @@ export default function Trainers() {
 
       {/* Search & Stats */}
       <div style={{ background: 'var(--bg-card)', padding: '16px 20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-base)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div className="header-search" style={{ width: '320px' }}>
+        <div className="header-search" style={{ flex: '1 1 240px', maxWidth: 360 }}>
           <Search size={16} color="var(--text-muted)" />
           <input
             type="text"

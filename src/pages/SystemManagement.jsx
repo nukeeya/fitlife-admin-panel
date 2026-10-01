@@ -169,7 +169,7 @@ export default function SystemManagement() {
           TAB 1: BRAND IDENTITY & LOGO SETTINGS
           ========================================================================= */}
       {activeTab === 'branding' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px', alignItems: 'start' }}>
+        <div className="split-grid" style={{ gap: '24px', alignItems: 'start' }}>
           {/* Form */}
           <div className="activity-card" style={{ padding: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>

@@ -219,7 +219,7 @@ export default function GymShop() {
 
       {/* Filter Bar */}
       <div className="filter-bar">
-        <div className="header-search" style={{ width: '300px' }}>
+        <div className="header-search" style={{ flex: '1 1 240px', maxWidth: 360 }}>
           <Search size={16} color="var(--text-muted)" />
           <input
             type="text"
@@ -281,7 +281,7 @@ export default function GymShop() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
               gap: '20px',
               padding: '20px',
             }}

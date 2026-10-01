@@ -84,7 +84,7 @@ export default function SMSManagement() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '20px' }}>
+      <div className="split-grid">
         {/* Campaign Composer */}
         <div className="activity-card" style={{ padding: '24px' }}>
           <h2 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>

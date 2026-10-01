@@ -657,7 +657,7 @@ export default function DietPlans() {
               </div>
 
               {/* Meal Food Items List */}
-              <div style={{ padding: '0.5rem 1.25rem' }}>
+              <div style={{ padding: '0.5rem 1.25rem', overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
                   <thead>
                     <tr style={{ color: 'var(--text-muted)', fontSize: '0.76rem', textTransform: 'uppercase', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>

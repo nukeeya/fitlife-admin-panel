@@ -123,7 +123,7 @@ export default function Reports() {
       </div>
 
       {/* Bottom Row: Member Growth & Plan Breakdown */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
+      <div className="split-grid">
         <div style={{ background: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-base)' }}>
           <h2 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '16px' }}>
             Cumulative Member Growth Cohort

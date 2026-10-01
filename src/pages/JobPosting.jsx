@@ -95,7 +95,7 @@ export default function JobPosting() {
       </div>
 
       {/* Active Openings Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
         {jobList.map((job) => (
           <div
             key={job.id}

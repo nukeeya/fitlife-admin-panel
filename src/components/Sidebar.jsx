@@ -24,11 +24,12 @@ import {
   Moon,
   ChevronDown,
   ChevronRight,
+  X,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useGymData } from '../context/GymDataContext';
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen = false, onClose }) {
   const { theme, toggleTheme } = useTheme();
   const { applications, branding } = useGymData();
   const location = useLocation();
@@ -69,7 +70,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${isOpen ? ' is-open' : ''}`}>
       {/* Brand Header */}
       <div className="sidebar-logo">
         <div className="logo-badge">
@@ -79,10 +80,20 @@ export default function Sidebar() {
           <span className="logo-text">{branding?.gymName || 'FITLIFE'}</span>
           <span className="logo-sub">{branding?.tagline || 'ENTERPRISE GYM'}</span>
         </div>
+        {/* Close button — only visible in the mobile drawer */}
+        <button className="sidebar-close" onClick={onClose} title="Close menu">
+          <X size={18} />
+        </button>
       </div>
 
       {/* Navigation List */}
-      <nav className="sidebar-nav">
+      {/* On mobile the sidebar is an overlay: tapping any link closes it */}
+      <nav
+        className="sidebar-nav"
+        onClick={(e) => {
+          if (e.target.closest('a')) onClose?.();
+        }}
+      >
         <span className="nav-section-title">Core Operations</span>
 
         {/* 1. Dashboard */}

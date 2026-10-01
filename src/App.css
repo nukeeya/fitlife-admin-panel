@@ -5,7 +5,8 @@
 .app-layout {
   display: flex;
   height: 100vh;
-  width: 100vw;
+  height: 100dvh; /* mobile browser chrome that resizes the viewport */
+  width: 100%;
   overflow: hidden;
   background-color: var(--bg-base);
 }
@@ -20,6 +21,7 @@
 
 .main-wrapper {
   flex: 1;
+  min-width: 0; /* allow flex child to shrink so inner grids can scroll */
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -724,6 +726,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 /* =============================================================================
@@ -2225,7 +2228,8 @@
 .login-page {
   display: flex;
   height: 100vh;
-  width: 100vw;
+  height: 100dvh;
+  width: 100%;
   overflow: hidden;
   background-color: var(--bg-base);
 }
@@ -2649,7 +2653,7 @@
   align-items: center;
   justify-content: center;
   height: 100vh;
-  width: 100vw;
+  width: 100%;
   background-color: var(--bg-base);
   color: var(--text-primary);
   gap: 16px;
@@ -2674,5 +2678,216 @@
   .charts-row {
     grid-template-columns: 1fr;
   }
+}
+
+/* =============================================================================
+   RESPONSIVE / ADAPTIVE LAYOUT
+   Breakpoints: 1200 / 1100 / 992 / 768 / 560 / 400
+   ============================================================================= */
+
+/* Hidden on desktop; shown from the 992px breakpoint down */
+.menu-toggle,
+.sidebar-close,
+.sidebar-backdrop {
+  display: none;
+}
+
+/* No drawer (and therefore no toggle) when the horizontal nav style is active */
+.layout-horizontal .menu-toggle {
+  display: none;
+}
+
+/* Two-column split used by Dashboard / Reports / SMS / System pages —
+   collapses to one column on tablets and phones. */
+.split-grid {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .split-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- Large laptops & small desktops ------------------------------------ */
+@media (max-width: 1200px) {
+  .header-search { width: 220px; }
+  .search-box { width: 220px; }
+  /* The email under the user's name is the first thing to go */
+  .user-profile-pill > div:last-child > span:last-child { display: none; }
+}
+
+@media (max-width: 1100px) {
+  /* SMS credit balance lives on the SMS page — drop it from the header */
+  .badge-sms { display: none; }
+}
+
+/* ---- Tablets: sidebar becomes an off-canvas drawer ---------------------- */
+@media (max-width: 992px) {
+  .menu-toggle { display: flex; }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    transform: translateX(-100%);
+    visibility: hidden;
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.4);
+    transition: transform 0.25s ease, visibility 0.25s ease;
+  }
+
+  .sidebar.is-open {
+    transform: translateX(0);
+    visibility: visible;
+  }
+
+  [dir="rtl"] .sidebar {
+    left: auto;
+    right: 0;
+    transform: translateX(100%);
+  }
+
+  [dir="rtl"] .sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(2px);
+    z-index: 45;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .sidebar-close {
+    display: flex;
+    margin-left: auto;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border: 1px solid var(--border-base);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  .header-search { display: none; }
+  .user-profile-pill { display: none; }
+  .main-content { padding: 18px; }
+}
+
+/* ---- Small tablets & large phones --------------------------------------- */
+@media (max-width: 768px) {
+  .app-header {
+    height: 60px;
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .header-left,
+  .header-right { gap: 8px; min-width: 0; }
+
+  /* Action buttons collapse to icons */
+  .btn-label { display: none; }
+
+  /* Badges that no longer fit */
+  .badge-role { display: none; }
+
+  .sidebar-logo { height: 60px; padding: 0 14px; }
+
+  .main-content { padding: 14px; }
+  .page { gap: 16px; }
+  .page-title { font-size: 20px; }
+  .page-subtitle { font-size: 12px; }
+
+  .horizontal-nav-bar { padding: 0 12px; }
+
+  /* Forms & detail grids stack into one column */
+  .form-grid { grid-template-columns: 1fr; }
+  .detail-grid { grid-template-columns: 1fr; }
+  .detail-grid .full-width { grid-column: auto; }
+  .info-grid { grid-template-columns: 1fr; }
+  .info-item.full-width { grid-column: auto; }
+
+  /* Modals become near full-screen sheets */
+  .modal-overlay { padding: 12px; }
+  .modal-content { max-height: 94vh; }
+  .modal-header { padding: 14px 16px; }
+  .modal-body { padding: 16px; gap: 14px; }
+  .modal-footer { padding: 12px 16px; flex-wrap: wrap; justify-content: stretch; }
+  .modal-footer .btn { flex: 1; }
+
+  /* Tables scroll horizontally instead of crushing every column */
+  .data-table,
+  .custom-table { min-width: 600px; }
+  .table-card { padding: 14px; }
+
+  .header-actions { flex-wrap: wrap; }
+  .search-box { width: 100%; max-width: 340px; }
+
+  .charts-row { gap: 14px; }
+
+  .login-right { padding: 24px; }
+}
+
+/* ---- Phones ------------------------------------------------------------- */
+@media (max-width: 560px) {
+  .main-content { padding: 12px; }
+  .page { gap: 14px; }
+  .page-title { font-size: 18px; }
+
+  .header-icon-btn { width: 34px; height: 34px; }
+
+  .dashboard-metrics-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+
+  .stat-widget { padding: 14px; }
+  .stat-widget-value { font-size: 20px; }
+  .stat-card { padding: 14px; min-height: 100px; }
+  .stat-card-value,
+  .stat-value { font-size: 22px; }
+
+  .chart-card,
+  .table-card { padding: 14px; }
+
+  .modal-overlay { padding: 8px; }
+  .modal-content { border-radius: 14px; }
+  .modal-header h2 { font-size: 15px; }
+
+  .customizer-panel { width: 100%; }
+
+  .plan-card { padding: 20px; }
+  .price-amount { font-size: 26px; }
+
+  .diet-card-header,
+  .diet-meals { padding: 16px; }
+
+  .page-actions { width: 100%; }
+  .page-actions .btn { flex: 1; }
+
+  .login-right { padding: 20px 14px; }
+  .login-welcome { font-size: 22px; }
+}
+
+/* ---- Very small phones -------------------------------------------------- */
+@media (max-width: 400px) {
+  .main-content { padding: 10px; }
+  .btn { padding: 8px 12px; font-size: 12px; }
+  .btn-sm { padding: 5px 8px; }
+  .stat-widget-value { font-size: 18px; }
+  .modal-body { padding: 14px 12px; }
 }
 

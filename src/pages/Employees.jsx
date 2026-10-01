@@ -38,7 +38,7 @@ export default function Employees() {
 
       {/* Filter and Stats */}
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-card)', padding: '16px 20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-base)' }}>
-        <div className="header-search" style={{ width: '300px' }}>
+        <div className="header-search" style={{ flex: '1 1 240px', maxWidth: 360 }}>
           <Search size={16} color="var(--text-muted)" />
           <input
             type="text"

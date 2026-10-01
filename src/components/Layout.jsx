@@ -12,19 +12,28 @@ export default function Layout() {
   const { navStyle } = useTheme();
   const [isAdmissionOpen, setIsAdmissionOpen] = useState(false);
   const [isCheckInOpen, setIsCheckInOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const isVertical = navStyle === 'vertical';
 
   return (
     <div className={`app-layout ${isVertical ? 'layout-vertical' : 'layout-horizontal'}`}>
-      {/* Vertical Sidebar */}
-      {isVertical && <Sidebar />}
+      {/* Vertical Sidebar (off-canvas drawer below the 992px breakpoint) */}
+      {isVertical && (
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      )}
+
+      {/* Backdrop behind the drawer on tablets/phones */}
+      {isVertical && isSidebarOpen && (
+        <div className="sidebar-backdrop" onClick={() => setIsSidebarOpen(false)} aria-hidden="true" />
+      )}
 
       <div className="main-wrapper">
         {/* Global Top Header */}
         <Header
           onOpenAdmission={() => setIsAdmissionOpen(true)}
           onOpenQuickCheckIn={() => setIsCheckInOpen(true)}
+          onToggleSidebar={() => setIsSidebarOpen((v) => !v)}
         />
 
         {/* Horizontal Navigation (if horizontal mode active) */}
