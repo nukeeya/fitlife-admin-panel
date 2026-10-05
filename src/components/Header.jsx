@@ -4,7 +4,6 @@ import {
   Sliders,
   Sun,
   Moon,
-  MessageSquare,
   UserCheck,
   Bell,
   LogOut,
@@ -12,14 +11,12 @@ import {
   Plus,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { useGymData } from '../context/GymDataContext';
 import { useAuth } from '../context/AuthContext';
 import ConfirmDialog from './common/ConfirmDialog';
 import { downloadBackup, hasBusinessData } from '../utils/localBackup';
 
 export default function Header({ onOpenQuickCheckIn, onOpenAdmission, onToggleSidebar }) {
   const { theme, toggleTheme, setIsCustomizerOpen } = useTheme();
-  const { smsBalance } = useGymData();
   const { user, signOut } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -89,12 +86,6 @@ export default function Header({ onOpenQuickCheckIn, onOpenAdmission, onToggleSi
       </div>
 
       <div className="header-right">
-        {/* SMS Balance Indicator */}
-        <div className="badge-sms" title="Remaining SMS Campaign Credits">
-          <MessageSquare size={14} />
-          <span className="btn-label">{smsBalance.toLocaleString()} SMS</span>
-        </div>
-
         {/* Dark/Light Theme Toggle */}
         <button
           className="header-icon-btn"

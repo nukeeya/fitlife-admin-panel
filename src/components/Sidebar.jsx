@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -73,13 +73,19 @@ export default function Sidebar({ isOpen = false, onClose }) {
     <aside className={`sidebar${isOpen ? ' is-open' : ''}`}>
       {/* Brand Header */}
       <div className="sidebar-logo">
-        <div className="logo-badge">
-          {renderBrandIcon()}
-        </div>
-        <div className="logo-text-group">
-          <span className="logo-text">{branding?.gymName || 'FITLIFE'}</span>
-          <span className="logo-sub">{branding?.tagline || 'ENTERPRISE GYM'}</span>
-        </div>
+        <Link
+          to="/dashboard"
+          className="sidebar-brand-link"
+          aria-label={`${branding?.gymName || 'FITLIFE'} dashboard`}
+        >
+          <div className="logo-badge">
+            {renderBrandIcon()}
+          </div>
+          <div className="logo-text-group">
+            <span className="logo-text">{branding?.gymName || 'FITLIFE'}</span>
+            <span className="logo-sub">{branding?.tagline || 'ENTERPRISE GYM'}</span>
+          </div>
+        </Link>
         {/* Close button — only visible in the mobile drawer */}
         <button className="sidebar-close" onClick={onClose} title="Close menu">
           <X size={18} />
