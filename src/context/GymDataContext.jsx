@@ -1023,6 +1023,18 @@ export function GymDataProvider({ children }) {
     });
   };
 
+  const fetchShopOrders = useCallback(async () => {
+    const { data, error } = await db.fetchShopOrders();
+    if (error) throw error;
+    return data || [];
+  }, []);
+
+  const updateShopOrderStatus = useCallback(async (id, status) => {
+    const { data, error } = await db.updateShopOrderStatus(id, status);
+    if (error) throw error;
+    return data;
+  }, []);
+
   // --- Analytics ---------------------------------------------------------------
   // Titles on Dashboard.jsx: "TOTAL ACTIVE" / "TODAY CHECK-INS" / "TODAY COLLECTED"
   // / "MONTHLY REVENUE" — computed against real dates, no mock inflation.
@@ -1142,6 +1154,8 @@ export function GymDataProvider({ children }) {
         shopProducts,
         saveShopProduct,
         deleteShopProduct,
+        fetchShopOrders,
+        updateShopOrderStatus,
         stats,
         analytics,
         currentUserRole,

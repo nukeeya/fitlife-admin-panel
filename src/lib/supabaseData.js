@@ -690,4 +690,12 @@ export const db = {
   deleteShopProduct(id) {
     return supabase.from('shop_products').delete().eq('id', id);
   },
+
+  fetchShopOrders() {
+    return supabase.from('shop_orders').select('*').order('created_at', { ascending: false });
+  },
+
+  updateShopOrderStatus(id, status) {
+    return supabase.from('shop_orders').update({ status }).eq('id', id).select('*').single();
+  },
 };

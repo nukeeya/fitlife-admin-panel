@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ShoppingBag,
   Plus,
@@ -34,7 +34,48 @@ const EMPTY_FORM = {
 const fmtMoney = (n) => `৳${Math.round(Number(n) || 0).toLocaleString()}`;
 
 export default function GymShop() {
-  const { shopProducts, saveShopProduct, deleteShopProduct } = useGymData();
+  const {
+    shopProducts,
+    saveShopProduct,
+    deleteShopProduct,
+    fetchShopOrders,
+    updateShopOrderStatus,
+  } = useGymData();
+  const [activeView, setActiveView] = useState('products');
+  const [orders, setOrders] = useState([]);
+  const [ordersError, setOrdersError] = useState('');
+
+  useEffect(() => {
+    if (activeView !== 'orders') return undefined;
+    let isCurrent = true;
+    const loadOrders = async () => {
+      try {
+        const result = await fetchShopOrders();
+        if (isCurrent) {
+          setOrders(result);
+          setOrdersError('');
+        }
+      } catch (error) {
+        if (isCurrent) setOrdersError(error.message || 'Could not load customer orders.');
+      }
+    };
+    loadOrders();
+    const timer = window.setInterval(loadOrders, 30_000);
+    return () => {
+      isCurrent = false;
+      window.clearInterval(timer);
+    };
+  }, [activeView, fetchShopOrders]);
+
+  const handleOrderStatusChange = async (orderId, status) => {
+    try {
+      const updated = await updateShopOrderStatus(orderId, status);
+      setOrders((current) => current.map((order) => order.id === orderId ? updated : order));
+      setOrdersError('');
+    } catch (error) {
+      setOrdersError(error.message || 'Could not update order status.');
+    }
+  };
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -178,12 +219,111 @@ export default function GymShop() {
           </p>
         </div>
 
-        <button type="button" className="btn btn-primary" onClick={openAdd}>
-          <Plus size={16} />
-          + Add Product
+        {activeView === 'products' && (
+          <button type="button" className="btn btn-primary" onClick={openAdd}>
+            <Plus size={16} />
+            + Add Product
+          </button>
+        )}
+      </div>
+
+      <div className="filter-bar" role="tablist" aria-label="Gym Shop sections">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeView === 'products'}
+          className={`btn btn-sm ${activeView === 'products' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveView('products')}
+        >
+          Products
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeView === 'orders'}
+          className={`btn btn-sm ${activeView === 'orders' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveView('orders')}
+        >
+          Customer Orders
         </button>
       </div>
 
+      {activeView === 'orders' ? (
+        <div className="activity-card">
+          <div className="activity-header">
+            <span style={{ fontWeight: 800 }}>Customer Order Requests</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              {orders.length} requests · refreshes every 30 seconds
+            </span>
+          </div>
+          {ordersError && (
+            <div role="alert" style={{ margin: '16px', color: 'var(--danger)', fontSize: '13px' }}>
+              {ordersError}
+            </div>
+          )}
+          <div className="table-responsive">
+            <table className="custom-table">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Customer</th>
+                  <th>Items</th>
+                  <th>Total</th>
+                  <th>Delivery Address</th>
+                  <th>Requested</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
+                      {ordersError ? 'Orders could not be loaded.' : 'No customer orders yet.'}
+                    </td>
+                  </tr>
+                ) : orders.map((order) => (
+                  <tr key={order.id}>
+                    <td style={{ fontWeight: 700 }}>#{order.id}</td>
+                    <td>
+                      <div style={{ fontWeight: 700 }}>{order.customer_name}</div>
+                      <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{order.phone}</div>
+                      {order.email && <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{order.email}</div>}
+                    </td>
+                    <td>
+                      {(order.items || []).map((item) => (
+                        <div key={`${order.id}-${item.productId}`}>
+                          {item.name} × {item.quantity}{item.size ? ` · ${item.size}` : ''}
+                        </div>
+                      ))}
+                      {order.customer_note && (
+                        <div style={{ marginTop: '5px', color: 'var(--text-muted)', fontSize: '11px' }}>
+                          Note: {order.customer_note}
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ fontWeight: 700 }}>{fmtMoney(order.total)}</td>
+                    <td>{order.delivery_address}</td>
+                    <td>{new Date(order.created_at).toLocaleString()}</td>
+                    <td>
+                      <select
+                        className="form-select"
+                        value={order.status}
+                        aria-label={`Status for order ${order.id}`}
+                        onChange={(event) => handleOrderStatusChange(order.id, event.target.value)}
+                      >
+                        {['New', 'Contacted', 'Completed', 'Cancelled'].map((status) => (
+                          <option key={status} value={status}>{status}</option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+      <>
       {/* Stats */}
       <div className="stats-grid">
         <div className="stat-card">
@@ -667,6 +807,8 @@ export default function GymShop() {
         type="danger"
         isLoading={isDeleting}
       />
+      </>
+      )}
     </div>
   );
 }
