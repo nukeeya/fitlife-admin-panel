@@ -24,6 +24,7 @@ import {
   mapWorkoutPlan,
   mapProgressLog,
   mapShopProduct,
+  shopProductToRow,
   FALLBACK_DATA,
 } from '../lib/supabaseData';
 import { resolveProfilePhotoUrls } from '../lib/profilePhotos';
