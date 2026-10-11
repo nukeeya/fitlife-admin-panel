@@ -240,7 +240,7 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
               >
                 <option value="None">No Locker Assigned</option>
                 {lockers
-                  .filter((l) => l.status === 'Available')
+                  .filter((l) => l.status === 'Available' && !l.isMock)
                   .map((l) => (
                     <option key={l.id} value={l.number}>
                       {l.number} ({l.zone} - ৳{l.monthlyFee}/mo)

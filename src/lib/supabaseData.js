@@ -46,7 +46,20 @@ export const FALLBACK_DATA = {
   invoices: [],
   expenses: [],
   attendance: [],
-  lockers: [],
+  lockers: [
+    { id: 9001, number: 'A-001', zone: 'Zone A', type: 'Standard', status: 'Occupied', assignedTo: 'Rahim Ahmed', memberCode: 'FLM-0001', expiryDate: '2026-11-10', monthlyFee: 500, isMock: true },
+    { id: 9002, number: 'A-002', zone: 'Zone A', type: 'Standard', status: 'Available', assignedTo: null, memberCode: null, expiryDate: null, monthlyFee: 500, isMock: true },
+    { id: 9003, number: 'A-003', zone: 'Zone A', type: 'Digital', status: 'Occupied', assignedTo: 'Sakib Hasan', memberCode: 'FLM-0002', expiryDate: '2026-10-28', monthlyFee: 650, isMock: true },
+    { id: 9004, number: 'A-004', zone: 'Zone A', type: 'Standard', status: 'Available', assignedTo: null, memberCode: null, expiryDate: null, monthlyFee: 500, isMock: true },
+    { id: 9005, number: 'A-005', zone: 'Zone A', type: 'Standard', status: 'Maintenance', assignedTo: null, memberCode: null, expiryDate: null, monthlyFee: 500, isMock: true },
+    { id: 9006, number: 'B-001', zone: 'Zone B', type: 'Digital', status: 'Occupied', assignedTo: 'Nafisa Rahman', memberCode: 'FLM-0003', expiryDate: '2026-10-19', monthlyFee: 650, isMock: true },
+    { id: 9007, number: 'B-002', zone: 'Zone B', type: 'Standard', status: 'Available', assignedTo: null, memberCode: null, expiryDate: null, monthlyFee: 500, isMock: true },
+    { id: 9008, number: 'B-003', zone: 'Zone B', type: 'Standard', status: 'Occupied', assignedTo: 'Tanvir Islam', memberCode: 'FLM-0004', expiryDate: '2026-11-02', monthlyFee: 500, isMock: true },
+    { id: 9009, number: 'B-004', zone: 'Zone B', type: 'Digital', status: 'Available', assignedTo: null, memberCode: null, expiryDate: null, monthlyFee: 650, isMock: true },
+    { id: 9010, number: 'VIP-01', zone: 'Zone VIP', type: 'VIP Executive', status: 'Occupied', assignedTo: 'Arif Hossain', memberCode: 'FLM-0005', expiryDate: '2026-12-01', monthlyFee: 1200, isMock: true },
+    { id: 9011, number: 'VIP-02', zone: 'Zone VIP', type: 'VIP Executive', status: 'Available', assignedTo: null, memberCode: null, expiryDate: null, monthlyFee: 1200, isMock: true },
+    { id: 9012, number: 'VIP-03', zone: 'Zone VIP', type: 'Digital', status: 'Maintenance', assignedTo: null, memberCode: null, expiryDate: null, monthlyFee: 850, isMock: true },
+  ],
   trainers: [],
   employees: [],
   roles: [
@@ -586,7 +599,11 @@ export const db = {
   },
 
   updateLockerAssignment(lockerId, patch) {
-    return supabase.from('locker_assignments').update(patch).eq('locker_id', lockerId);
+    return supabase
+      .from('locker_assignments')
+      .update(patch)
+      .eq('locker_id', lockerId)
+      .eq('status', 'Active');
   },
 
   // SMS ------------------------------------------------------------------------------

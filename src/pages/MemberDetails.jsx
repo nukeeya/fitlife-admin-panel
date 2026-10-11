@@ -1,19 +1,13 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
-  User,
-  Phone,
-  Mail,
-  Calendar,
-  CreditCard,
-  Key,
-  Dumbbell,
   CheckCircle2,
-  Clock,
-  Tag,
   Printer,
+  Pencil,
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
+import Modal from '../components/common/Modal';
 
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
   '&': '&amp;',
@@ -128,11 +122,57 @@ function printMemberInvoice(invoice, member, branding) {
 
 export default function MemberDetails() {
   const { id } = useParams();
-  const { members, invoices, attendance, checkInMember, branding } = useGymData();
+  const {
+    members,
+    invoices,
+    checkInMember,
+    updateMemberAssignments,
+    branding,
+    plans,
+    trainers,
+    lockers,
+  } = useGymData();
+  const [isAssignmentsOpen, setIsAssignmentsOpen] = useState(false);
+  const [isSavingAssignments, setIsSavingAssignments] = useState(false);
+  const [assignmentError, setAssignmentError] = useState('');
+  const [assignmentNotice, setAssignmentNotice] = useState('');
+  const [assignmentForm, setAssignmentForm] = useState(null);
 
-  const member = members.find((m) => m.id === Number(id)) || members[0];
+  const member = members.find((m) => m.id === Number(id));
   const memberInvoices = invoices.filter((i) => i.memberId === member?.id);
-  const memberAttendance = attendance.filter((a) => a.memberId === member?.id);
+
+  const openAssignments = () => {
+    setAssignmentForm({
+      planId: String(member.planId || plans.find((plan) => plan.name === member.plan)?.id || ''),
+      expiry: member.expiry || '',
+      trainerId: member.trainerId ? String(member.trainerId) : '',
+      lockerId: member.lockerId ? String(member.lockerId) : '',
+    });
+    setAssignmentError('');
+    setAssignmentNotice('');
+    setIsAssignmentsOpen(true);
+  };
+
+  const handleAssignmentsSubmit = async (event) => {
+    event.preventDefault();
+    setAssignmentError('');
+    setAssignmentNotice('');
+    setIsSavingAssignments(true);
+
+    try {
+      const result = await updateMemberAssignments(member.id, assignmentForm);
+      if (result?.error) {
+        setAssignmentError(`Could not save assignments: ${result.error.message}`);
+        return;
+      }
+      setIsAssignmentsOpen(false);
+      setAssignmentNotice('Membership and assignments updated.');
+    } catch (error) {
+      setAssignmentError(`Could not save assignments: ${error.message || 'Unexpected error.'}`);
+    } finally {
+      setIsSavingAssignments(false);
+    }
+  };
 
   if (!member) {
     return (
@@ -161,10 +201,21 @@ export default function MemberDetails() {
           </div>
         </div>
 
-        <button className="btn btn-primary" onClick={() => checkInMember(member.id)}>
-          <CheckCircle2 size={16} /> Check In Today
-        </button>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button type="button" className="btn btn-secondary" onClick={openAssignments}>
+            <Pencil size={16} /> Edit Membership & Assignments
+          </button>
+          <button type="button" className="btn btn-primary" onClick={() => checkInMember(member.id)}>
+            <CheckCircle2 size={16} /> Check In Today
+          </button>
+        </div>
       </div>
+
+      {assignmentNotice && (
+        <div role="status" style={{ padding: '12px 16px', marginBottom: '16px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.12)', color: '#10B981' }}>
+          {assignmentNotice}
+        </div>
+      )}
 
       {/* Member Profile Summary Cards */}
       <div className="dashboard-metrics-grid">
@@ -261,6 +312,107 @@ export default function MemberDetails() {
           </table>
         </div>
       </div>
+
+      <Modal
+        isOpen={isAssignmentsOpen}
+        onClose={() => !isSavingAssignments && setIsAssignmentsOpen(false)}
+        title="Edit Membership & Assignments"
+        subtitle={`${member.name} · ${member.code}`}
+        icon={Pencil}
+        size="lg"
+        closeOnBackdropClick={!isSavingAssignments}
+        closeOnEsc={!isSavingAssignments}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setIsAssignmentsOpen(false)}
+              disabled={isSavingAssignments}
+            >
+              Cancel
+            </button>
+            <button type="submit" form="edit-member-assignments-form" className="btn btn-primary" disabled={isSavingAssignments}>
+              {isSavingAssignments ? 'Saving…' : 'Save Changes'}
+            </button>
+          </div>
+        }
+      >
+        {assignmentForm && (
+          <form id="edit-member-assignments-form" onSubmit={handleAssignmentsSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {assignmentError && (
+              <div role="alert" style={{ padding: '12px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.12)', color: 'var(--danger)' }}>
+                {assignmentError}
+              </div>
+            )}
+
+            <label className="form-group">
+              <span className="form-label">Membership plan *</span>
+              <select
+                className="form-select"
+                required
+                value={assignmentForm.planId}
+                onChange={(event) => setAssignmentForm({ ...assignmentForm, planId: event.target.value })}
+              >
+                <option value="" disabled>Select a plan</option>
+                {plans
+                  .filter((plan) => plan.status === 'Active' || plan.id === member.planId)
+                  .map((plan) => (
+                    <option key={plan.id} value={plan.id}>{plan.name}</option>
+                  ))}
+              </select>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                Changing the plan here does not create or change an invoice.
+              </span>
+            </label>
+
+            <label className="form-group">
+              <span className="form-label">Membership expiry *</span>
+              <input
+                className="form-input"
+                type="date"
+                required
+                value={assignmentForm.expiry}
+                onChange={(event) => setAssignmentForm({ ...assignmentForm, expiry: event.target.value })}
+              />
+            </label>
+
+            <label className="form-group">
+              <span className="form-label">Personal trainer</span>
+              <select
+                className="form-select"
+                value={assignmentForm.trainerId}
+                onChange={(event) => setAssignmentForm({ ...assignmentForm, trainerId: event.target.value })}
+              >
+                <option value="">No trainer</option>
+                {trainers
+                  .filter((trainer) => trainer.available || trainer.id === member.trainerId)
+                  .map((trainer) => (
+                  <option key={trainer.id} value={trainer.id}>{trainer.name}</option>
+                  ))}
+              </select>
+            </label>
+
+            <label className="form-group">
+              <span className="form-label">Locker</span>
+              <select
+                className="form-select"
+                value={assignmentForm.lockerId}
+                onChange={(event) => setAssignmentForm({ ...assignmentForm, lockerId: event.target.value })}
+              >
+                <option value="">No locker</option>
+                {lockers
+                  .filter((locker) => !locker.isMock && (locker.status === 'Available' || locker.id === member.lockerId))
+                  .map((locker) => (
+                    <option key={locker.id} value={locker.id}>
+                      {locker.number}{locker.zone ? ` · ${locker.zone}` : ''}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 }

@@ -169,7 +169,7 @@ export function GymDataProvider({ children }) {
     : INITIAL_DATA.employees), [raw, profilePhotoUrls]);
 
   const lockers = useMemo(() => {
-    if (!raw?.lockers) return INITIAL_DATA.lockers;
+    if (!raw?.lockers?.length) return INITIAL_DATA.lockers;
     // Active assignments give locker -> member display values
     const active = (raw.lockerAssignments || []).filter((a) => a.status === 'Active');
     const byLocker = {};
@@ -454,6 +454,7 @@ export function GymDataProvider({ children }) {
 
     const trainer = trainerName && trainerName !== 'None' ? trainers.find((t) => t.name === trainerName) : null;
     const locker = lockerNumber && lockerNumber !== 'None' ? lockers.find((l) => l.number === lockerNumber) : null;
+    if (locker?.isMock) return null;
 
     const tempId = -Date.now();
     const optimisticMember = {
@@ -674,6 +675,119 @@ export function GymDataProvider({ children }) {
     });
   };
 
+  const updateMemberAssignments = async (memberId, assignments) => {
+    const member = members.find((item) => item.id === Number(memberId));
+    if (!member || member.id < 0 || !raw?.members) {
+      return { error: new Error('Assignments could not be saved because the member record is unavailable.') };
+    }
+
+    const selectedPlan = plans.find((plan) => plan.id === Number(assignments.planId));
+    if (!selectedPlan || (selectedPlan.status !== 'Active' && selectedPlan.id !== member.planId)) {
+      return { error: new Error('Select an active membership plan.') };
+    }
+    const expiryDate = new Date(`${assignments.expiry}T00:00:00`);
+    const formattedExpiry = Number.isNaN(expiryDate.getTime())
+      ? ''
+      : `${expiryDate.getFullYear()}-${String(expiryDate.getMonth() + 1).padStart(2, '0')}-${String(expiryDate.getDate()).padStart(2, '0')}`;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(assignments.expiry) || formattedExpiry !== assignments.expiry) {
+      return { error: new Error('Enter a valid membership expiry date.') };
+    }
+
+    const trainerId = assignments.trainerId ? Number(assignments.trainerId) : null;
+    const selectedTrainer = trainerId === null ? null : trainers.find((trainer) => trainer.id === trainerId);
+    if (trainerId !== null && (!selectedTrainer || (!selectedTrainer.available && trainerId !== member.trainerId))) {
+      return { error: new Error('Select an available trainer.') };
+    }
+
+    const lockerId = assignments.lockerId ? Number(assignments.lockerId) : null;
+    const currentLockerId = member.lockerId ? Number(member.lockerId) : null;
+    const selectedLocker = lockerId === null ? null : lockers.find((locker) => locker.id === lockerId);
+    if (lockerId !== null && !selectedLocker) {
+      return { error: new Error('Select a valid locker.') };
+    }
+    if (selectedLocker?.isMock) {
+      return { error: new Error('Demo lockers cannot be assigned. Add a real locker in the database first.') };
+    }
+    if (lockerId !== currentLockerId && selectedLocker && selectedLocker.status !== 'Available') {
+      return { error: new Error('That locker is no longer available. Refresh and choose another locker.') };
+    }
+
+    const nextStatus = member.status === 'Inactive'
+      ? 'Inactive'
+      : assignments.expiry < todayStr()
+      ? 'Expired'
+      : assignments.expiry <= addDays(todayStr(), 7)
+      ? 'Expiring'
+      : 'Active';
+    const patch = {
+      plan: selectedPlan.name,
+      expiry: assignments.expiry,
+      status: nextStatus,
+      trainer_id: trainerId,
+      locker_id: lockerId,
+    };
+
+    return commit({
+      optimistic: () =>
+        setRaw((prev) =>
+          prev
+            ? {
+                ...prev,
+                lockers: prev.lockers.map((locker) => {
+                  if (locker.id === currentLockerId && locker.id !== lockerId) {
+                    return { ...locker, status: 'Available' };
+                  }
+                  if (locker.id === lockerId && locker.id !== currentLockerId) {
+                    return { ...locker, status: 'Occupied' };
+                  }
+                  return locker;
+                }),
+                lockerAssignments: [
+                  ...(prev.lockerAssignments || []).map((assignment) =>
+                    assignment.locker_id === currentLockerId && assignment.status === 'Active' && currentLockerId !== lockerId
+                      ? { ...assignment, status: 'Released' }
+                      : assignment
+                  ),
+                  ...(lockerId !== null && lockerId !== currentLockerId
+                    ? [{ locker_id: lockerId, member_id: member.id, expiry_date: assignments.expiry, status: 'Active' }]
+                    : []),
+                ],
+                members: prev.members.map((row) =>
+                  row.id === member.id ? { ...row, ...patch } : row
+                ),
+              }
+            : prev
+        ),
+      persist: async () => {
+        if (currentLockerId !== lockerId && currentLockerId !== null) {
+          const releaseLocker = await db.updateLocker(currentLockerId, { status: 'Available' });
+          if (releaseLocker.error) return releaseLocker;
+          const releaseAssignment = await db.updateLockerAssignment(currentLockerId, { status: 'Released' });
+          if (releaseAssignment.error) return releaseAssignment;
+        }
+
+        if (currentLockerId !== lockerId && lockerId !== null) {
+          const occupyLocker = await db.updateLocker(lockerId, { status: 'Occupied' });
+          if (occupyLocker.error) return occupyLocker;
+        }
+
+        const memberUpdate = await db.updateMember(member.id, patch);
+        if (memberUpdate.error) return memberUpdate;
+
+        if (currentLockerId !== lockerId && lockerId !== null) {
+          return db.insertLockerAssignment({
+            lockerId,
+            memberId: member.id,
+            expiryDate: assignments.expiry,
+          });
+        }
+
+        return memberUpdate;
+      },
+      reloadAll: true,
+    });
+  };
+
   const bulkCheckIn = (memberIds) => {
     memberIds.forEach((id) => checkInMember(id, 'Bulk Admin Entry'));
   };
@@ -754,6 +868,11 @@ export function GymDataProvider({ children }) {
     const member = members.find((m) => m.id === Number(memberId));
     if (!member || member.id < 0 || !raw) return;
 
+    if (lockers.some((locker) => locker.id === Number(lockerId) && locker.isMock)) {
+      alert('Demo lockers cannot be assigned. Add a real locker in the database first.');
+      return;
+    }
+
     const expiry = expiryDate || addDays(todayStr(), 30);
 
     await commit({
@@ -787,6 +906,16 @@ export function GymDataProvider({ children }) {
   };
 
   const releaseLocker = async (lockerId) => {
+    if (lockers.some((locker) => locker.id === Number(lockerId) && locker.isMock)) {
+      alert('Demo lockers cannot be released. Add real locker records before managing assignments.');
+      return;
+    }
+
+    if (!raw) {
+      alert('Locker data is unavailable. Reconnect to the database before releasing a locker.');
+      return;
+    }
+
     await commit({
       optimistic: () =>
         setRaw((prev) =>
@@ -1168,6 +1297,7 @@ export function GymDataProvider({ children }) {
         rejectApplication,
         checkInMember,
         checkOutMember,
+        updateMemberAssignments,
         bulkCheckIn,
         collectPayment,
         addExpense,

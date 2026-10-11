@@ -18,6 +18,7 @@ export default function LockerManagement() {
   const activeTab = searchParams.get('tab') || 'assigned'; // 'assigned' | 'edit-list'
 
   const { lockers, members, assignLocker, releaseLocker } = useGymData();
+  const showingMockLockers = lockers.some((locker) => locker.isMock);
   const [searchTerm, setSearchTerm] = useState('');
   const [zoneFilter, setZoneFilter] = useState('All');
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -94,6 +95,12 @@ export default function LockerManagement() {
           </button>
         </div>
       </div>
+
+      {showingMockLockers && (
+        <div role="status" style={{ padding: '12px 16px', marginBottom: '16px', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.12)', color: 'var(--warning)' }}>
+          Showing sample locker data because no locker records were found. These demo lockers are read-only and are not saved to the database.
+        </div>
+      )}
 
       {/* Filter Bar */}
       <div className="filter-bar">
@@ -175,6 +182,8 @@ export default function LockerManagement() {
                           type="button"
                           className="btn btn-secondary btn-sm"
                           onClick={() => setReleaseConfirmLocker(l)}
+                          disabled={l.isMock}
+                          title={l.isMock ? 'Demo locker — read only' : undefined}
                         >
                           Release Locker
                         </button>
@@ -218,6 +227,8 @@ export default function LockerManagement() {
                   className="btn btn-primary btn-sm"
                   style={{ width: '100%', marginTop: '8px' }}
                   onClick={() => handleOpenAssign(l)}
+                  disabled={l.isMock}
+                  title={l.isMock ? 'Demo locker — read only' : undefined}
                 >
                   Assign
                 </button>
@@ -229,6 +240,8 @@ export default function LockerManagement() {
                   className="btn btn-secondary btn-sm"
                   style={{ width: '100%', marginTop: '8px' }}
                   onClick={() => setReleaseConfirmLocker(l)}
+                  disabled={l.isMock}
+                  title={l.isMock ? 'Demo locker — read only' : undefined}
                 >
                   Release
                 </button>
