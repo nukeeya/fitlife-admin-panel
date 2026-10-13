@@ -37,7 +37,6 @@ This document provides the complete structural blueprint, service design, REST A
 |   ├── /api/v1/attendance      (Daily Present/Absent, Individual, Bulk Check-in)   |
 |   ├── /api/v1/sms             (Campaign Broadcaster, Greenweb SMS API Gateway)    |
 |   ├── /api/v1/plans           (Packages, Feature Matrix, Locker Bundles)          |
-|   ├── /api/v1/ads             (Marketing Banners, Impressions, Click Telemetry)   |
 |   ├── /api/v1/ai-workouts     (AI Workout Regime Generator & Client Assignment)   |
 |   ├── /api/v1/ai-diets        (AI Macro & Calorie Meal Schedule Synthesizer)      |
 |   ├── /api/v1/jobs            (Recruitment Vacancies & Candidate Pipeline)        |

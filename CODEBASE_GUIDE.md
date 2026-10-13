@@ -6,7 +6,7 @@ A complete map of the **FitLife Gym Management Admin Panel** — what it is, how
 
 ## 1. What this project is
 
-An admin panel for managing a gym (members, admissions, invoices, attendance, lockers, staff, SMS, ads, jobs, reports) plus an **evidence-based AI fitness module** (workout regime generator, diet/macro planner, PDF export).
+An admin panel for managing a gym (members, admissions, invoices, attendance, lockers, staff, messaging, jobs, reports) plus an **evidence-based AI fitness module** (workout regime generator, diet/macro planner, PDF export).
 
 Two apps live in this repo:
 
@@ -69,7 +69,7 @@ Three React contexts wrap the entire app (order matters: Auth → Theme → GymD
 | --- | --- | --- |
 | `AuthContext` | `src/context/AuthContext.jsx` | `useAuth()` → `{ user, loading, signIn, signUp, signOut, resetPassword, updatePassword }`. Wraps Supabase auth. `signOut()` also **wipes all `fitlife-*` localStorage keys** (see `clearLocalCaches`). |
 | `ThemeContext` | `src/context/ThemeContext.jsx` | `useTheme()` → theme settings (dark/light, primary color, bg, nav style `vertical`/`horizontal-*`, LTR/RTL, boxed layout). Writes `data-*` attributes + CSS variables (`--primary`, `--bg-base`, …) onto `<html>`. Persists to `fitlife-theme-settings`. Exports `COLOR_PRESETS`, `BG_PRESETS_DARK/LIGHT`. |
-| `GymDataContext` | `src/context/GymDataContext.jsx` | **The heart of the app.** `useGymData()` → every entity array (members, plans, lockers, trainers, employees, invoices, expenses, attendance, roles, SMS, ads, jobs, diet/workout plans) + all mutation actions (see §5). |
+| `GymDataContext` | `src/context/GymDataContext.jsx` | **The heart of the app.** `useGymData()` → every entity array (members, plans, lockers, trainers, employees, invoices, expenses, attendance, roles, messaging, jobs, diet/workout plans) + all mutation actions (see §5). |
 
 ### Data flows through Supabase
 
@@ -107,7 +107,6 @@ Write conventions: members are stored `first_name`/`last_name` (split from the U
 | `/memberships` | `Memberships.jsx` | Plan overview |
 | `/sms` | `SMSManagement.jsx` | SMS campaigns & balance |
 | `/subscription-plans` | `SubscriptionPlans.jsx` | Plan CRUD + features |
-| `/advertisements` | `Advertisements.jsx` | Banner ads, impressions/clicks |
 | `/gym-shop` | `GymShop.jsx` | Shop inventory: gym wear + food, stock/pricing CRUD |
 | `/ai-workouts` | `AIWorkoutManagement.jsx` | AI workout regime generator (819 lines) |
 | `/diet-plans` | `DietPlans.jsx` | AI diet/macro planner (859 lines — biggest page) |
@@ -121,7 +120,7 @@ Write conventions: members are stored `first_name`/`last_name` (split from the U
 
 The single source of truth. Key exports from `useGymData()`:
 
-**Read state:** `branding, members, applications, plans, lockers, trainers, employees, invoices, expenses, attendance, roles, smsCampaigns, smsBalance, ads, jobs, dietPlans, workoutPlans, progressLogs, shopProducts`
+**Read state:** `branding, members, applications, plans, lockers, trainers, employees, invoices, expenses, attendance, roles, smsCampaigns, smsBalance, jobs, dietPlans, workoutPlans, progressLogs, shopProducts`
 
 **Derived (useMemo):** `stats`, `analytics`, `pendingApprovals`, and `getAnalytics()` (the 14 dashboard metrics incl. real-time sales/attendance computed from invoices/attendance).
 

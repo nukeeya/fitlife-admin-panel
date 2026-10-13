@@ -470,7 +470,6 @@ export default function SystemManagement() {
                     <th>Discount Privilege</th>
                     <th>Max Discount %</th>
                     <th>Approve Members</th>
-                    <th>Manage Lockers</th>
                     <th>Financials</th>
                     <th>Staff Count</th>
                   </tr>
@@ -527,16 +526,6 @@ export default function SystemManagement() {
                           onClick={() => updateRolePermission(role.id, 'canApproveMembers', !role.canApproveMembers)}
                         >
                           {role.canApproveMembers ? '✓ Yes' : '✗ No'}
-                        </button>
-                      </td>
-
-                      {/* Can Manage Lockers */}
-                      <td>
-                        <button
-                          className={`btn btn-sm ${role.canManageLockers ? 'btn-secondary' : 'btn-danger'}`}
-                          onClick={() => updateRolePermission(role.id, 'canManageLockers', !role.canManageLockers)}
-                        >
-                          {role.canManageLockers ? '✓ Yes' : '✗ No'}
                         </button>
                       </td>
 

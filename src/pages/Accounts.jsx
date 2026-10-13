@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
 import Modal from '../components/common/Modal';
+import { printInvoice } from '../utils/invoicePrinter';
 
 export default function Accounts() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -149,7 +150,7 @@ export default function Accounts() {
                   <th>Net Payable</th>
                   <th>Paid / Due</th>
                   <th>Status</th>
-                  <th>Action</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -198,18 +199,37 @@ export default function Accounts() {
                       </span>
                     </td>
                     <td>
-                      {inv.dueAmount > 0 ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                         <button
-                          className="btn btn-primary btn-sm"
-                          onClick={() => handleOpenPayment(inv)}
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => printInvoice(inv, branding, 'print')}
+                          aria-label={`Print invoice ${inv.number}`}
                         >
-                          Collect Due
+                          <Printer size={14} /> Print
                         </button>
-                      ) : (
-                        <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700 }}>
-                          ✓ Settled
-                        </span>
-                      )}
+                        {inv.dueAmount > 0 ? (
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => handleOpenPayment(inv)}
+                          >
+                            Collect Due
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700 }}>
+                            ✓ Settled
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => printInvoice(inv, branding, 'pdf')}
+                          aria-label={`Print or save invoice ${inv.number} as PDF`}
+                          title="Print or save as PDF"
+                        >
+                          Save PDF
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

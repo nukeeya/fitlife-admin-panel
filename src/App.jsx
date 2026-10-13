@@ -10,7 +10,6 @@ import Members from './pages/Members';
 import MemberDetails from './pages/MemberDetails';
 import ApprovalManagement from './pages/ApprovalManagement';
 import Admissions from './pages/Admissions';
-import LockerManagement from './pages/LockerManagement';
 import Trainers from './pages/Trainers';
 import Employees from './pages/Employees';
 import Accounts from './pages/Accounts';
@@ -19,7 +18,6 @@ import Payments from './pages/Payments';
 import Memberships from './pages/Memberships';
 import SMSManagement from './pages/SMSManagement';
 import SubscriptionPlans from './pages/SubscriptionPlans';
-import Advertisements from './pages/Advertisements';
 import GymShop from './pages/GymShop';
 import AIWorkoutManagement from './pages/AIWorkoutManagement';
 import DietPlans from './pages/DietPlans';
@@ -48,16 +46,16 @@ export default function App() {
               <Route path="/members/:id" element={<MemberDetails />} />
               <Route path="/admissions" element={<ApprovalManagement />} />
               <Route path="/approvals" element={<ApprovalManagement />} />
-              <Route path="/lockers" element={<LockerManagement />} />
               <Route path="/trainers" element={<Trainers />} />
               <Route path="/employees" element={<Employees />} />
               <Route path="/accounts" element={<Accounts />} />
               <Route path="/attendance" element={<Attendance />} />
               <Route path="/payments" element={<Payments />} />
               <Route path="/memberships" element={<Memberships />} />
-              <Route path="/sms" element={<SMSManagement />} />
+              <Route path="/whatsapp" element={<SMSManagement />} />
+              <Route path="/sms" element={<Navigate to="/whatsapp" replace />} />
               <Route path="/subscription-plans" element={<SubscriptionPlans />} />
-              <Route path="/advertisements" element={<Advertisements />} />
+              <Route path="/advertisements" element={<Navigate to="/dashboard" replace />} />
               <Route path="/gym-shop" element={<GymShop />} />
               <Route path="/ai-workouts" element={<AIWorkoutManagement />} />
               <Route path="/diet-plans" element={<DietPlans />} />

@@ -70,7 +70,6 @@ export const FALLBACK_DATA = {
     { id: 5, name: 'Accountant', description: 'Finance & payroll', canApplyDiscount: true, maxDiscountPercent: 5, canApproveMembers: false, canManageLockers: false, canManageFinances: true, usersCount: 0 },
   ],
   smsCampaigns: [],
-  ads: [],
   jobs: [],
   shopProducts: [],
 };
@@ -343,22 +342,6 @@ export function mapSmsCampaign(row) {
   };
 }
 
-export function mapAd(row) {
-  if (!row) return null;
-  return {
-    id: row.id,
-    title: row.title,
-    bannerUrl: row.banner_url,
-    targetUrl: row.target_url || '',
-    position: row.position,
-    impressions: row.impressions ?? 0,
-    clicks: row.clicks ?? 0,
-    startDate: row.start_date,
-    endDate: row.end_date,
-    status: row.status,
-  };
-}
-
 export function mapJob(row, appsByJobId = {}) {
   if (!row) return null;
   return {
@@ -438,6 +421,9 @@ export async function fetchAllData() {
     planFeatures: () => supabase.from('plan_features').select('*'),
     members: () => supabase.from('members').select('*').order('id', { ascending: false }),
     applications: () => supabase.from('admission_submissions').select('*').order('submitted_at', { ascending: false }),
+    payments: () => supabase.from('payments')
+      .select('id, invoice_id, amount, method, transaction_reference, payment_date')
+      .order('payment_date'),
     lockers: () => supabase.from('lockers').select('*').order('id'),
     lockerAssignments: () => supabase.from('locker_assignments').select('*'),
     trainers: () => supabase.from('trainers').select('*').order('id'),
@@ -450,7 +436,6 @@ export async function fetchAllData() {
     users: () => supabase.from('users').select('role_id'),
     smsCampaigns: () => supabase.from('sms_campaigns').select('*').order('id', { ascending: false }),
     smsSettings: () => supabase.from('sms_settings').select('*').limit(1),
-    ads: () => supabase.from('advertisements').select('*').order('id'),
     jobs: () => supabase.from('job_postings').select('*').order('id', { ascending: false }),
     jobApplications: () => supabase.from('job_applications').select('job_id'),
     dietPlans: () => supabase.from('ai_diet_plans').select('*').order('id', { ascending: false }),
@@ -668,6 +653,34 @@ export const db = {
     return supabase.from('ai_diet_plans').delete().eq('id', id);
   },
 
+  assignDietPlan(id, memberId, clientName) {
+    return supabase
+      .from('ai_diet_plans')
+      .update({ member_id: memberId, plan_title: clientName })
+      .eq('id', id)
+      .is('member_id', null)
+      .select('*')
+      .single();
+  },
+
+  duplicateDietPlan(plan, memberId, clientName) {
+    return supabase
+      .from('ai_diet_plans')
+      .insert({
+        member_id: memberId,
+        plan_title: clientName,
+        target_goal: plan.target_goal,
+        daily_calories: plan.daily_calories,
+        protein_grams: plan.protein_grams,
+        carbs_grams: plan.carbs_grams,
+        fats_grams: plan.fats_grams,
+        meals_json: plan.meals_json,
+        dietary_preference: plan.dietary_preference,
+      })
+      .select('*')
+      .single();
+  },
+
   insertWorkoutPlan({ memberId, clientName, goal, record, experience, daysPerWeek }) {
     return supabase
       .from('ai_workout_plans')
@@ -685,6 +698,32 @@ export const db = {
 
   deleteWorkoutPlan(id) {
     return supabase.from('ai_workout_plans').delete().eq('id', id);
+  },
+
+  assignWorkoutPlan(id, memberId, clientName) {
+    return supabase
+      .from('ai_workout_plans')
+      .update({ member_id: memberId, plan_title: clientName })
+      .eq('id', id)
+      .is('member_id', null)
+      .select('*')
+      .single();
+  },
+
+  duplicateWorkoutPlan(plan, memberId, clientName) {
+    return supabase
+      .from('ai_workout_plans')
+      .insert({
+        member_id: memberId,
+        plan_title: clientName,
+        fitness_goal: plan.fitness_goal,
+        experience_level: plan.experience_level,
+        days_per_week: plan.days_per_week,
+        routine_json: plan.routine_json,
+        ai_generated_notes: plan.ai_generated_notes,
+      })
+      .select('*')
+      .single();
   },
 
   insertProgressLog({ memberId, record }) {

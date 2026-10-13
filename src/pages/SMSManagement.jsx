@@ -1,218 +1,61 @@
-import { useState } from 'react';
-import {
-  MessageSquare,
-  Send,
-  Plus,
-  Sparkles,
-  Users,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-} from 'lucide-react';
-import { useGymData } from '../context/GymDataContext';
+import { MessageCircle, Send } from 'lucide-react';
 
 export default function SMSManagement() {
-  const { smsCampaigns, smsBalance, sendSMS, members } = useGymData();
-
-  const [campaignTitle, setCampaignTitle] = useState('');
-  const [recipientType, setRecipientType] = useState('All Members');
-  const [messageText, setMessageText] = useState('');
-  const [isSuccess, setIsSuccess] = useState(false);
-
-  const templates = [
-    {
-      label: 'Renewal Expiry Alert',
-      text: 'Dear Member, your FitLife Gym membership expires soon. Renew today to keep your preferred locker and enjoy continuous access!',
-    },
-    {
-      label: 'Seasonal Discount Promo',
-      text: 'FitLife Special Offer! Renew for 3 months and get a 15% flat discount. Use code MONSOON15 at reception this week!',
-    },
-    {
-      label: 'Welcome New Member',
-      text: 'Welcome to FitLife Enterprise Gym! Your fitness journey begins today. Book your free complimentary trainer session at the desk.',
-    },
-  ];
-
-  const estimatedRecipients =
-    recipientType === 'All Members'
-      ? members.length
-      : recipientType === 'Active Only'
-      ? members.filter((m) => m.status === 'Active').length
-      : 12;
-
-  const [errorNotice, setErrorNotice] = useState('');
-
-  const handleSendCampaign = async (e) => {
-    e.preventDefault();
-    if (!campaignTitle || !messageText) {
-      setErrorNotice('Please fill in both campaign title and broadcast message.');
-      return;
-    }
-    setErrorNotice('');
-
-    const success = await sendSMS({
-      title: campaignTitle,
-      recipientType,
-      message: messageText,
-    });
-
-    if (success) {
-      setIsSuccess(true);
-      setCampaignTitle('');
-      setMessageText('');
-      setTimeout(() => setIsSuccess(false), 3000);
-    } else {
-      setErrorNotice('Failed to send campaign — please try again.');
-    }
-  };
-
   return (
     <div className="page">
-      {/* Header */}
       <div className="page-header">
         <div className="page-title-group">
-          <h1 className="page-title">SMS Management & Notification Gateway</h1>
+          <h1 className="page-title">WhatsApp Management</h1>
           <p className="page-subtitle">
-            Broadcast promotional campaigns, automated membership expiry alerts, and transactional messages.
+            Prepare WhatsApp notices, membership updates, and offers for gym members.
           </p>
-        </div>
-
-        <div className="badge-sms" style={{ fontSize: '14px', padding: '8px 16px' }}>
-          <MessageSquare size={16} />
-          <span>Remaining Credits: {smsBalance.toLocaleString()} SMS</span>
         </div>
       </div>
 
-      <div className="split-grid">
-        {/* Campaign Composer */}
-        <div className="activity-card" style={{ padding: '24px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Send size={18} color="var(--primary)" />
-            Compose SMS Campaign
-          </h2>
-
-          {isSuccess && (
-            <div style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10B981', color: '#10B981', padding: '12px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <CheckCircle2 size={16} />
-              Campaign dispatched successfully! SMS balance deducted.
-            </div>
-          )}
-
-          {errorNotice && (
-            <div style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid var(--danger)', color: 'var(--danger)', padding: '12px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <AlertCircle size={16} />
-              {errorNotice}
-            </div>
-          )}
-
-          <form onSubmit={handleSendCampaign} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div className="form-group">
-              <label className="form-label">Campaign Title *</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. September Weekend Workout Blast"
-                className="form-input"
-                value={campaignTitle}
-                onChange={(e) => setCampaignTitle(e.target.value)}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Target Recipient Group</label>
-              <select
-                className="form-select"
-                value={recipientType}
-                onChange={(e) => setRecipientType(e.target.value)}
-              >
-                <option value="All Members">All Registered Members ({members.length})</option>
-                <option value="Active Only">Active Members Only ({members.filter((m) => m.status === 'Active').length})</option>
-                <option value="Expiring Members">Expiring in 7 Days (32)</option>
-              </select>
-            </div>
-
-            {/* Template Selector */}
-            <div className="form-group">
-              <label className="form-label">Quick Templates</label>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {templates.map((t) => (
-                  <button
-                    key={t.label}
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => setMessageText(t.text)}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <label className="form-label">SMS Message Body *</label>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                  {messageText.length} / 160 characters (1 SMS)
-                </span>
-              </div>
-              <textarea
-                rows="4"
-                required
-                placeholder="Type your SMS message here..."
-                className="form-textarea"
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-              />
-            </div>
-
-            <div style={{ background: 'var(--bg-surface)', padding: '12px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
-              <span>Estimated Cost: <strong>{estimatedRecipients} Credits</strong></span>
-              <span>Gateway: <strong>Greenweb High-Speed SMS API</strong></span>
-            </div>
-
-            <button type="submit" className="btn btn-primary" style={{ marginTop: '6px' }}>
-              <Send size={16} />
-              Broadcast Campaign Now
-            </button>
-          </form>
+      <div className="whatsapp-setup-card">
+        <div className="whatsapp-setup-heading">
+          <div className="whatsapp-setup-icon"><MessageCircle size={22} /></div>
+          <div>
+            <h2>WhatsApp Business campaigns</h2>
+            <p>Meta WhatsApp Business Cloud API</p>
+          </div>
+          <span className="whatsapp-status-badge">Sending disabled</span>
         </div>
 
-        {/* Campaign History */}
-        <div className="activity-card">
-          <div className="activity-header">
-            <span style={{ fontWeight: 800 }}>Recent Campaigns & Delivery Logs</span>
-          </div>
-
-          <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {smsCampaigns.map((camp) => (
-              <div
-                key={camp.id}
-                style={{
-                  background: 'var(--bg-surface)',
-                  padding: '14px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-base)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '6px',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontWeight: 700, fontSize: '13px' }}>{camp.title}</span>
-                  <span className={`badge ${camp.status === 'Sent' ? 'badge-success' : 'badge-warning'}`}>
-                    {camp.status}
-                  </span>
-                </div>
-                <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>"{camp.message}"</p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  <span>To: {camp.recipientType} ({camp.count} recipients)</span>
-                  <span>{camp.sentAt}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="whatsapp-setup-notice" role="status">
+          Bulk delivery is intentionally disabled until member consent and approved message templates are ready.
         </div>
+
+        <div className="whatsapp-requirements">
+          <h3>Required before sending</h3>
+          <ul>
+            <li>
+              <span className="whatsapp-requirement-pending">Pending</span>
+              Record and verify WhatsApp opt-in for members who will receive campaigns.
+            </li>
+            <li>
+              <span className="whatsapp-requirement-pending">Pending</span>
+              Use Meta-approved templates for gym-initiated notices and promotional offers.
+            </li>
+            <li>
+              <span className="whatsapp-requirement-server">Server-side</span>
+              Connect the Cloud API phone number and access token through a Supabase Edge Function.
+            </li>
+          </ul>
+        </div>
+
+        <p className="whatsapp-security-note">
+          Keep the Meta access token and phone number credentials in server-side secrets only. Do not add them to this page, browser storage, or <code>VITE_</code> environment variables.
+        </p>
+
+        <button
+          type="button"
+          className="btn btn-secondary"
+          disabled
+          title="Complete the requirements above before enabling WhatsApp campaigns."
+        >
+          <Send size={16} /> WhatsApp Broadcast Unavailable
+        </button>
       </div>
     </div>
   );

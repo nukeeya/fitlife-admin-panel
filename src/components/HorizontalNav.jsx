@@ -4,14 +4,12 @@ import {
   LayoutDashboard,
   Users,
   UserCheck,
-  Key,
   Dumbbell,
   Briefcase,
   CreditCard,
   CalendarCheck,
-  MessageSquare,
+  MessageCircle,
   Award,
-  Megaphone,
   ShoppingBag,
   Cpu,
   Apple,
@@ -48,28 +46,6 @@ export default function HorizontalNav() {
         <UserCheck size={16} />
         <span>Approvals</span>
       </NavLink>
-
-      {/* Lockers Dropdown */}
-      <div className="h-nav-item">
-        <div
-          className="h-nav-link"
-          onClick={() => handleDropdownClick('lockers')}
-        >
-          <Key size={16} />
-          <span>Lockers</span>
-          <ChevronDown size={12} />
-        </div>
-        {(activeDropdown === 'lockers' || navStyle === 'horizontal-hover') && (
-          <div className="h-nav-dropdown" style={{ display: navStyle === 'horizontal-click' ? (activeDropdown === 'lockers' ? 'flex' : 'none') : undefined }}>
-            <NavLink to="/lockers?tab=assigned" className="submenu-link" onClick={() => setActiveDropdown(null)}>
-              Assigned Locker
-            </NavLink>
-            <NavLink to="/lockers?tab=edit-list" className="submenu-link" onClick={() => setActiveDropdown(null)}>
-              Locker Edit List
-            </NavLink>
-          </div>
-        )}
-      </div>
 
       <NavLink to="/trainers" className="h-nav-link">
         <Dumbbell size={16} />
@@ -140,9 +116,9 @@ export default function HorizontalNav() {
         )}
       </div>
 
-      <NavLink to="/sms" className="h-nav-link">
-        <MessageSquare size={16} />
-        <span>SMS</span>
+      <NavLink to="/whatsapp" className="h-nav-link">
+        <MessageCircle size={16} />
+        <span>WhatsApp</span>
       </NavLink>
 
       {/* Plans Dropdown */}
@@ -169,11 +145,6 @@ export default function HorizontalNav() {
           </div>
         )}
       </div>
-
-      <NavLink to="/advertisements" className="h-nav-link">
-        <Megaphone size={16} />
-        <span>Ads</span>
-      </NavLink>
 
       <NavLink to="/gym-shop" className="h-nav-link">
         <ShoppingBag size={16} />

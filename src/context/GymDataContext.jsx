@@ -18,7 +18,6 @@ import {
   mapMemberBase,
   mapExpense,
   mapSmsCampaign,
-  mapAd,
   mapJob,
   mapDietPlan,
   mapWorkoutPlan,
@@ -246,6 +245,20 @@ export function GymDataProvider({ children }) {
     for (const p of raw.plans || []) plansById[p.id] = p;
     const discountsById = {};
     for (const d of raw.discounts || []) discountsById[d.id] = d;
+    const paymentsByInvoice = new Map();
+    for (const payment of raw.payments || []) {
+      if (payment.invoice_id == null) continue;
+      const invoiceId = Number(payment.invoice_id);
+      const payments = paymentsByInvoice.get(invoiceId) || [];
+      payments.push({
+        id: payment.id,
+        amount: Number(payment.amount) || 0,
+        method: payment.method || '—',
+        reference: payment.transaction_reference || '',
+        date: payment.payment_date,
+      });
+      paymentsByInvoice.set(invoiceId, payments);
+    }
 
     return raw.invoices.map((row) => {
       const m = membersById[row.member_id] || {};
@@ -257,6 +270,8 @@ export function GymDataProvider({ children }) {
         memberId: row.member_id,
         memberName: `${m.first_name || ''} ${m.last_name || ''}`.trim() || 'Member',
         memberCode: m.member_code || `FLM-${String(row.member_id).padStart(4, '0')}`,
+        memberPhone: m.phone || '',
+        memberEmail: m.email || '',
         planName: plan?.name || m.plan || 'Plan',
         baseAmount: Number(row.base_amount),
         discountType: disc?.discount_type || null,
@@ -270,6 +285,9 @@ export function GymDataProvider({ children }) {
         status: row.payment_status,
         method: row.payment_method || 'CASH',
         date: row.invoice_date,
+        dueDate: row.due_date || null,
+        notes: row.notes || '',
+        payments: paymentsByInvoice.get(Number(row.id)) || [],
       };
     });
   }, [raw]);
@@ -317,7 +335,6 @@ export function GymDataProvider({ children }) {
   }, [raw, plans, profilePhotoUrls]);
 
   const smsCampaigns = useMemo(() => (raw?.smsCampaigns ? raw.smsCampaigns.map(mapSmsCampaign) : INITIAL_DATA.smsCampaigns), [raw]);
-  const ads = useMemo(() => (raw?.ads ? raw.ads.map(mapAd) : INITIAL_DATA.ads), [raw]);
 
   const jobs = useMemo(() => {
     if (!raw?.jobs) return INITIAL_DATA.jobs;
@@ -521,7 +538,7 @@ export function GymDataProvider({ children }) {
         }
 
         // 3. invoice
-        const { error: invErr } = await db.insertInvoice({
+        const { data: invoiceRow, error: invErr } = await db.insertInvoice({
           invoice_number: generateInvoiceNumber(),
           member_id: memberRow.id,
           plan_id: selectedPlan.id,
@@ -537,6 +554,19 @@ export function GymDataProvider({ children }) {
           invoice_date: joined,
         });
         if (invErr) return { error: invErr };
+
+        if (actualPaid > 0) {
+          const { error: paymentErr } = await db.insertPayment({
+            invoice_id: invoiceRow.id,
+            member_id: memberRow.id,
+            plan: selectedPlan.name,
+            amount: actualPaid,
+            method: paymentMethod || 'CASH',
+            status: 'Paid',
+            transaction_reference: null,
+          });
+          if (paymentErr) return { error: paymentErr };
+        }
 
         // 4. locker occupancy
         if (locker) {
@@ -725,6 +755,7 @@ export function GymDataProvider({ children }) {
       status: nextStatus,
       trainer_id: trainerId,
       locker_id: lockerId,
+      ...(assignments.avatar ? { avatar: assignments.avatar } : {}),
     };
 
     return commit({
@@ -1062,6 +1093,37 @@ export function GymDataProvider({ children }) {
     });
   };
 
+  const assignDietPlan = async (planId, memberId) => {
+    const plan = (raw?.dietPlans || []).find((item) => item.id === Number(planId));
+    const member = members.find((item) => item.id === Number(memberId));
+    if (!plan || !member) return { error: new Error('Select a valid member and diet plan.') };
+    if (Number(plan.member_id) === member.id) return { data: plan, error: null };
+    if (plan.member_id != null) {
+      return commit({
+        persist: () => db.duplicateDietPlan(plan, member.id, member.name),
+        reloadAll: true,
+      });
+    }
+
+    return commit({
+      optimistic: () =>
+        setRaw((prev) =>
+          prev
+            ? {
+                ...prev,
+                dietPlans: (prev.dietPlans || []).map((item) =>
+                  item.id === plan.id
+                    ? { ...item, member_id: member.id, plan_title: member.name }
+                    : item
+                ),
+              }
+            : prev
+        ),
+      persist: () => db.assignDietPlan(plan.id, member.id, member.name),
+      reloadAll: true,
+    });
+  };
+
   const saveWorkoutPlan = async (newProgram) => {
     const goal = newProgram?.program?.goal || newProgram?.program?.metadata?.goal || 'General Fitness';
     const experience =
@@ -1096,6 +1158,37 @@ export function GymDataProvider({ children }) {
           prev ? { ...prev, workoutPlans: (prev.workoutPlans || []).filter((p) => p.id !== programId) } : prev
         ),
       persist: () => db.deleteWorkoutPlan(programId),
+      reloadAll: true,
+    });
+  };
+
+  const assignWorkoutPlan = async (planId, memberId) => {
+    const plan = (raw?.workoutPlans || []).find((item) => item.id === Number(planId));
+    const member = members.find((item) => item.id === Number(memberId));
+    if (!plan || !member) return { error: new Error('Select a valid member and workout plan.') };
+    if (Number(plan.member_id) === member.id) return { data: plan, error: null };
+    if (plan.member_id != null) {
+      return commit({
+        persist: () => db.duplicateWorkoutPlan(plan, member.id, member.name),
+        reloadAll: true,
+      });
+    }
+
+    return commit({
+      optimistic: () =>
+        setRaw((prev) =>
+          prev
+            ? {
+                ...prev,
+                workoutPlans: (prev.workoutPlans || []).map((item) =>
+                  item.id === plan.id
+                    ? { ...item, member_id: member.id, plan_title: member.name }
+                    : item
+                ),
+              }
+            : prev
+        ),
+      persist: () => db.assignWorkoutPlan(plan.id, member.id, member.name),
       reloadAll: true,
     });
   };
@@ -1271,14 +1364,15 @@ export function GymDataProvider({ children }) {
         roles,
         smsCampaigns,
         smsBalance,
-        ads,
         jobs,
         dietPlans,
         saveDietPlan,
         deleteDietPlan,
+        assignDietPlan,
         workoutPlans,
         saveWorkoutPlan,
         deleteWorkoutPlan,
+        assignWorkoutPlan,
         progressLogs,
         logMemberProgress,
         shopProducts,

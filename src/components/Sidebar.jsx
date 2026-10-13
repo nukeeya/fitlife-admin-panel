@@ -4,14 +4,12 @@ import {
   LayoutDashboard,
   Users,
   UserCheck,
-  Key,
   Dumbbell,
   Briefcase,
   CreditCard,
   CalendarCheck,
-  MessageSquare,
+  MessageCircle,
   Award,
-  Megaphone,
   ShoppingBag,
   Cpu,
   Apple,
@@ -35,7 +33,6 @@ export default function Sidebar({ isOpen = false, onClose }) {
   const location = useLocation();
 
   const [openMenus, setOpenMenus] = useState({
-    lockers: false,
     accounts: false,
     attendance: false,
     plans: false,
@@ -138,32 +135,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
           )}
         </NavLink>
 
-        {/* 4. Locker Management (Submenus) */}
-        <div>
-          <button
-            type="button"
-            className={`sidebar-link ${location.pathname.startsWith('/lockers') ? 'active' : ''}`}
-            onClick={() => toggleSubmenu('lockers')}
-          >
-            <div className="sidebar-link-content">
-              <Key size={18} />
-              <span>Locker Management</span>
-            </div>
-            {openMenus.lockers ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          </button>
-          {openMenus.lockers && (
-            <div className="sidebar-submenu">
-              <NavLink to="/lockers?tab=assigned" className="submenu-link">
-                • Assigned Locker
-              </NavLink>
-              <NavLink to="/lockers?tab=edit-list" className="submenu-link">
-                • Locker Edit List
-              </NavLink>
-            </div>
-          )}
-        </div>
-
-        {/* 5. Trainer Management */}
+        {/* 4. Trainer Management */}
         <NavLink
           to="/trainers"
           className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
@@ -252,14 +224,14 @@ export default function Sidebar({ isOpen = false, onClose }) {
           )}
         </div>
 
-        {/* 9. SMS Management */}
+        {/* 9. WhatsApp Management */}
         <NavLink
-          to="/sms"
+          to="/whatsapp"
           className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
         >
           <div className="sidebar-link-content">
-            <MessageSquare size={18} />
-            <span>SMS Management</span>
+            <MessageCircle size={18} />
+            <span>WhatsApp Management</span>
           </div>
         </NavLink>
 
@@ -293,18 +265,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
           )}
         </div>
 
-        {/* 11. Advertisements */}
-        <NavLink
-          to="/advertisements"
-          className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-        >
-          <div className="sidebar-link-content">
-            <Megaphone size={18} />
-            <span>Advertisements</span>
-          </div>
-        </NavLink>
-
-        {/* 12. Gym Shop */}
+        {/* 11. Gym Shop */}
         <NavLink
           to="/gym-shop"
           className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
