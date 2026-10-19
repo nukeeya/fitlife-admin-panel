@@ -69,14 +69,29 @@ export default function HorizontalNav() {
         </div>
         {(activeDropdown === 'accounts' || navStyle === 'horizontal-hover') && (
           <div className="h-nav-dropdown" style={{ display: navStyle === 'horizontal-click' ? (activeDropdown === 'accounts' ? 'flex' : 'none') : undefined }}>
+            <NavLink to="/accounts?tab=overview" className="submenu-link" onClick={() => setActiveDropdown(null)}>
+              Financial Overview
+            </NavLink>
             <NavLink to="/accounts?tab=invoices" className="submenu-link" onClick={() => setActiveDropdown(null)}>
               Invoice List
             </NavLink>
             <NavLink to="/accounts?tab=payments" className="submenu-link" onClick={() => setActiveDropdown(null)}>
               Payment Collection
             </NavLink>
+            <NavLink to="/accounts?tab=dues" className="submenu-link" onClick={() => setActiveDropdown(null)}>
+              Member Dues
+            </NavLink>
+            <NavLink to="/accounts?tab=methods" className="submenu-link" onClick={() => setActiveDropdown(null)}>
+              Payment Methods
+            </NavLink>
             <NavLink to="/accounts?tab=expenses" className="submenu-link" onClick={() => setActiveDropdown(null)}>
               Expense Management
+            </NavLink>
+            <NavLink to="/accounts?tab=revenue-recognition" className="submenu-link" onClick={() => setActiveDropdown(null)}>
+              Revenue Recognition
+            </NavLink>
+            <NavLink to="/accounts?tab=reports" className="submenu-link" onClick={() => setActiveDropdown(null)}>
+              Financial Reports
             </NavLink>
             <NavLink to="/accounts?tab=balance-sheet" className="submenu-link" onClick={() => setActiveDropdown(null)}>
               Monthly Balance Sheet

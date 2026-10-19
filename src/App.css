@@ -794,19 +794,21 @@
   width: 34px;
   height: 34px;
   border-radius: var(--radius-md);
-  background: var(--bg-surface);
+  background: transparent;
+  background: color-mix(in srgb, currentColor 6%, transparent);
   color: var(--primary);
+  border: 1.5px solid currentColor;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: var(--transition-spring);
+  box-sizing: border-box;
 }
 
 .stat-widget:hover .stat-widget-icon {
   transform: scale(1.18) rotate(8deg);
-  background: var(--primary);
-  color: #000000;
-  box-shadow: 0 0 12px var(--primary-glow);
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, currentColor 30%, transparent);
 }
 
 .stat-widget-value {

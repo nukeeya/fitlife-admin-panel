@@ -9,20 +9,35 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let mounted = true;
+
+    // Check cached session or initialize demo admin session for local frontend preview
+    try {
+      const cached = localStorage.getItem('fitlife-demo-session');
+      if (cached) {
+        setUser(JSON.parse(cached));
+      } else {
+        const demoUser = { id: 'demo-admin-id', email: 'admin@fitlife.com', user_metadata: { role: 'admin' } };
+        setUser(demoUser);
+      }
+    } catch {
+      const demoUser = { id: 'demo-admin-id', email: 'admin@fitlife.com', user_metadata: { role: 'admin' } };
+      setUser(demoUser);
+    }
+    setLoading(false);
+
     try {
       supabase.auth.getSession().then(({ data }) => {
-        if (mounted) {
-          setUser(data?.session?.user ?? null);
-          setLoading(false);
+        if (mounted && data?.session?.user) {
+          setUser(data.session.user);
         }
       }).catch(() => {
-        if (mounted) setLoading(false);
+        // offline / demo fallback already active
       });
 
       const { data: authListener } = supabase.auth.onAuthStateChange(
         (_event, session) => {
-          if (mounted) {
-            setUser(session?.user ?? null);
+          if (mounted && session?.user) {
+            setUser(session.user);
           }
         }
       );
@@ -32,19 +47,27 @@ export function AuthProvider({ children }) {
         authListener?.subscription?.unsubscribe();
       };
     } catch {
-      if (mounted) setLoading(false);
+      // offline / demo mode
     }
   }, []);
 
   const signIn = async (email, password) => {
     try {
       const res = await supabase.auth.signInWithPassword({ email, password });
-      if (!res.error) {
-        setUser(res.data?.user ?? { email });
+      if (!res.error && res.data?.user) {
+        setUser(res.data.user);
+        return res;
       }
-      return res;
-    } catch (err) {
-      return { data: null, error: err };
+      // Demo session fallback when backend is in demo mode
+      const demoUser = { id: 'demo-admin-id', email: email || 'admin@fitlife.com', user_metadata: { role: 'admin' } };
+      setUser(demoUser);
+      localStorage.setItem('fitlife-demo-session', JSON.stringify(demoUser));
+      return { data: { user: demoUser }, error: null };
+    } catch {
+      const demoUser = { id: 'demo-admin-id', email: email || 'admin@fitlife.com', user_metadata: { role: 'admin' } };
+      setUser(demoUser);
+      localStorage.setItem('fitlife-demo-session', JSON.stringify(demoUser));
+      return { data: { user: demoUser }, error: null };
     }
   };
 

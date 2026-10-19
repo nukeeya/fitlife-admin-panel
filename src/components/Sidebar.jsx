@@ -174,14 +174,29 @@ export default function Sidebar({ isOpen = false, onClose }) {
           </button>
           {openMenus.accounts && (
             <div className="sidebar-submenu">
+              <NavLink to="/accounts?tab=overview" className="submenu-link">
+                • Financial Overview
+              </NavLink>
               <NavLink to="/accounts?tab=invoices" className="submenu-link">
                 • Invoice List
               </NavLink>
               <NavLink to="/accounts?tab=payments" className="submenu-link">
                 • Payment Collection
               </NavLink>
+              <NavLink to="/accounts?tab=dues" className="submenu-link">
+                • Member Dues
+              </NavLink>
+              <NavLink to="/accounts?tab=methods" className="submenu-link">
+                • Payment Methods
+              </NavLink>
               <NavLink to="/accounts?tab=expenses" className="submenu-link">
                 • Expense Management
+              </NavLink>
+              <NavLink to="/accounts?tab=revenue-recognition" className="submenu-link">
+                • Revenue Recognition
+              </NavLink>
+              <NavLink to="/accounts?tab=reports" className="submenu-link">
+                • Financial Reports
               </NavLink>
               <NavLink to="/accounts?tab=balance-sheet" className="submenu-link">
                 • Monthly Balance Sheet
