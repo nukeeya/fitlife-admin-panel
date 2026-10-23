@@ -11,6 +11,7 @@ import {
   MessageCircle,
   Award,
   ShoppingBag,
+  Coffee,
   Cpu,
   Apple,
   FileSpreadsheet,
@@ -164,6 +165,11 @@ export default function HorizontalNav() {
       <NavLink to="/gym-shop" className="h-nav-link">
         <ShoppingBag size={16} />
         <span>Shop</span>
+      </NavLink>
+
+      <NavLink to="/coffee-shop" className="h-nav-link">
+        <Coffee size={16} />
+        <span>Coffee Shop</span>
       </NavLink>
 
       <NavLink to="/ai-workouts" className="h-nav-link">

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   ShoppingBag,
+  Coffee,
   Plus,
   Pencil,
   Trash2,
@@ -34,6 +36,7 @@ const EMPTY_FORM = {
 const fmtMoney = (n) => `৳${Math.round(Number(n) || 0).toLocaleString()}`;
 
 export default function GymShop() {
+  const [searchParams] = useSearchParams();
   const {
     shopProducts,
     saveShopProduct,
@@ -79,7 +82,9 @@ export default function GymShop() {
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('All'); // 'All' | 'Gym Wear' | 'Food'
+  const [categoryFilter, setCategoryFilter] = useState(
+    () => ['Food', 'Cafe'].includes(searchParams.get('category')) ? searchParams.get('category') : 'All'
+  ); // 'All' | 'Gym Wear' | 'Food' | 'Cafe'
   const [statusFilter, setStatusFilter] = useState('All'); // 'All' | 'Active' | 'Draft' | 'Archived'
 
   // Add / Edit form state
@@ -109,6 +114,7 @@ export default function GymShop() {
       All: list.length,
       'Gym Wear': list.filter((p) => p.category === 'Gym Wear').length,
       Food: list.filter((p) => p.category === 'Food').length,
+      Cafe: list.filter((p) => p.category === 'Cafe').length,
     };
   }, [shopProducts]);
 
@@ -129,7 +135,7 @@ export default function GymShop() {
 
   const openAdd = () => {
     setEditingProduct(null);
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, category: categoryFilter === 'All' ? 'Gym Wear' : categoryFilter });
     setFormError('');
     setShowFormModal(true);
   };
@@ -138,7 +144,7 @@ export default function GymShop() {
     setEditingProduct(product);
     setForm({
       name: product.name || '',
-      category: product.category === 'Food' ? 'Food' : 'Gym Wear',
+      category: product.category || 'Gym Wear',
       brand: product.brand || '',
       price: String(product.price ?? ''),
       cost: String(product.cost ?? ''),
@@ -330,7 +336,7 @@ export default function GymShop() {
           <span className="stat-card-title">TOTAL PRODUCTS</span>
           <div className="stat-card-value">{stats.total}</div>
           <span className="stat-card-label">
-            {categoryCounts['Gym Wear']} apparel · {categoryCounts.Food} food items
+            {categoryCounts['Gym Wear']} apparel · {categoryCounts.Food} nutrition items · {categoryCounts.Cafe} cafe items
           </span>
         </div>
         <div className="stat-card">
@@ -371,7 +377,7 @@ export default function GymShop() {
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>CATEGORY:</span>
-          {['All', 'Gym Wear', 'Food'].map((c) => (
+          {['All', 'Gym Wear', 'Food', 'Cafe'].map((c) => (
             <button
               key={c}
               type="button"
@@ -433,7 +439,7 @@ export default function GymShop() {
                 Number(p.price) > 0
                   ? Math.round(((Number(p.price) - Number(p.cost)) / Number(p.price)) * 100)
                   : null;
-              const CategoryIcon = p.category === 'Food' ? UtensilsCrossed : Shirt;
+              const CategoryIcon = p.category === 'Cafe' ? Coffee : p.category === 'Food' ? UtensilsCrossed : Shirt;
 
               return (
                 <div
@@ -477,7 +483,7 @@ export default function GymShop() {
                       />
                     )}
                     <span
-                      className={`badge ${p.category === 'Food' ? 'badge-info' : 'badge-primary'}`}
+                      className={`badge ${p.category === 'Gym Wear' ? 'badge-primary' : 'badge-info'}`}
                       style={{ position: 'absolute', top: '10px', left: '10px' }}
                     >
                       {p.category}
@@ -621,6 +627,7 @@ export default function GymShop() {
                 >
                   <option value="Gym Wear">Gym Wear</option>
                   <option value="Food">Food</option>
+                  <option value="Cafe">Cafe</option>
                 </select>
               </div>
 
@@ -649,10 +656,10 @@ export default function GymShop() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">{form.category === 'Food' ? 'Pack Size / Variant' : 'Size / Variant'}</label>
+                <label className="form-label">{form.category === 'Gym Wear' ? 'Size / Variant' : 'Pack Size / Variant'}</label>
                 <input
                   type="text"
-                  placeholder={form.category === 'Food' ? 'e.g. 1kg / 12-pack' : 'e.g. M, L, XL'}
+                  placeholder={form.category === 'Gym Wear' ? 'e.g. M, L, XL' : 'e.g. 1kg / 12-pack / 350ml'}
                   className="form-input"
                   value={form.size}
                   onChange={(e) => setField('size', e.target.value)}

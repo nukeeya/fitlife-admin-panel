@@ -703,6 +703,149 @@
   border-top: 1px solid var(--border-base);
 }
 
+.coffee-shop-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.9fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.coffee-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px;
+  padding: 16px;
+}
+
+.coffee-menu-item {
+  min-height: 126px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 15px;
+  text-align: left;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-spring);
+}
+
+.coffee-menu-item:hover:not(:disabled) {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.coffee-menu-item:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.coffee-menu-item-name {
+  font-weight: 700;
+}
+
+.coffee-menu-item-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.coffee-menu-item-price {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.coffee-cart {
+  padding: 0 16px;
+}
+
+.coffee-cart-row {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-base);
+}
+
+.coffee-quantity-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coffee-quantity-controls button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.coffee-quantity-controls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.coffee-checkout-fields {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.coffee-checkout-fields label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.coffee-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 16px;
+  padding: 16px 0;
+  border-top: 1px solid var(--border-base);
+  font-size: 16px;
+}
+
+.coffee-total strong {
+  font-size: 20px;
+  color: var(--primary);
+}
+
+.coffee-checkout-button {
+  width: calc(100% - 32px);
+  justify-content: center;
+  margin: 0 16px 16px;
+}
+
+@media (max-width: 900px) {
+  .coffee-shop-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .coffee-cart-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .coffee-cart-row > strong:last-child {
+    grid-column: 2;
+    text-align: right;
+  }
+}
+
 /* =============================================================================
    PAGE & DASHBOARD COMPONENTS
    ============================================================================= */

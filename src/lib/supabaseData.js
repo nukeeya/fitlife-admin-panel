@@ -161,7 +161,7 @@ export function shopProductToRow(product) {
   };
   return {
     name: String(product.name || '').trim() || 'Unnamed Product',
-    category: product.category === 'Food' ? 'Food' : 'Gym Wear',
+    category: ['Food', 'Cafe'].includes(product.category) ? product.category : 'Gym Wear',
     brand: product.brand || null,
     price: num(product.price),
     cost: num(product.cost),
@@ -397,7 +397,7 @@ export function mapShopProduct(row) {
   return {
     id: row.id,
     name: row.name,
-    category: row.category, // 'Gym Wear' | 'Food'
+    category: row.category, // 'Gym Wear' | 'Food' | 'Cafe'
     brand: row.brand || '',
     price: Number(row.price ?? 0),
     cost: Number(row.cost ?? 0),

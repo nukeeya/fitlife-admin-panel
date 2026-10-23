@@ -4,6 +4,34 @@ import { supabase } from '../lib/supabase';
 import { resolveProfilePhotoUrls } from '../lib/profilePhotos';
 import Modal from '../components/common/Modal';
 
+const ADMISSION_PLAN_NAMES = {
+  '1-month': '1 Month',
+  '3-months': '3 Months',
+  '6-months': '6 Months',
+  '1-year': '1 Year',
+  '1-day-trial': '1 Day Trial',
+  'couple-package': 'Couple Package',
+  'corporate-package': 'Corporate Package',
+};
+const ADMISSION_PLAN_DURATION_DAYS = {
+  '1-month': 30,
+  '3-months': 90,
+  '6-months': 180,
+  '1-year': 365,
+  '1-day-trial': 1,
+};
+
+function formatAdmissionPlan(submission) {
+  const name = submission.plan_details?.plan_name
+    || ADMISSION_PLAN_NAMES[submission.plan]
+    || submission.plan?.replace(/[-_]/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+    || '—';
+  const people = Number(submission.plan_details?.corporate_people);
+  return submission.plan === 'corporate-package' && people > 0
+    ? `${name} (${people} people)`
+    : name;
+}
+
 export default function Admissions() {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,9 +71,9 @@ export default function Admissions() {
   async function handleApprove(sub) {
     setProcessing(sub.id);
     try {
-      // Calculate expiry date (30 days from now)
+      // Packages without a defined term retain the existing 30-day default.
       const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + 30);
+      expiryDate.setDate(expiryDate.getDate() + (ADMISSION_PLAN_DURATION_DAYS[sub.plan] || 30));
 
       // Create member record
       const { error: memberError } = await supabase.from('members').insert({
@@ -54,7 +82,7 @@ export default function Admissions() {
         last_name: sub.last_name,
         email: sub.email,
         phone: sub.phone,
-        plan: sub.plan === 'basic' ? 'Basic' : sub.plan === 'standard' ? 'Standard' : 'Premium',
+        plan: formatAdmissionPlan(sub),
         branch: sub.branch,
         joined: new Date().toISOString().split('T')[0],
         expiry: expiryDate.toISOString().split('T')[0],
@@ -194,7 +222,7 @@ export default function Admissions() {
                 </td>
                 <td>{s.phone}</td>
                 <td>{s.branch?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</td>
-                <td>{s.plan?.replace(/\b\w/g, l => l.toUpperCase())}</td>
+                <td>{formatAdmissionPlan(s)}</td>
                 <td>{s.submittedDate}</td>
                 <td>
                   <span className={`status-badge ${
@@ -315,7 +343,17 @@ export default function Admissions() {
               <h3><MapPin size={16} /> BRANCH & PLAN</h3>
               <div className="detail-grid">
                 <div><span className="detail-label">Branch</span><span className="detail-value">{selectedSubmission.branch?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span></div>
-                <div><span className="detail-label">Plan</span><span className="detail-value">{selectedSubmission.plan?.replace(/\b\w/g, l => l.toUpperCase())}</span></div>
+                <div><span className="detail-label">Plan</span><span className="detail-value">{formatAdmissionPlan(selectedSubmission)}</span></div>
+                {(selectedSubmission.plan_details?.add_ons || []).length > 0 && (
+                  <div className="full-width">
+                    <span className="detail-label">Add-ons</span>
+                    <span className="detail-value">
+                      {selectedSubmission.plan_details.add_ons
+                        .map((addOn) => `${addOn.name} (৳${Number(addOn.price).toLocaleString('en-BD')})`)
+                        .join(', ')}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 

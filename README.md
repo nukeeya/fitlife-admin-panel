@@ -9,6 +9,13 @@ Admin panel for gym management built with React 19, Vite, React Router, Recharts
   `database/schema.sql` (run the whole file in the Supabase SQL Editor)
 - **Linting:** Oxlint (`npm run lint`)
 
+For an existing Supabase project, apply the SQL files in `database/migrations`
+in numeric order. Apply `008_admission_plan_details.sql` before deploying the
+admission form update. Apply `009_coffee_shop_pos.sql` after `001_shop_products.sql`
+to enable authenticated Coffee Shop sales. The migration adds a dedicated `Cafe`
+product category. Add or manage cafe menu items under Gym Shop → Cafe. Checkout
+records walk-in sales and deducts stock in one database transaction.
+
 ## Local development
 
 ```bash
