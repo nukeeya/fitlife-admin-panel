@@ -90,7 +90,7 @@ export default function JobPosting() {
           onClick={() => setShowAddJobModal(true)}
         >
           <Plus size={16} />
-          + Post New Vacancy
+          Post New Vacancy
         </button>
       </div>
 

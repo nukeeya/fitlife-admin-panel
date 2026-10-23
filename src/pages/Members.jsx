@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import {
   Search,
   Plus,
@@ -21,11 +21,15 @@ import { useGymData } from '../context/GymDataContext';
 import { useAuth } from '../context/AuthContext';
 import { members as fallbackMembers } from '../data/gymData';
 import Modal from '../components/common/Modal';
+import Avatar from '../components/common/Avatar';
 
 export default function Members() {
   const navigate = useNavigate();
   const outletContext = useOutletContext();
   const openAdmission = outletContext?.openAdmission || (() => {});
+  const [searchParams] = useSearchParams();
+  const queryFromUrl = searchParams.get('search') || searchParams.get('q') || '';
+
   const {
     members: liveMembers,
     plans,
@@ -40,7 +44,14 @@ export default function Members() {
   const { resetPassword } = useAuth();
   const allMembers = liveMembers || fallbackMembers;
 
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(queryFromUrl);
+
+  useEffect(() => {
+    const q = searchParams.get('search') || searchParams.get('q');
+    if (q !== null && q !== searchTerm) {
+      setSearchTerm(q);
+    }
+  }, [searchParams]);
   const [statusFilter, setStatusFilter] = useState('All');
   const [planFilter, setPlanFilter] = useState('All');
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -311,13 +322,14 @@ export default function Members() {
                 onClick={() => navigate(`/members/${m.id}`)}
               >
                 <td>
-                  <div className="member-cell">
-                    <div className="avatar" style={{ overflow: 'hidden' }}>
-                      {m.avatar?.startsWith('http') ? (
-                        <img src={m.avatar} alt={`${m.name} profile`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : m.avatar}
+                  <div className="member-cell" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Avatar src={m.avatar} name={m.name} size={36} shape="circle" />
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{m.name}</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                        {m.code || `FLM-${String(m.id).padStart(4, '0')}`}
+                      </span>
                     </div>
-                    {m.name}
                   </div>
                 </td>
                 <td>{m.plan}</td>

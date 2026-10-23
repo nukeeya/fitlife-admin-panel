@@ -9,8 +9,8 @@ import {
   FileSpreadsheet,
   Scale,
   DollarSign,
+  Lock,
 } from 'lucide-react';
-import { FinanceProvider } from '../context/FinanceContext';
 import FinancialOverviewTab from '../components/finance/FinancialOverviewTab';
 import InvoiceListTab from '../components/finance/InvoiceListTab';
 import PaymentCollectionTab from '../components/finance/PaymentCollectionTab';
@@ -20,12 +20,14 @@ import ExpenseManagementTab from '../components/finance/ExpenseManagementTab';
 import RevenueRecognitionTab from '../components/finance/RevenueRecognitionTab';
 import FinancialReportsTab from '../components/finance/FinancialReportsTab';
 import MonthlyBalanceSheetTab from '../components/finance/MonthlyBalanceSheetTab';
+import MonthlyAccountClosingTab from '../components/finance/MonthlyAccountClosingTab';
 
 export const ACCOUNTS_TABS = [
   { id: 'overview', label: 'Financial Overview', icon: LayoutDashboard },
   { id: 'invoices', label: 'Invoice List', icon: Receipt },
   { id: 'payments', label: 'Payment Collection', icon: CreditCard },
   { id: 'dues', label: 'Member Dues', icon: Clock },
+  { id: 'closing', label: 'Monthly Closing', icon: Lock },
   { id: 'methods', label: 'Payment Methods', icon: Wallet },
   { id: 'expenses', label: 'Expense Management', icon: DollarSign },
   { id: 'revenue-recognition', label: 'Revenue Recognition', icon: TrendingUp },
@@ -43,80 +45,82 @@ export default function Accounts() {
   };
 
   return (
-    <FinanceProvider>
-      <div className="page">
-        {/* Header */}
-        <div className="page-header">
-          <div className="page-title-group">
-            <h1 className="page-title">Accounts & Financial Management</h1>
-            <p className="page-subtitle">
-              Comprehensive accounting suite: partial-payment dues simulator, multi-channel gateways, dynamic revenue recognition, and reconciled statements.
-            </p>
-          </div>
-
-          {/* Subtabs Bar — Scrollable on mobile, interactive */}
-          <div className="subtabs-bar" style={{ display: 'flex', gap: '8px', overflowX: 'auto', width: '100%' }}>
-            {ACCOUNTS_TABS.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  className={`subtab-btn ${isActive ? 'active' : ''}`}
-                  onClick={() => handleTabChange(tab.id)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    whiteSpace: 'nowrap',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <Icon size={14} />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
+    <div className="page">
+      {/* Header */}
+      <div className="page-header">
+        <div className="page-title-group">
+          <h1 className="page-title">Accounts & Financial Management</h1>
+          <p className="page-subtitle">
+            Comprehensive accounting suite: partial-payment dues simulator, monthly closing reconciliation, multi-channel gateways, dynamic revenue recognition, and reconciled statements.
+          </p>
         </div>
 
-        {/* Tab Views */}
-        {activeTab === 'overview' && (
-          <FinancialOverviewTab onNavigateTab={handleTabChange} />
-        )}
-
-        {activeTab === 'invoices' && (
-          <InvoiceListTab />
-        )}
-
-        {activeTab === 'payments' && (
-          <PaymentCollectionTab />
-        )}
-
-        {activeTab === 'dues' && (
-          <MemberDuesTab />
-        )}
-
-        {activeTab === 'methods' && (
-          <PaymentMethodsTab />
-        )}
-
-        {activeTab === 'expenses' && (
-          <ExpenseManagementTab />
-        )}
-
-        {activeTab === 'revenue-recognition' && (
-          <RevenueRecognitionTab />
-        )}
-
-        {activeTab === 'reports' && (
-          <FinancialReportsTab />
-        )}
-
-        {activeTab === 'balance-sheet' && (
-          <MonthlyBalanceSheetTab />
-        )}
+        {/* Subtabs Bar — Scrollable on mobile, interactive */}
+        <div className="subtabs-bar" style={{ display: 'flex', gap: '8px', overflowX: 'auto', width: '100%' }}>
+          {ACCOUNTS_TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                className={`subtab-btn ${isActive ? 'active' : ''}`}
+                onClick={() => handleTabChange(tab.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                }}
+              >
+                <Icon size={14} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
-    </FinanceProvider>
+
+      {/* Tab Views */}
+      {activeTab === 'overview' && (
+        <FinancialOverviewTab onNavigateTab={handleTabChange} />
+      )}
+
+      {activeTab === 'invoices' && (
+        <InvoiceListTab />
+      )}
+
+      {activeTab === 'payments' && (
+        <PaymentCollectionTab />
+      )}
+
+      {activeTab === 'dues' && (
+        <MemberDuesTab />
+      )}
+
+      {activeTab === 'closing' && (
+        <MonthlyAccountClosingTab />
+      )}
+
+      {activeTab === 'methods' && (
+        <PaymentMethodsTab />
+      )}
+
+      {activeTab === 'expenses' && (
+        <ExpenseManagementTab />
+      )}
+
+      {activeTab === 'revenue-recognition' && (
+        <RevenueRecognitionTab />
+      )}
+
+      {activeTab === 'reports' && (
+        <FinancialReportsTab />
+      )}
+
+      {activeTab === 'balance-sheet' && (
+        <MonthlyBalanceSheetTab />
+      )}
+    </div>
   );
 }

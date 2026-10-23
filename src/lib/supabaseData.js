@@ -13,55 +13,69 @@ import { supabase } from './supabase';
 // unreachable, so every page keeps rendering. Shapes mirror the mappers' output.
 // -----------------------------------------------------------------------------
 
+import {
+  MOCK_MEMBERS,
+  MOCK_TRAINERS,
+  MOCK_EMPLOYEES,
+  MOCK_APPLICATIONS,
+} from '../data/mockProfiles';
+
 export const FALLBACK_DATA = {
   plans: [
     {
       id: 1, code: '1-month', name: '1 Month', price: 7000, period: '', durationDays: 30,
-      features: [],
+      features: ['Full Gym Access', 'Standard Locker', 'Fitness Assessment'],
       lockerZone: null, popular: false, vatPercent: 5, status: 'Active',
     },
     {
-      id: 2, code: '3-months', name: '3 Months', price: 18000, period: '', durationDays: 90,
-      features: [],
+      id: 2, code: '3-months', name: '3 Months', price: 15000, period: '', durationDays: 90,
+      features: ['Full Gym Access', 'Dedicated Locker', 'Bi-weekly Trainer Review', 'Steam & Sauna Weekend'],
       lockerZone: null, popular: true, vatPercent: 5, status: 'Active',
     },
     {
       id: 3, code: '6-months', name: '6 Months', price: 30000, period: '', durationDays: 180,
-      features: [],
+      features: ['VIP Gym Access', 'Dedicated Digital Locker', 'Personal Trainer Review', 'Steam & Sauna All Days'],
       lockerZone: null, popular: false, vatPercent: 5, status: 'Active',
     },
     {
       id: 4, code: '1-year', name: '1 Year', price: 50000, period: '', durationDays: 365,
-      features: [],
+      features: ['All-Inclusive Elite Access', 'VIP Executive Locker', 'Monthly InBody Scans', 'Guest Passes (5/mo)'],
       lockerZone: null, popular: false, vatPercent: 5, status: 'Active',
     },
     {
       id: 5, code: '1-day-trial', name: '1 Day Trial', price: 500, period: '', durationDays: 1,
-      features: ['No Admission Fee'],
+      features: ['Single Day Access', 'No Admission Fee'],
       lockerZone: null, popular: false, vatPercent: 5, status: 'Active',
     },
   ],
-  members: [],
-  applications: [],
+  members: MOCK_MEMBERS,
+  applications: MOCK_APPLICATIONS,
   invoices: [],
   expenses: [],
-  attendance: [],
-  lockers: [
-    { id: 9001, number: 'A-001', zone: 'Zone A', type: 'Standard', status: 'Occupied', assignedTo: 'Rahim Ahmed', memberCode: 'FLM-0001', expiryDate: '2026-11-10', monthlyFee: 500, isMock: true },
-    { id: 9002, number: 'A-002', zone: 'Zone A', type: 'Standard', status: 'Available', assignedTo: null, memberCode: null, expiryDate: null, monthlyFee: 500, isMock: true },
-    { id: 9003, number: 'A-003', zone: 'Zone A', type: 'Digital', status: 'Occupied', assignedTo: 'Sakib Hasan', memberCode: 'FLM-0002', expiryDate: '2026-10-28', monthlyFee: 650, isMock: true },
-    { id: 9004, number: 'A-004', zone: 'Zone A', type: 'Standard', status: 'Available', assignedTo: null, memberCode: null, expiryDate: null, monthlyFee: 500, isMock: true },
-    { id: 9005, number: 'A-005', zone: 'Zone A', type: 'Standard', status: 'Maintenance', assignedTo: null, memberCode: null, expiryDate: null, monthlyFee: 500, isMock: true },
-    { id: 9006, number: 'B-001', zone: 'Zone B', type: 'Digital', status: 'Occupied', assignedTo: 'Nafisa Rahman', memberCode: 'FLM-0003', expiryDate: '2026-10-19', monthlyFee: 650, isMock: true },
-    { id: 9007, number: 'B-002', zone: 'Zone B', type: 'Standard', status: 'Available', assignedTo: null, memberCode: null, expiryDate: null, monthlyFee: 500, isMock: true },
-    { id: 9008, number: 'B-003', zone: 'Zone B', type: 'Standard', status: 'Occupied', assignedTo: 'Tanvir Islam', memberCode: 'FLM-0004', expiryDate: '2026-11-02', monthlyFee: 500, isMock: true },
-    { id: 9009, number: 'B-004', zone: 'Zone B', type: 'Digital', status: 'Available', assignedTo: null, memberCode: null, expiryDate: null, monthlyFee: 650, isMock: true },
-    { id: 9010, number: 'VIP-01', zone: 'Zone VIP', type: 'VIP Executive', status: 'Occupied', assignedTo: 'Arif Hossain', memberCode: 'FLM-0005', expiryDate: '2026-12-01', monthlyFee: 1200, isMock: true },
-    { id: 9011, number: 'VIP-02', zone: 'Zone VIP', type: 'VIP Executive', status: 'Available', assignedTo: null, memberCode: null, expiryDate: null, monthlyFee: 1200, isMock: true },
-    { id: 9012, number: 'VIP-03', zone: 'Zone VIP', type: 'Digital', status: 'Maintenance', assignedTo: null, memberCode: null, expiryDate: null, monthlyFee: 850, isMock: true },
+  attendance: [
+    { id: 1, memberId: 8, name: 'Farhan Ahmed', checkIn: '06:45 AM', checkOut: '08:10 AM', status: 'In', date: '2026-10-22' },
+    { id: 2, memberId: 1, name: 'Kabir Chowdhury', checkIn: '07:00 AM', checkOut: '08:15 AM', status: 'Out', date: '2026-10-22' },
+    { id: 3, memberId: 3, name: 'Tanvir Hossain', checkIn: '07:30 AM', checkOut: '09:00 AM', status: 'Out', date: '2026-10-22' },
+    { id: 4, memberId: 2, name: 'Sabrina Yasmin', checkIn: '08:15 AM', checkOut: '—', status: 'In', date: '2026-10-22' },
+    { id: 5, memberId: 4, name: 'Nabila Karim', checkIn: '09:00 AM', checkOut: '—', status: 'In', date: '2026-10-22' },
+    { id: 6, memberId: 5, name: 'Mahmudul Hasan', checkIn: '09:45 AM', checkOut: '11:00 AM', status: 'Out', date: '2026-10-22' },
   ],
-  trainers: [],
-  employees: [],
+  lockers: [
+    { id: 9001, number: 'A-001', zone: 'Zone A', type: 'Standard', status: 'Occupied', assignedTo: 'Mahmudul Hasan', memberCode: 'FLM-1005', expiryDate: '2026-11-10', monthlyFee: 500, isMock: true },
+    { id: 9002, number: 'A-002', zone: 'Zone A', type: 'Standard', status: 'Occupied', assignedTo: 'Ashfaqur Rahman', memberCode: 'FLM-1011', expiryDate: '2026-11-30', monthlyFee: 500, isMock: true },
+    { id: 9003, number: 'A-003', zone: 'Zone A', type: 'Digital', status: 'Occupied', assignedTo: 'Sabrina Yasmin', memberCode: 'FLM-1002', expiryDate: '2026-10-28', monthlyFee: 650, isMock: true },
+    { id: 9004, number: 'A-004', zone: 'Zone A', type: 'Standard', status: 'Occupied', assignedTo: 'Zubair Al-Mamun', memberCode: 'FLM-1009', expiryDate: '2027-03-12', monthlyFee: 500, isMock: true },
+    { id: 9005, number: 'A-005', zone: 'Zone A', type: 'Standard', status: 'Maintenance', assignedTo: null, memberCode: null, expiryDate: null, monthlyFee: 500, isMock: true },
+    { id: 9006, number: 'B-001', zone: 'Zone B', type: 'Digital', status: 'Occupied', assignedTo: 'Nabila Karim', memberCode: 'FLM-1004', expiryDate: '2026-12-31', monthlyFee: 650, isMock: true },
+    { id: 9007, number: 'B-002', zone: 'Zone B', type: 'Standard', status: 'Occupied', assignedTo: 'Mehnaz Parveen', memberCode: 'FLM-1010', expiryDate: '2026-11-14', monthlyFee: 500, isMock: true },
+    { id: 9008, number: 'B-003', zone: 'Zone B', type: 'Standard', status: 'Occupied', assignedTo: 'Farhan Ahmed', memberCode: 'FLM-1008', expiryDate: '2026-12-31', monthlyFee: 500, isMock: true },
+    { id: 9009, number: 'B-004', zone: 'Zone B', type: 'Digital', status: 'Occupied', assignedTo: 'Sumaiya Akter', memberCode: 'FLM-1012', expiryDate: '2026-11-04', monthlyFee: 650, isMock: true },
+    { id: 9010, number: 'VIP-01', zone: 'Zone VIP', type: 'VIP Executive', status: 'Occupied', assignedTo: 'Kabir Chowdhury', memberCode: 'FLM-1001', expiryDate: '2027-01-09', monthlyFee: 1200, isMock: true },
+    { id: 9011, number: 'VIP-02', zone: 'Zone VIP', type: 'VIP Executive', status: 'Occupied', assignedTo: 'Tanvir Hossain', memberCode: 'FLM-1003', expiryDate: '2027-09-30', monthlyFee: 1200, isMock: true },
+    { id: 9012, number: 'VIP-03', zone: 'Zone VIP', type: 'Digital', status: 'Available', assignedTo: null, memberCode: null, expiryDate: null, monthlyFee: 850, isMock: true },
+  ],
+  trainers: MOCK_TRAINERS,
+  employees: MOCK_EMPLOYEES,
   roles: [
     { id: 1, name: 'Super Admin', description: 'Full system access', canApplyDiscount: true, maxDiscountPercent: 100, canApproveMembers: true, canManageLockers: true, canManageFinances: true, usersCount: 0 },
     { id: 2, name: 'Branch Manager', description: 'Branch-level management', canApplyDiscount: true, maxDiscountPercent: 15, canApproveMembers: true, canManageLockers: true, canManageFinances: true, usersCount: 0 },

@@ -17,6 +17,7 @@ import { supabase } from '../lib/supabase';
 import { uploadProfilePhoto } from '../lib/profilePhotos';
 import Modal from '../components/common/Modal';
 import ProfilePhotoField from '../components/ProfilePhotoField';
+import Avatar from '../components/common/Avatar';
 
 export default function Trainers() {
   const { trainers: liveTrainers, members: liveMembers, refresh } = useGymData();
@@ -249,7 +250,7 @@ export default function Trainers() {
       </div>
 
       {/* Trainers Grid */}
-      <div className="trainer-grid">
+      <div className="trainers-grid trainer-grid">
         {filtered.length === 0 ? (
           <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-base)' }}>
             No coaches found matching your criteria.
@@ -260,11 +261,7 @@ export default function Trainers() {
             return (
               <div key={t.id} className="trainer-card">
                 <div className="trainer-header">
-                  <div className="avatar-initials" style={{ width: '48px', height: '48px', fontSize: '16px', overflow: 'hidden' }}>
-                    {t.avatar?.startsWith('http') ? (
-                      <img src={t.avatar} alt={`${t.name} profile`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : t.avatar || t.name.slice(0, 2).toUpperCase()}
-                  </div>
+                  <Avatar src={t.avatar} name={t.name} size={48} shape="circle" />
                   <div>
                     <h3 style={{ fontSize: '16px', fontWeight: 800, margin: 0 }}>{t.name}</h3>
                     <span style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 600 }}>{t.specialty}</span>
@@ -515,7 +512,7 @@ export default function Trainers() {
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div className="avatar-initials">{m.avatar}</div>
+                        <Avatar src={m.avatar} name={m.name} size={34} shape="circle" />
                         <div>
                           <div style={{ fontWeight: 700, fontSize: '13px' }}>{m.name}</div>
                           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>

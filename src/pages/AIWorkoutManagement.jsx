@@ -6,7 +6,6 @@ import {
   Download,
   Plus,
   CheckCircle2,
-  Info,
   RefreshCw,
   Shield,
   TrendingUp,

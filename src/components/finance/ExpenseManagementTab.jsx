@@ -9,12 +9,11 @@ import {
 import { useFinance } from '../../context/FinanceContext';
 import { formatBDT, formatDatePretty } from '../../utils/financeCalculators';
 import { exportReportToExcel } from '../../utils/excelExporter';
-import { EXPENSE_CATEGORIES } from '../../data/financeMockData';
 import FinanceDateFilterBar from './FinanceDateFilterBar';
 import ExpenseFormModal from './modals/ExpenseFormModal';
 
 export default function ExpenseManagementTab() {
-  const { filteredExpenses, deleteDemoExpense, activeDateRange } = useFinance();
+  const { filteredExpenses, deleteDemoExpense, activeDateRange, allExpenseCategories } = useFinance();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
@@ -139,7 +138,7 @@ export default function ExpenseManagementTab() {
             style={{ width: 'auto', fontSize: '12px', height: '36px', padding: '4px 8px' }}
           >
             <option value="ALL">All Categories</option>
-            {EXPENSE_CATEGORIES.map((cat) => (
+            {allExpenseCategories.map((cat) => (
               <option key={cat} value={cat}>
                 {cat}
               </option>

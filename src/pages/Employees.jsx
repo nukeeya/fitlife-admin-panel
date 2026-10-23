@@ -15,6 +15,7 @@ import { supabase } from '../lib/supabase';
 import { uploadProfilePhoto } from '../lib/profilePhotos';
 import Modal from '../components/common/Modal';
 import ProfilePhotoField from '../components/ProfilePhotoField';
+import Avatar from '../components/common/Avatar';
 
 export default function Employees() {
   const { employees: liveEmployees, branding, refresh } = useGymData();
@@ -364,11 +365,7 @@ export default function Employees() {
                       <tr key={e.id}>
                         <td>
                           <div className="member-cell">
-                            <div className="avatar-initials" style={{ overflow: 'hidden' }}>
-                              {e.avatar?.startsWith('http') ? (
-                                <img src={e.avatar} alt={`${e.name} profile`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              ) : e.avatar || e.name.slice(0, 2).toUpperCase()}
-                            </div>
+                            <Avatar src={e.avatar} name={e.name} size={40} shape="circle" />
                             <div className="member-cell-info">
                               <span className="member-cell-name" style={{ fontWeight: 700 }}>{e.name}</span>
                               <span className="member-cell-code">{e.code}</span>

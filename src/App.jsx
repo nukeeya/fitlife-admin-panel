@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { FinanceProvider } from './context/FinanceContext';
 import { GymDataProvider } from './context/GymDataContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -33,8 +34,9 @@ export default function App() {
     <ErrorBoundary>
       <AuthProvider>
         <ThemeProvider>
-          <GymDataProvider>
-            <BrowserRouter>
+          <FinanceProvider>
+            <GymDataProvider>
+              <BrowserRouter>
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/login" element={<Login />} />
@@ -70,8 +72,9 @@ export default function App() {
           </Routes>
         </BrowserRouter>
       </GymDataProvider>
-    </ThemeProvider>
-    </AuthProvider>
+    </FinanceProvider>
+  </ThemeProvider>
+  </AuthProvider>
     </ErrorBoundary>
   );
 }

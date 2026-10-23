@@ -27,6 +27,8 @@ import {
 } from 'recharts';
 import { useTheme } from '../context/ThemeContext';
 import { useGymData } from '../context/GymDataContext';
+import { useFinance } from '../context/FinanceContext';
+import { Link } from 'react-router-dom';
 
 function StatCard({ title, value, change, changeLabel, icon: Icon, isLime, color }) {
   return (
@@ -59,6 +61,7 @@ export default function Dashboard() {
     checkInMember,
     checkOutMember,
   } = useGymData();
+  const { overdueCount, setShowOverduePopup } = useFinance();
 
   const textColor = theme === 'light' ? '#666666' : '#8E8E93';
   const gridColor = theme === 'light' ? '#E5E5EA' : '#222222';
@@ -122,6 +125,64 @@ export default function Dashboard() {
           </p>
         </div>
       </div>
+
+      {/* Persistent Overdue Receivables Notification Banner */}
+      {overdueCount > 0 && (
+        <div
+          style={{
+            padding: '14px 18px',
+            marginBottom: '20px',
+            borderRadius: 'var(--radius-lg)',
+            background: 'rgba(239, 68, 68, 0.08)',
+            border: '1px solid rgba(239, 68, 68, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                background: 'rgba(239, 68, 68, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--danger)',
+                flexShrink: 0,
+              }}
+            >
+              <AlertTriangle size={22} />
+            </div>
+            <div>
+              <strong style={{ fontSize: '14px', color: 'var(--danger)' }}>
+                {overdueCount} Membership Receivables Overdue Past Agreed Deadline
+              </strong>
+              <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                Member clearance deadlines have lapsed. You can record payments or apply the single-use one-time extension.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              className="btn btn-danger btn-sm"
+              onClick={() => setShowOverduePopup(true)}
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              Open Overdue Action Center ({overdueCount})
+            </button>
+            <Link to="/accounts?tab=dues" className="btn btn-secondary btn-sm" style={{ whiteSpace: 'nowrap' }}>
+              Due Reminder Dashboard
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* =========================================================================
           14 CORE DASHBOARD KPI CARDS

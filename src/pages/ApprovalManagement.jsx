@@ -20,6 +20,7 @@ import {
 import { useGymData } from '../context/GymDataContext';
 import ApprovalModal from '../components/ApprovalModal';
 import Modal from '../components/common/Modal';
+import Avatar from '../components/common/Avatar';
 
 export default function ApprovalManagement() {
   const { applications, rejectApplication } = useGymData();
@@ -182,11 +183,7 @@ export default function ApprovalManagement() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div className="avatar-initials" style={{ width: '40px', height: '40px', fontSize: '13px' }}>
-                      {app.photo?.startsWith('http')
-                        ? <img src={app.photo} alt="" style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }} />
-                        : app.photo || app.name.slice(0, 2).toUpperCase()}
-                    </div>
+                    <Avatar src={app.photo || app.avatar} name={app.name} size={42} shape="circle" />
                     <div>
                       <h3 style={{ fontSize: '15px', fontWeight: 800 }}>{app.name}</h3>
                       <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
@@ -290,11 +287,7 @@ export default function ApprovalManagement() {
                     <tr key={app.id}>
                       <td>
                         <div className="member-cell">
-                          <div className="avatar-initials">
-                            {app.photo?.startsWith('http')
-                              ? <img src={app.photo} alt="" style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }} />
-                              : app.photo || app.name.slice(0, 2).toUpperCase()}
-                          </div>
+                          <Avatar src={app.photo || app.avatar} name={app.name} size={36} shape="circle" />
                           <div>
                             <span style={{ fontWeight: 700 }}>{app.name}</span>
                             <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{app.code} • {app.gender}</div>

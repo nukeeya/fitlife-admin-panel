@@ -1,7 +1,21 @@
 import { useState, useMemo, useEffect } from 'react';
-import { CheckCircle2, ShieldAlert, Sparkles, UserCheck, Calculator } from 'lucide-react';
+import {
+  CheckCircle2,
+  ShieldAlert,
+  Sparkles,
+  UserCheck,
+  Calculator,
+  Calendar,
+  AlertCircle,
+  CreditCard,
+  Receipt,
+  Clock,
+} from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
+import { useFinance } from '../context/FinanceContext';
+import { formatBDT } from '../utils/financeCalculators';
 import Modal from './common/Modal';
+import Avatar from './common/Avatar';
 
 export default function ApprovalModal({ application, isOpen, onClose }) {
   const {
@@ -13,50 +27,113 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
     approveApplication,
   } = useGymData();
 
+  const { addAdmissionInvoice, demoDate } = useFinance();
+
   const [planId, setPlanId] = useState(application?.desiredPlanId || activePlans[0]?.id || 1);
-  const [discountType, setDiscountType] = useState('percentage');
-  const [discountValue, setDiscountValue] = useState(10);
+  const [discountType, setDiscountType] = useState('flat');
+  const [discountValue, setDiscountValue] = useState(0);
   const [discountReason, setDiscountReason] = useState('Online Application Early Bird Promo');
-  const [paymentMethod, setPaymentMethod] = useState('bKASH');
+  const [paymentOption, setPaymentOption] = useState('partial'); // 'full' | 'partial'
+  const [initialPayment, setInitialPayment] = useState('10000');
+  const [dueDate, setDueDate] = useState('2026-10-25');
+  const [paymentMethod, setPaymentMethod] = useState('bKash');
+  const [notes, setNotes] = useState('First installment paid on approval. Balance due by 25 Oct 2026.');
+  const [validationError, setValidationError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const [successDetails, setSuccessDetails] = useState(null);
+
   const desiredPlanId = application?.desiredPlanId;
   const hasApplication = Boolean(application);
 
-  // Synchronize state with current application to prevent cross-record contamination
-  useEffect(() => {
-    if (hasApplication && isOpen) {
-      const requestedPlanIsActive = activePlans.some((plan) => plan.id === desiredPlanId);
-      setPlanId(requestedPlanIsActive ? desiredPlanId : activePlans[0]?.id || 1);
-      setDiscountType('percentage');
-      setDiscountValue(10);
-      setDiscountReason('Online Application Early Bird Promo');
-      setPaymentMethod('bKASH');
-      setIsSuccess(false);
-    }
-  }, [application?.id, isOpen, desiredPlanId, activePlans, hasApplication]);
+  const selectedPlan = useMemo(() => {
+    return activePlans.find((p) => p.id === Number(planId)) || activePlans[0] || { price: 15000, name: '3 Months' };
+  }, [activePlans, planId]);
 
   const hasDiscountPrivilege = canRoleApplyDiscount();
   const currentRoleObj = roles.find((r) => r.name === currentUserRole);
   const maxDiscountAllowed = currentRoleObj?.maxDiscountPercentage ?? 100;
 
-  const selectedPlan = useMemo(() => {
-    return activePlans.find((p) => p.id === Number(planId)) || activePlans[0];
-  }, [activePlans, planId]);
-
   const pricing = useMemo(() => {
     return calculatePricing({
-      basePrice: selectedPlan?.price || 0,
+      basePrice: selectedPlan?.price || 15000,
       discountType,
       discountValue: hasDiscountPrivilege ? discountValue : 0,
       vatPercent: 0,
     });
   }, [selectedPlan, discountType, discountValue, hasDiscountPrivilege, calculatePricing]);
 
+  // Synchronize state with current application when modal opens
+  useEffect(() => {
+    if (hasApplication && isOpen) {
+      const requestedPlanIsActive = activePlans.some((plan) => plan.id === desiredPlanId);
+      const planToSet = requestedPlanIsActive ? desiredPlanId : (activePlans[1]?.id || activePlans[0]?.id || 2);
+      setPlanId(planToSet);
+
+      // Default mock scenario from requirement prompt:
+      // Package: ৳15,000, Initial: ৳10,000, Due: ৳5,000, Due date: 25 Oct 2026
+      setDiscountType('flat');
+      setDiscountValue(0);
+      setDiscountReason('Online Application Early Bird Promo');
+      setPaymentOption('partial');
+      setInitialPayment('10000');
+      setDueDate('2026-10-25');
+      setPaymentMethod('bKash');
+      setNotes('First installment paid on approval. Balance due on 25 Oct 2026.');
+      setValidationError('');
+      setIsSuccess(false);
+      setSuccessDetails(null);
+    }
+  }, [application?.id, isOpen, desiredPlanId, activePlans, hasApplication]);
+
+  // Dynamic initial payment & outstanding due calculation
+  const calculatedInitialPay = useMemo(() => {
+    if (paymentOption === 'full') {
+      return pricing.netPayable;
+    }
+    const parsed = Number(initialPayment);
+    return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+  }, [paymentOption, initialPayment, pricing.netPayable]);
+
+  const outstandingDue = useMemo(() => {
+    return Math.max(0, pricing.netPayable - calculatedInitialPay);
+  }, [pricing.netPayable, calculatedInitialPay]);
+
   if (!application) return null;
+
+  const handlePaymentOptionChange = (option) => {
+    setPaymentOption(option);
+    setValidationError('');
+    if (option === 'full') {
+      setInitialPayment(String(pricing.netPayable));
+    } else {
+      // Default partial scenario
+      const partialDefault = Math.round(pricing.netPayable * 0.65);
+      setInitialPayment(String(partialDefault > 0 ? partialDefault : 10000));
+      if (!dueDate) setDueDate('2026-10-25');
+    }
+  };
 
   const handleApprove = async (e) => {
     e.preventDefault();
+    setValidationError('');
+
+    // Form Validation
+    const payNum = Number(calculatedInitialPay);
+    if (Number.isNaN(payNum) || payNum < 0) {
+      setValidationError('Initial payment cannot be negative or invalid.');
+      return;
+    }
+    if (payNum > pricing.netPayable) {
+      setValidationError(`Initial payment cannot exceed the net payable amount (${formatBDT(pricing.netPayable)}).`);
+      return;
+    }
+    if (outstandingDue > 0 && !dueDate) {
+      setValidationError('Due clearance date is mandatory when an outstanding balance remains.');
+      return;
+    }
+
     try {
+      // 1. Activate member in GymDataContext
       const res = await approveApplication({
         appId: application.id,
         planId,
@@ -64,25 +141,57 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
         discountValue: hasDiscountPrivilege ? discountValue : 0,
         discountReason,
         paymentMethod,
+        paidAmount: payNum,
+        dueDate: outstandingDue > 0 ? dueDate : null,
+        notes,
       });
 
       if (!res?.ok) {
-        alert(
-          `Failed to approve application — ${res?.message || 'the records could not be saved.'}\n\nThe application was left as Pending. Please check the browser console for details and try again.`
-        );
+        setValidationError(res?.message || 'Failed to approve application.');
         return;
       }
+
+      // 2. Synchronize invoice and dues in FinanceContext
+      const memberCode = res.member?.code || `FLM-${String(Date.now()).slice(-4)}`;
+      addAdmissionInvoice({
+        memberId: res.member?.id || application.id,
+        memberName: application.name,
+        memberCode,
+        memberPhone: application.phone,
+        memberAvatar: application.photo || application.avatar,
+        planId: selectedPlan.id,
+        planName: selectedPlan.name,
+        durationMonths: selectedPlan.durationDays ? Math.round(selectedPlan.durationDays / 30) : 3,
+        baseAmount: pricing.basePrice,
+        discountAmount: pricing.discountAmount,
+        discountReason,
+        netPayable: pricing.netPayable,
+        initialPayment: payNum,
+        dueAmount: outstandingDue,
+        dueDate: outstandingDue > 0 ? dueDate : demoDate,
+        paymentMethod,
+        notes,
+      });
+
+      setSuccessDetails({
+        memberName: application.name,
+        memberCode,
+        planName: selectedPlan.name,
+        packagePrice: pricing.basePrice,
+        netPayable: pricing.netPayable,
+        initialPayment: payNum,
+        outstandingDue,
+        dueDate: outstandingDue > 0 ? dueDate : 'Paid in Full',
+      });
 
       setIsSuccess(true);
       setTimeout(() => {
         setIsSuccess(false);
         onClose();
-      }, 1200);
+      }, 2500);
     } catch (err) {
       console.error('[ApprovalModal] approve failed:', err);
-      alert(
-        `Failed to approve application — ${err?.message || 'unexpected error'}\n\nThe application was left as Pending. Please check the browser console for details.`
-      );
+      setValidationError(err?.message || 'Unexpected error while approving application.');
     }
   };
 
@@ -90,34 +199,165 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Approve Member Application: ${application.name}`}
-      subtitle={`Verify applicant dossier, assign membership plan, and authorize discount`}
+      title={`Admission Approval & Billing: ${application.name}`}
+      subtitle="Verify applicant, configure partial/full payment, and establish due clearance date"
       icon={UserCheck}
       size="lg"
     >
-      {isSuccess ? (
-        <div style={{ padding: '50px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-          <CheckCircle2 size={48} color="#10B981" />
-          <h3 style={{ fontSize: '20px', fontWeight: 800 }}>Application Approved & Activated!</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-            Member created with code, invoice issued, and dynamic discount recorded.
-          </p>
-        </div>
-      ) : (
-        <form onSubmit={handleApprove}>
-          {/* Applicant Info Summary */}
-          <div style={{ background: 'var(--bg-surface)', padding: '14px', borderRadius: '8px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', fontSize: '13px', border: '1px solid var(--border-base)', marginBottom: '16px' }}>
-            <div><strong>Code:</strong> {application.code}</div>
-            <div><strong>Phone:</strong> {application.phone}</div>
-            <div><strong>Email:</strong> {application.email || '—'}</div>
-            <div><strong>Goal:</strong> {application.goal || 'General Fitness'}</div>
-            <div><strong>Medical:</strong> {application.medical || 'None'}</div>
+      {isSuccess && successDetails ? (
+        <div style={{ padding: '30px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
+          <div
+            style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              background: 'rgba(16, 185, 129, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#10B981',
+            }}
+          >
+            <CheckCircle2 size={40} />
           </div>
 
-          {/* Package & Payment */}
+          <div>
+            <h3 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)' }}>
+              Admission Approved & Membership Activated!
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '4px 0 0 0' }}>
+              Member profile initialized for <strong>{successDetails.memberName}</strong> ({successDetails.memberCode}).
+            </p>
+          </div>
+
+          <div
+            style={{
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-base)',
+              borderRadius: 'var(--radius-md)',
+              padding: '16px 20px',
+              width: '100%',
+              maxWidth: '440px',
+              textAlign: 'left',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              fontSize: '13px',
+              marginTop: '6px',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Assigned Package:</span>
+              <strong>{successDetails.planName}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Final Payable Amount:</span>
+              <strong>{formatBDT(successDetails.netPayable)}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Initial Payment Received:</span>
+              <strong style={{ color: '#10B981' }}>{formatBDT(successDetails.initialPayment)}</strong>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                paddingTop: '6px',
+                borderTop: '1px solid var(--border-base)',
+                fontWeight: 800,
+              }}
+            >
+              <span>Outstanding Due:</span>
+              <span style={{ color: successDetails.outstandingDue > 0 ? '#F59E0B' : '#10B981' }}>
+                {successDetails.outstandingDue > 0 ? formatBDT(successDetails.outstandingDue) : '৳0 (Paid in Full)'}
+              </span>
+            </div>
+            {successDetails.outstandingDue > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--danger)', fontSize: '12px' }}>
+                <span>Due Clearance Deadline:</span>
+                <strong>{successDetails.dueDate}</strong>
+              </div>
+            )}
+          </div>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            Outstanding dues ledger and member profile updated automatically.
+          </span>
+        </div>
+      ) : (
+        <form onSubmit={handleApprove} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Validation Error Alert */}
+          {validationError && (
+            <div
+              style={{
+                padding: '10px 14px',
+                borderRadius: 'var(--radius-md)',
+                background: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid var(--danger)',
+                color: 'var(--danger)',
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <AlertCircle size={16} style={{ flexShrink: 0 }} />
+              <span>{validationError}</span>
+            </div>
+          )}
+
+          {/* Member Photo, Name & ID Header Card */}
+          <div
+            style={{
+              background: 'var(--bg-surface)',
+              padding: '14px 18px',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border-base)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '14px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Avatar
+                src={application.photo || application.avatar}
+                name={application.name}
+                size={52}
+                shape="circle"
+              />
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                  {application.name}
+                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  <span style={{ color: 'var(--primary)', fontWeight: 700 }}>ID: {application.code}</span>
+                  <span>•</span>
+                  <span>{application.phone}</span>
+                  {application.email && (
+                    <>
+                      <span>•</span>
+                      <span>{application.email}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '12px' }}>
+              <span className="badge badge-warning" style={{ fontSize: '11px' }}>
+                Pending Review
+              </span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '4px' }}>
+                Branch: {application.branch || 'Gulshan Flagship'}
+              </span>
+            </div>
+          </div>
+
+          {/* Package Selection & Discount Row */}
           <div className="form-grid">
             <div className="form-group">
-              <label className="form-label">Assign Package</label>
+              <label className="form-label">Selected Membership Package *</label>
               <select
                 className="form-select"
                 value={planId}
@@ -125,70 +365,69 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
               >
                 {activePlans.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} — ৳{p.price.toLocaleString()}
+                    {p.name} — {formatBDT(p.price)}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Approved Payment Channel</label>
+              <label className="form-label">Payment Channel *</label>
               <select
                 className="form-select"
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value)}
               >
-                <option value="bKASH">bKASH Merchant Payment</option>
-                <option value="Nagad">Nagad Online</option>
-                <option value="CASH">Cash at Reception Desk</option>
-                <option value="CARD">Visa / Mastercard POS</option>
-                <option value="BANK">Bank Wire</option>
+                <option value="bKash">bKash Merchant Payment</option>
+                <option value="Cash">Cash at Reception Desk</option>
+                <option value="Nagad">Nagad Digital Wallet</option>
+                <option value="Rocket">Rocket (DBBL)</option>
+                <option value="Bank Card">Visa / Mastercard POS</option>
               </select>
             </div>
           </div>
 
-          {/* Role Discount Privilege Engine */}
+          {/* Dynamic Discount Authorization (Optional) */}
           <div
             style={{
-              marginTop: '16px',
-              padding: '16px',
+              padding: '12px 16px',
               background: 'var(--bg-surface)',
-              borderRadius: '8px',
+              borderRadius: 'var(--radius-md)',
               border: '1px solid var(--border-base)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontWeight: 800, fontSize: '13px', textTransform: 'uppercase' }}>
-                  Dynamic Approval Discount Authorization
+                <span style={{ fontWeight: 800, fontSize: '12px', textTransform: 'uppercase' }}>
+                  Admission Discount / Promo Voucher
                 </span>
-                <span className="badge badge-primary">{currentUserRole} Access</span>
+                <span className="badge badge-primary" style={{ fontSize: '10px' }}>{currentUserRole}</span>
               </div>
-
               {!hasDiscountPrivilege && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--warning)', fontSize: '12px' }}>
-                  <ShieldAlert size={14} />
-                  <span>No discount privilege</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--warning)', fontSize: '11px' }}>
+                  <ShieldAlert size={13} />
+                  <span>Requires manager role</span>
                 </div>
               )}
             </div>
 
             {hasDiscountPrivilege ? (
-              <div className="form-grid">
+              <div className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
                 <div className="form-group">
-                  <label className="form-label">Discount Type</label>
+                  <label className="form-label" style={{ fontSize: '11px' }}>Discount Type</label>
                   <select
                     className="form-select"
                     value={discountType}
                     onChange={(e) => setDiscountType(e.target.value)}
+                    style={{ height: '34px', fontSize: '12px' }}
                   >
-                    <option value="percentage">Percentage (%)</option>
                     <option value="flat">Flat Amount (৳)</option>
+                    <option value="percentage">Percentage (%)</option>
                   </select>
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">
+                  <label className="form-label" style={{ fontSize: '11px' }}>
                     Discount Value {discountType === 'percentage' ? `(Max ${maxDiscountAllowed}%)` : '(৳)'}
                   </label>
                   <input
@@ -197,64 +436,224 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
                     max={discountType === 'percentage' ? maxDiscountAllowed : selectedPlan?.price}
                     className="form-input"
                     value={discountValue}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      if (discountType === 'percentage' && val > maxDiscountAllowed) {
-                        setDiscountValue(maxDiscountAllowed);
-                      } else {
-                        setDiscountValue(val);
-                      }
-                    }}
+                    onChange={(e) => setDiscountValue(Number(e.target.value))}
+                    style={{ height: '34px', fontSize: '12px' }}
                   />
                 </div>
 
                 <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                  <label className="form-label">Authorization Note / Promo Tag</label>
+                  <label className="form-label" style={{ fontSize: '11px' }}>Promo Reason / Tag</label>
                   <input
                     type="text"
                     className="form-input"
                     value={discountReason}
                     onChange={(e) => setDiscountReason(e.target.value)}
+                    style={{ height: '34px', fontSize: '12px' }}
                   />
                 </div>
               </div>
             ) : (
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
-                Only Management and Owners can apply custom discount codes on membership approvals.
+              <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)' }}>
+                Standard base price applies. Super Admin or Branch Manager authorization required for custom promo waivers.
               </p>
             )}
           </div>
 
-          {/* Pricing Calc Breakdown */}
-          <div className="discount-calc-box" style={{ marginTop: '16px' }}>
-            <div className="discount-calc-title">
-              <Calculator size={16} />
-              <span>Live Approval Price Breakdown</span>
+          {/* Pricing & Net Payable Box */}
+          <div
+            style={{
+              background: 'rgba(200, 255, 0, 0.04)',
+              border: '1px solid rgba(200, 255, 0, 0.25)',
+              borderRadius: 'var(--radius-md)',
+              padding: '12px 16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+              fontSize: '13px',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Total Package Price ({selectedPlan.name}):</span>
+              <strong>{formatBDT(pricing.basePrice)}</strong>
             </div>
-
-            <div className="calc-row">
-              <span>Selected Package ({selectedPlan.name}):</span>
-              <span>৳{pricing.basePrice.toLocaleString()}</span>
-            </div>
-
-            <div className="calc-row">
-              <span>Authorized Discount ({pricing.discountType === 'percentage' ? `${pricing.discountValue}%` : `৳${pricing.discountValue}`}):</span>
-              <span style={{ color: 'var(--danger)', fontWeight: 700 }}>- ৳{pricing.discountAmount.toLocaleString()}</span>
-            </div>
-
-            <div className="calc-row total-row">
-              <span>Net Payable Invoice:</span>
-              <span>৳{pricing.netPayable.toLocaleString()}</span>
+            {pricing.discountAmount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--danger)' }}>
+                <span>Authorized Discount:</span>
+                <strong>- {formatBDT(pricing.discountAmount)}</strong>
+              </div>
+            )}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                paddingTop: '6px',
+                borderTop: '1px solid var(--border-base)',
+                fontWeight: 800,
+                fontSize: '14px',
+              }}
+            >
+              <span>Final Payable Amount:</span>
+              <span style={{ color: 'var(--primary)' }}>{formatBDT(pricing.netPayable)}</span>
             </div>
           </div>
 
-          {/* Actions */}
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
+          {/* Payment Option: Full vs Partial Payment */}
+          <div>
+            <label className="form-label" style={{ fontWeight: 800 }}>Payment Terms & Installment Option *</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => handlePaymentOptionChange('full')}
+                style={{
+                  padding: '12px',
+                  borderRadius: 'var(--radius-md)',
+                  border: `2px solid ${paymentOption === 'full' ? 'var(--primary)' : 'var(--border-base)'}`,
+                  background: paymentOption === 'full' ? 'rgba(200, 255, 0, 0.08)' : 'var(--bg-surface)',
+                  color: 'var(--text-primary)',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                <div>Full Payment Upfront</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  Collect {formatBDT(pricing.netPayable)} immediately · ৳0 due
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handlePaymentOptionChange('partial')}
+                style={{
+                  padding: '12px',
+                  borderRadius: 'var(--radius-md)',
+                  border: `2px solid ${paymentOption === 'partial' ? 'var(--primary)' : 'var(--border-base)'}`,
+                  background: paymentOption === 'partial' ? 'rgba(200, 255, 0, 0.08)' : 'var(--bg-surface)',
+                  color: 'var(--text-primary)',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                <div>Partial Payment / Installment</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  Initial payment + schedule remaining due date
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Initial Payment & Auto Due Calculation Fields */}
+          <div className="form-grid">
+            <div className="form-group">
+              <label className="form-label">
+                Initial Payment Amount (BDT) *
+              </label>
+              <input
+                type="number"
+                min="0"
+                max={pricing.netPayable}
+                className="form-input"
+                value={paymentOption === 'full' ? pricing.netPayable : initialPayment}
+                onChange={(e) => setInitialPayment(e.target.value)}
+                disabled={paymentOption === 'full'}
+                placeholder="e.g. 10000"
+                required
+              />
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                {paymentOption === 'partial' ? 'Example mock scenario: ৳10,000 paid on admission' : 'Full settlement received'}
+              </span>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">
+                Automatically Calculated Outstanding Due
+              </label>
+              <div
+                style={{
+                  height: '42px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-base)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '0 12px',
+                  fontWeight: 800,
+                  fontSize: '15px',
+                  color: outstandingDue > 0 ? '#F59E0B' : '#10B981',
+                }}
+              >
+                {outstandingDue > 0 ? formatBDT(outstandingDue) : '৳0 (Fully Paid)'}
+              </div>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Net Payable ({formatBDT(pricing.netPayable)}) - Initial Payment ({formatBDT(calculatedInitialPay)})
+              </span>
+            </div>
+          </div>
+
+          {/* Due Clearance Date & Notes */}
+          {outstandingDue > 0 && (
+            <div
+              style={{
+                background: 'rgba(245, 158, 11, 0.08)',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+                borderRadius: 'var(--radius-md)',
+                padding: '14px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Clock size={16} color="#F59E0B" />
+                <span style={{ fontWeight: 800, fontSize: '13px', color: 'var(--text-primary)' }}>
+                  Due Clearance Schedule (Mandatory for Remaining {formatBDT(outstandingDue)})
+                </span>
+              </div>
+
+              <div className="form-grid">
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: '12px' }}>
+                    Agreed Due Clearance Date *
+                  </label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    required
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    Example mock due date: <strong>25 October 2026</strong>
+                  </span>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: '12px' }}>
+                    Payment Clearance Remarks / Agreement Note
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="e.g. Member committed to pay remaining ৳5,000 on 25th"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary">
-              <Sparkles size={14} /> Authorize & Activate Member
+            <button type="submit" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Sparkles size={15} />
+              Confirm Approval & Issue Billing
             </button>
           </div>
         </form>

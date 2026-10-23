@@ -1,55 +1,106 @@
 import { useState, useEffect } from 'react';
-import { DollarSign, Plus, CheckCircle2, AlertCircle } from 'lucide-react';
+import { DollarSign, Plus, CheckCircle2, AlertCircle, X, ShieldAlert } from 'lucide-react';
 import Modal from '../../common/Modal';
-import { EXPENSE_CATEGORIES } from '../../../data/financeMockData';
 import { useFinance } from '../../../context/FinanceContext';
-import { REFERENCE_TODAY } from '../../../utils/financeCalculators';
 
 export default function ExpenseFormModal({
   isOpen,
   onClose,
   expenseToEdit = null,
 }) {
-  const { paymentMethods, addDemoExpense, updateDemoExpense } = useFinance();
+  const {
+    paymentMethods,
+    allExpenseCategories,
+    addCustomExpenseCategory,
+    addDemoExpense,
+    updateDemoExpense,
+    checkPeriodEditable,
+    demoDate,
+  } = useFinance();
 
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
+  const [category, setCategory] = useState(allExpenseCategories[0] || 'Rent & Facility Lease');
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('Bank Transfer');
   const [vendor, setVendor] = useState('');
-  const [date, setDate] = useState(REFERENCE_TODAY);
+  const [date, setDate] = useState(demoDate);
   const [approvalStatus, setApprovalStatus] = useState('Approved');
   const [approvedBy, setApprovedBy] = useState('Accounts Lead');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
+
+  // Inline Custom Category Creation
+  const [isAddingCustomCategory, setIsAddingCustomCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [customCatError, setCustomCatError] = useState('');
 
   const isEditing = Boolean(expenseToEdit);
 
   useEffect(() => {
     if (expenseToEdit) {
       setTitle(expenseToEdit.title || '');
-      setCategory(expenseToEdit.category || EXPENSE_CATEGORIES[0]);
+      setCategory(expenseToEdit.category || allExpenseCategories[0]);
       setAmount(String(expenseToEdit.amount || ''));
       setMethod(expenseToEdit.method || 'Bank Transfer');
       setVendor(expenseToEdit.vendor || '');
-      setDate(expenseToEdit.date || REFERENCE_TODAY);
+      setDate(expenseToEdit.date || demoDate);
       setApprovalStatus(expenseToEdit.approvalStatus || 'Approved');
       setApprovedBy(expenseToEdit.approvedBy || 'Accounts Lead');
       setNotes(expenseToEdit.notes || '');
       setError('');
     } else {
       setTitle('');
-      setCategory(EXPENSE_CATEGORIES[0]);
+      setCategory(allExpenseCategories[0] || 'Rent & Facility Lease');
       setAmount('');
       setMethod('Bank Transfer');
       setVendor('');
-      setDate(REFERENCE_TODAY);
+      setDate(demoDate);
       setApprovalStatus('Approved');
       setApprovedBy('Accounts Lead');
       setNotes('');
       setError('');
     }
-  }, [expenseToEdit, isOpen]);
+    setIsAddingCustomCategory(false);
+    setNewCategoryName('');
+    setCustomCatError('');
+  }, [expenseToEdit, isOpen, demoDate, allExpenseCategories]);
+
+  // Handle Category select change
+  const handleCategoryChange = (e) => {
+    const val = e.target.value;
+    if (val === '__ADD_NEW__') {
+      setIsAddingCustomCategory(true);
+      setNewCategoryName('');
+      setCustomCatError('');
+    } else {
+      setCategory(val);
+    }
+  };
+
+  // Save new custom category
+  const handleSaveCustomCategory = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCustomCatError('');
+
+    const res = addCustomExpenseCategory(newCategoryName);
+    if (!res.success) {
+      setCustomCatError(res.error);
+      return;
+    }
+
+    setCategory(res.category);
+    setIsAddingCustomCategory(false);
+    setNewCategoryName('');
+  };
+
+  const handleCancelCustomCategory = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsAddingCustomCategory(false);
+    setNewCategoryName('');
+    setCustomCatError('');
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -60,6 +111,13 @@ export default function ExpenseFormModal({
     }
     if (!num || num <= 0) {
       setError('Please enter a valid expense amount.');
+      return;
+    }
+
+    // Check if accounting month is locked / finalized
+    const periodCheck = checkPeriodEditable(date);
+    if (!periodCheck.editable) {
+      setError(`Cannot record expense: ${periodCheck.message}`);
       return;
     }
 
@@ -75,10 +133,16 @@ export default function ExpenseFormModal({
       notes: notes.trim(),
     };
 
+    let result;
     if (isEditing) {
-      updateDemoExpense(expenseToEdit.id, payload);
+      result = updateDemoExpense(expenseToEdit.id, payload);
     } else {
-      addDemoExpense(payload);
+      result = addDemoExpense(payload);
+    }
+
+    if (result && !result.success) {
+      setError(result.error);
+      return;
     }
 
     onClose();
@@ -107,17 +171,18 @@ export default function ExpenseFormModal({
       <form id="expense-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         {error && (
           <div style={{
-            padding: '8px 12px',
+            padding: '10px 14px',
             borderRadius: 'var(--radius-md)',
-            background: 'rgba(239, 68, 68, 0.1)',
+            background: 'rgba(239, 68, 68, 0.12)',
+            border: '1px solid var(--danger)',
             color: 'var(--danger)',
             fontSize: '12px',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
           }}>
-            <AlertCircle size={15} />
-            {error}
+            <AlertCircle size={16} style={{ flexShrink: 0 }} />
+            <span>{error}</span>
           </div>
         )}
 
@@ -135,19 +200,91 @@ export default function ExpenseFormModal({
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div>
-            <label className="form-label">Category *</label>
-            <select
-              className="form-control"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              required
-            >
-              {EXPENSE_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <label className="form-label" style={{ margin: 0 }}>Category *</label>
+              {!isAddingCustomCategory && (
+                <button
+                  type="button"
+                  onClick={() => setIsAddingCustomCategory(true)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--primary)',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    padding: 0,
+                  }}
+                >
+                  + Add Custom
+                </button>
+              )}
+            </div>
+
+            {isAddingCustomCategory ? (
+              <div
+                style={{
+                  background: 'var(--bg-surface)',
+                  padding: '8px',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--primary)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px',
+                }}
+              >
+                <input
+                  type="text"
+                  className="form-control"
+                  style={{ height: '32px', fontSize: '12px' }}
+                  placeholder="New category name..."
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  autoFocus
+                />
+
+                {customCatError && (
+                  <span style={{ fontSize: '10px', color: 'var(--danger)' }}>
+                    {customCatError}
+                  </span>
+                )}
+
+                <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: '11px', padding: '2px 8px', height: '26px' }}
+                    onClick={handleCancelCustomCategory}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    style={{ fontSize: '11px', padding: '2px 8px', height: '26px' }}
+                    onClick={handleSaveCustomCategory}
+                  >
+                    Save Category
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <select
+                className="form-control"
+                value={category}
+                onChange={handleCategoryChange}
+                required
+              >
+                {allExpenseCategories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+                <option value="__ADD_NEW__" style={{ fontWeight: 800, color: 'var(--primary)' }}>
+                  + Add Custom Category
                 </option>
-              ))}
-            </select>
+              </select>
+            )}
           </div>
 
           <div>

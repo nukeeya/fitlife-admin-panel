@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Sliders,
@@ -12,14 +13,19 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useFinance } from '../context/FinanceContext';
 import ConfirmDialog from './common/ConfirmDialog';
+import OverdueReminderModal from './finance/OverdueReminderModal';
 import { downloadBackup, hasBusinessData } from '../utils/localBackup';
 
 export default function Header({ onOpenQuickCheckIn, onOpenAdmission, onToggleSidebar }) {
   const { theme, toggleTheme, setIsCustomizerOpen } = useTheme();
   const { user, signOut } = useAuth();
+  const { overdueCount, showOverduePopup, setShowOverduePopup } = useFinance();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
 
   const emailLocal = (user?.email || '').split('@')[0];
   const displayName = emailLocal
@@ -62,7 +68,14 @@ export default function Header({ onOpenQuickCheckIn, onOpenAdmission, onToggleSi
           <Search size={16} color="var(--text-muted)" />
           <input
             type="text"
-            placeholder="Search members, invoices, trainers..."
+            placeholder="Search members, invoices, trainers... (Press Enter)"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && searchQuery.trim()) {
+                navigate(`/members?search=${encodeURIComponent(searchQuery.trim())}`);
+              }
+            }}
           />
         </div>
 
@@ -95,10 +108,39 @@ export default function Header({ onOpenQuickCheckIn, onOpenAdmission, onToggleSi
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
-        {/* Notifications */}
-        <button className="header-icon-btn" title="Notifications">
+        {/* Overdue Dues Notifications */}
+        <button
+          className="header-icon-btn"
+          onClick={() => setShowOverduePopup(true)}
+          title={overdueCount > 0 ? `${overdueCount} Overdue Member Dues - Click to review alerts` : 'No overdue dues'}
+          style={{ position: 'relative' }}
+        >
           <Bell size={18} />
-          <span className="notif-dot"></span>
+          {overdueCount > 0 ? (
+            <span
+              style={{
+                position: 'absolute',
+                top: '-4px',
+                right: '-4px',
+                background: 'var(--danger)',
+                color: '#FFFFFF',
+                fontSize: '10px',
+                fontWeight: 800,
+                borderRadius: '10px',
+                padding: '0 4px',
+                minWidth: '16px',
+                height: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 8px rgba(239, 68, 68, 0.6)',
+              }}
+            >
+              {overdueCount}
+            </span>
+          ) : (
+            <span className="notif-dot"></span>
+          )}
         </button>
 
         {/* UI Customizer Drawer Trigger */}
@@ -148,6 +190,11 @@ export default function Header({ onOpenQuickCheckIn, onOpenAdmission, onToggleSi
         cancelText="Cancel"
         type="warning"
         isLoading={isSigningOut}
+      />
+
+      <OverdueReminderModal
+        isOpen={showOverduePopup}
+        onClose={() => setShowOverduePopup(false)}
       />
     </header>
   );

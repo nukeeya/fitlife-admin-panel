@@ -36,7 +36,7 @@ export default function Memberships() {
               ))}
             </ul>
             <button
-              className={plan.popular ? 'btn-primary plan-btn' : 'btn-outline plan-btn'}
+              className={`btn plan-btn ${plan.popular ? 'btn-primary' : 'btn-outline'}`}
               onClick={() => navigate('/subscription-plans')}
             >
               EDIT PLAN
