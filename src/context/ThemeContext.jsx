@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useLayoutEffect } from 'react';
 
 const ThemeContext = createContext();
 
@@ -60,10 +60,13 @@ export function ThemeProvider({ children }) {
 
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
 
-  useEffect(() => {
+  // useLayoutEffect runs before paint — prevents any flash of wrong-theme colors.
+  // All CSS variables are set as inline styles so the browser always has the exact
+  // current value available; @property registration in index.css then interpolates
+  // between those values for a smooth cross-fade on every theme switch.
+  useLayoutEffect(() => {
     const root = document.documentElement;
 
-    // Apply data attributes
     root.setAttribute('data-theme', settings.theme);
     root.setAttribute('dir', settings.direction);
     root.setAttribute('data-nav', settings.navStyle);
@@ -71,7 +74,6 @@ export function ThemeProvider({ children }) {
     root.setAttribute('data-menu', settings.menuStyle);
     root.setAttribute('data-layout', settings.layoutWidth);
 
-    // Apply Dynamic CSS Variables
     root.style.setProperty('--primary', settings.primaryColor);
     root.style.setProperty('--primary-glow', `${settings.primaryColor}33`);
     root.style.setProperty('--primary-hover', `${settings.primaryColor}E6`);
@@ -99,7 +101,10 @@ export function ThemeProvider({ children }) {
       root.style.setProperty('--text-secondary', '#475569');
       root.style.setProperty('--text-muted', '#64748B');
     }
+  }, [settings]);
 
+  // Persist settings separately so the localStorage write never blocks paint
+  useEffect(() => {
     localStorage.setItem('fitlife-theme-settings', JSON.stringify(settings));
   }, [settings]);
 

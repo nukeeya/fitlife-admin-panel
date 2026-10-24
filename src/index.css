@@ -1,5 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@400;600;700;800;900&display=swap');
 
+/* ============================================================================
+   REGISTER CSS CUSTOM PROPERTIES — enables smooth interpolation on theme switch
+   ============================================================================ */
+@property --bg-base    { syntax: '<color>'; inherits: true; initial-value: #080808; }
+@property --bg-card    { syntax: '<color>'; inherits: true; initial-value: #141416; }
+@property --bg-surface { syntax: '<color>'; inherits: true; initial-value: #1B1B1F; }
+@property --bg-input   { syntax: '<color>'; inherits: true; initial-value: #101012; }
+@property --border-base  { syntax: '<color>'; inherits: true; initial-value: #26262B; }
+@property --border-light { syntax: '<color>'; inherits: true; initial-value: #33333A; }
+@property --text-primary   { syntax: '<color>'; inherits: true; initial-value: #FFFFFF; }
+@property --text-secondary { syntax: '<color>'; inherits: true; initial-value: #94A3B8; }
+@property --text-muted     { syntax: '<color>'; inherits: true; initial-value: #64748B; }
+@property --primary       { syntax: '<color>'; inherits: true; initial-value: #C8FF00; }
+@property --primary-hover { syntax: '<color>'; inherits: true; initial-value: #b4e600; }
+@property --primary-glow  { syntax: '<color>'; inherits: true; initial-value: rgba(200,255,0,0.25); }
+
 *,
 *::before,
 *::after {
@@ -33,7 +49,22 @@
   --radius-full: 9999px;
   --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
   --transition-smooth: 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  --transition-spring: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-spring: 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Smooth theme-switch transition for all registered custom properties */
+  transition:
+    --bg-base     0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    --bg-card     0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    --bg-surface  0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    --bg-input    0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    --border-base  0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    --border-light 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    --text-primary   0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    --text-secondary 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    --text-muted     0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    --primary       0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    --primary-hover 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    --primary-glow  0.28s cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Legacy & Semantic Compatibility Aliases (Dark Theme) */
   --lime: var(--primary);
@@ -84,10 +115,12 @@ html, body, #root {
   background-color: var(--bg-base);
   color: var(--text-primary);
   overflow-x: hidden;
-  transition: background-color var(--transition-smooth), color var(--transition-smooth);
 }
 
-/* Global Theme Transition for Smooth, Synchronous Mode Switching */
+/* Global element transition — piggybacks on @property CSS var transitions above.
+   Elements using var(--bg-*) / var(--text-*) etc. animate automatically via
+   the :root custom-property transitions; this list only adds fallback coverage
+   for browsers that pre-date @property support (Safari < 15.4). */
 .app-layout,
 .app-header,
 .sidebar,
@@ -118,10 +151,10 @@ html, body, #root {
 .horizontal-nav-bar,
 .member-options-menu,
 .card {
-  transition: background-color var(--transition-smooth), 
-              border-color var(--transition-smooth), 
-              color var(--transition-smooth), 
-              box-shadow var(--transition-smooth);
+  transition: background-color 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color     0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              color            0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow       0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Page Entry Fade and Slide Animation (Subtle & Fluid) */
@@ -137,7 +170,7 @@ html, body, #root {
 }
 
 .page {
-  animation: pageFadeSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: pageFadeSlideIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
   will-change: opacity, transform;
 }
 
