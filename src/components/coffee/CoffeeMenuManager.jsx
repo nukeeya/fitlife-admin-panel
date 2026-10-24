@@ -1,32 +1,29 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useMemo, useState } from 'react';
 import {
-  ShoppingBag,
   Coffee,
   Plus,
   Pencil,
   Trash2,
   Search,
-  Shirt,
-  UtensilsCrossed,
   AlertTriangle,
-  Package,
   Layers,
 } from 'lucide-react';
-import { useGymData } from '../context/GymDataContext';
-import Modal from '../components/common/Modal';
-import ConfirmDialog from '../components/common/ConfirmDialog';
+import { useGymData } from '../../context/GymDataContext';
+import Modal from '../common/Modal';
+import ConfirmDialog from '../common/ConfirmDialog';
 
 const LOW_STOCK_THRESHOLD = 10;
 
+// The coffee shop sells only 'Cafe' products (complete_coffee_shop_sale rejects other categories).
+const CAFE_CATEGORY = 'Cafe';
+
 const EMPTY_FORM = {
   name: '',
-  category: 'Gym Wear',
   brand: '',
   price: '',
   cost: '',
   stock: '',
-  unit: 'pcs',
+  unit: 'cup',
   size: '',
   imageUrl: '',
   description: '',
@@ -35,56 +32,11 @@ const EMPTY_FORM = {
 
 const fmtMoney = (n) => `৳${Math.round(Number(n) || 0).toLocaleString()}`;
 
-export default function GymShop() {
-  const [searchParams] = useSearchParams();
-  const {
-    shopProducts,
-    saveShopProduct,
-    deleteShopProduct,
-    fetchShopOrders,
-    updateShopOrderStatus,
-  } = useGymData();
-  const [activeView, setActiveView] = useState('products');
-  const [orders, setOrders] = useState([]);
-  const [ordersError, setOrdersError] = useState('');
-
-  useEffect(() => {
-    if (activeView !== 'orders') return undefined;
-    let isCurrent = true;
-    const loadOrders = async () => {
-      try {
-        const result = await fetchShopOrders();
-        if (isCurrent) {
-          setOrders(result);
-          setOrdersError('');
-        }
-      } catch (error) {
-        if (isCurrent) setOrdersError(error.message || 'Could not load customer orders.');
-      }
-    };
-    loadOrders();
-    const timer = window.setInterval(loadOrders, 30_000);
-    return () => {
-      isCurrent = false;
-      window.clearInterval(timer);
-    };
-  }, [activeView, fetchShopOrders]);
-
-  const handleOrderStatusChange = async (orderId, status) => {
-    try {
-      const updated = await updateShopOrderStatus(orderId, status);
-      setOrders((current) => current.map((order) => order.id === orderId ? updated : order));
-      setOrdersError('');
-    } catch (error) {
-      setOrdersError(error.message || 'Could not update order status.');
-    }
-  };
+export default function CoffeeMenuManager() {
+  const { shopProducts, saveShopProduct, deleteShopProduct } = useGymData();
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState(
-    () => ['Food', 'Cafe'].includes(searchParams.get('category')) ? searchParams.get('category') : 'All'
-  ); // 'All' | 'Gym Wear' | 'Food' | 'Cafe'
   const [statusFilter, setStatusFilter] = useState('All'); // 'All' | 'Active' | 'Draft' | 'Archived'
 
   // Add / Edit form state
@@ -98,44 +50,37 @@ export default function GymShop() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const stats = useMemo(() => {
-    const list = shopProducts || [];
-    const units = list.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
-    const costValue = list.reduce((sum, p) => sum + (Number(p.stock) || 0) * (Number(p.cost) || 0), 0);
-    const retailValue = list.reduce((sum, p) => sum + (Number(p.stock) || 0) * (Number(p.price) || 0), 0);
-    const lowStock = list.filter((p) => p.stock > 0 && p.stock <= LOW_STOCK_THRESHOLD).length;
-    const outOfStock = list.filter((p) => Number(p.stock) === 0).length;
-    return { total: list.length, units, costValue, retailValue, lowStock, outOfStock };
-  }, [shopProducts]);
+  const menuProducts = useMemo(
+    () => (shopProducts || []).filter((p) => p.category === CAFE_CATEGORY),
+    [shopProducts],
+  );
 
-  const categoryCounts = useMemo(() => {
-    const list = shopProducts || [];
-    return {
-      All: list.length,
-      'Gym Wear': list.filter((p) => p.category === 'Gym Wear').length,
-      Food: list.filter((p) => p.category === 'Food').length,
-      Cafe: list.filter((p) => p.category === 'Cafe').length,
-    };
-  }, [shopProducts]);
+  const stats = useMemo(() => {
+    const units = menuProducts.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
+    const costValue = menuProducts.reduce((sum, p) => sum + (Number(p.stock) || 0) * (Number(p.cost) || 0), 0);
+    const retailValue = menuProducts.reduce((sum, p) => sum + (Number(p.stock) || 0) * (Number(p.price) || 0), 0);
+    const lowStock = menuProducts.filter((p) => p.stock > 0 && p.stock <= LOW_STOCK_THRESHOLD).length;
+    const outOfStock = menuProducts.filter((p) => Number(p.stock) === 0).length;
+    return { total: menuProducts.length, units, costValue, retailValue, lowStock, outOfStock };
+  }, [menuProducts]);
 
   const filtered = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    return (shopProducts || []).filter((p) => {
+    return menuProducts.filter((p) => {
       const matchesSearch =
         !q ||
         (p.name || '').toLowerCase().includes(q) ||
         (p.brand || '').toLowerCase().includes(q);
-      const matchesCategory = categoryFilter === 'All' || p.category === categoryFilter;
       const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
-      return matchesSearch && matchesCategory && matchesStatus;
+      return matchesSearch && matchesStatus;
     });
-  }, [shopProducts, searchTerm, categoryFilter, statusFilter]);
+  }, [menuProducts, searchTerm, statusFilter]);
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const openAdd = () => {
     setEditingProduct(null);
-    setForm({ ...EMPTY_FORM, category: categoryFilter === 'All' ? 'Gym Wear' : categoryFilter });
+    setForm(EMPTY_FORM);
     setFormError('');
     setShowFormModal(true);
   };
@@ -144,12 +89,11 @@ export default function GymShop() {
     setEditingProduct(product);
     setForm({
       name: product.name || '',
-      category: product.category || 'Gym Wear',
       brand: product.brand || '',
       price: String(product.price ?? ''),
       cost: String(product.cost ?? ''),
       stock: String(product.stock ?? ''),
-      unit: product.unit || 'pcs',
+      unit: product.unit || 'cup',
       size: product.size || '',
       imageUrl: product.imageUrl || '',
       description: product.description || '',
@@ -165,6 +109,7 @@ export default function GymShop() {
 
     const payload = {
       ...form,
+      category: CAFE_CATEGORY,
       name: form.name.trim(),
       price: Number(form.price) || 0,
       cost: Number(form.cost) || 0,
@@ -177,14 +122,14 @@ export default function GymShop() {
     try {
       const res = await saveShopProduct(payload);
       if (res?.error) {
-        setFormError(`Could not save product: ${res.error.message}`);
+        setFormError(`Could not save menu item: ${res.error.message}`);
       } else {
         setShowFormModal(false);
         setEditingProduct(null);
         setForm(EMPTY_FORM);
       }
     } catch (err) {
-      setFormError(`Could not save product: ${err?.message || 'Unexpected error'}`);
+      setFormError(`Could not save menu item: ${err?.message || 'Unexpected error'}`);
     } finally {
       setIsSaving(false);
     }
@@ -196,7 +141,7 @@ export default function GymShop() {
     try {
       await deleteShopProduct(deleteTarget.id);
     } catch (err) {
-      console.error('[GymShop] delete failed:', err);
+      console.error('[CoffeeMenuManager] delete failed:', err);
     } finally {
       setIsDeleting(false);
       setDeleteTarget(null);
@@ -215,137 +160,21 @@ export default function GymShop() {
   };
 
   return (
-    <div className="page">
-      {/* Header */}
-      <div className="page-header">
-        <div className="page-title-group">
-          <h1 className="page-title">Gym Shop — Wear & Nutrition</h1>
-          <p className="page-subtitle">
-            Manage gym apparel and food inventory: pricing, stock levels, product status and margins.
-          </p>
-        </div>
-
-        {activeView === 'products' && (
-          <button type="button" className="btn btn-primary" onClick={openAdd}>
-            <Plus size={16} />
-            + Add Product
-          </button>
-        )}
-      </div>
-
-      <div className="filter-bar" role="tablist" aria-label="Gym Shop sections">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeView === 'products'}
-          className={`btn btn-sm ${activeView === 'products' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setActiveView('products')}
-        >
-          Products
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeView === 'orders'}
-          className={`btn btn-sm ${activeView === 'orders' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setActiveView('orders')}
-        >
-          Customer Orders
-        </button>
-      </div>
-
-      {activeView === 'orders' ? (
-        <div className="activity-card">
-          <div className="activity-header">
-            <span style={{ fontWeight: 800 }}>Customer Order Requests</span>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              {orders.length} requests · refreshes every 30 seconds
-            </span>
-          </div>
-          {ordersError && (
-            <div role="alert" style={{ margin: '16px', color: 'var(--danger)', fontSize: '13px' }}>
-              {ordersError}
-            </div>
-          )}
-          <div className="table-responsive">
-            <table className="custom-table">
-              <thead>
-                <tr>
-                  <th>Order</th>
-                  <th>Customer</th>
-                  <th>Items</th>
-                  <th>Total</th>
-                  <th>Delivery Address</th>
-                  <th>Requested</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
-                      {ordersError ? 'Orders could not be loaded.' : 'No customer orders yet.'}
-                    </td>
-                  </tr>
-                ) : orders.map((order) => (
-                  <tr key={order.id}>
-                    <td style={{ fontWeight: 700 }}>#{order.id}</td>
-                    <td>
-                      <div style={{ fontWeight: 700 }}>{order.customer_name}</div>
-                      <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{order.phone}</div>
-                      {order.email && <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{order.email}</div>}
-                    </td>
-                    <td>
-                      {(order.items || []).map((item) => (
-                        <div key={`${order.id}-${item.productId}`}>
-                          {item.name} × {item.quantity}{item.size ? ` · ${item.size}` : ''}
-                        </div>
-                      ))}
-                      {order.customer_note && (
-                        <div style={{ marginTop: '5px', color: 'var(--text-muted)', fontSize: '11px' }}>
-                          Note: {order.customer_note}
-                        </div>
-                      )}
-                    </td>
-                    <td style={{ fontWeight: 700 }}>{fmtMoney(order.total)}</td>
-                    <td>{order.delivery_address}</td>
-                    <td>{new Date(order.created_at).toLocaleString()}</td>
-                    <td>
-                      <select
-                        className="form-select"
-                        value={order.status}
-                        aria-label={`Status for order ${order.id}`}
-                        onChange={(event) => handleOrderStatusChange(order.id, event.target.value)}
-                      >
-                        {['New', 'Contacted', 'Completed', 'Cancelled'].map((status) => (
-                          <option key={status} value={status}>{status}</option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : (
-      <>
+    <>
       {/* Stats */}
       <div className="stats-grid">
         <div className="stat-card">
-          <span className="stat-card-title">TOTAL PRODUCTS</span>
+          <span className="stat-card-title">MENU ITEMS</span>
           <div className="stat-card-value">{stats.total}</div>
-          <span className="stat-card-label">
-            {categoryCounts['Gym Wear']} apparel · {categoryCounts.Food} nutrition items · {categoryCounts.Cafe} cafe items
-          </span>
+          <span className="stat-card-label">All cafe listings, including drafts</span>
         </div>
         <div className="stat-card">
           <span className="stat-card-title">UNITS IN STOCK</span>
           <div className="stat-card-value">{stats.units.toLocaleString()}</div>
-          <span className="stat-card-label">Across all product listings</span>
+          <span className="stat-card-label">Across all menu items</span>
         </div>
         <div className="stat-card">
-          <span className="stat-card-title">INVENTORY AT COST</span>
+          <span className="stat-card-title">STOCK AT COST</span>
           <div className="stat-card-value">{fmtMoney(stats.costValue)}</div>
           <span className="stat-card-label">Total purchase value of stock</span>
         </div>
@@ -369,24 +198,10 @@ export default function GymShop() {
           <Search size={16} color="var(--text-muted)" />
           <input
             type="text"
-            placeholder="Search product name or brand..."
+            placeholder="Search menu item or brand..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-        </div>
-
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>CATEGORY:</span>
-          {['All', 'Gym Wear', 'Food', 'Cafe'].map((c) => (
-            <button
-              key={c}
-              type="button"
-              className={`btn btn-sm ${categoryFilter === c ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setCategoryFilter(c)}
-            >
-              {c} ({categoryCounts[c] ?? 0})
-            </button>
-          ))}
         </div>
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -402,25 +217,30 @@ export default function GymShop() {
             </button>
           ))}
         </div>
+
+        <button type="button" className="btn btn-primary" style={{ marginLeft: 'auto' }} onClick={openAdd}>
+          <Plus size={16} />
+          Add Menu Item
+        </button>
       </div>
 
-      {/* Product Grid */}
+      {/* Menu Grid */}
       <div className="activity-card">
         <div className="activity-header">
-          <span style={{ fontWeight: 800 }}>Product Inventory</span>
+          <span style={{ fontWeight: 800 }}>Menu &amp; Stock</span>
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-            {filtered.length} of {stats.total} products
+            {filtered.length} of {stats.total} items
           </span>
         </div>
 
         {filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
-            <Package size={40} style={{ margin: '0 auto 12px', display: 'block', opacity: 0.5 }} />
+            <Coffee size={40} style={{ margin: '0 auto 12px', display: 'block', opacity: 0.5 }} />
             <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-secondary)' }}>
-              No products match your filter
+              No menu items match your filter
             </div>
             <div style={{ fontSize: '12px', marginTop: '4px' }}>
-              Try a different search, or click “+ Add Product” to stock the shop.
+              Try a different search, or click “Add Menu Item” to build the menu.
             </div>
           </div>
         ) : (
@@ -439,7 +259,6 @@ export default function GymShop() {
                 Number(p.price) > 0
                   ? Math.round(((Number(p.price) - Number(p.cost)) / Number(p.price)) * 100)
                   : null;
-              const CategoryIcon = p.category === 'Cafe' ? Coffee : p.category === 'Food' ? UtensilsCrossed : Shirt;
 
               return (
                 <div
@@ -465,7 +284,7 @@ export default function GymShop() {
                       justifyContent: 'center',
                     }}
                   >
-                    <CategoryIcon size={44} color="var(--text-muted)" style={{ opacity: 0.4 }} />
+                    <Coffee size={44} color="var(--text-muted)" style={{ opacity: 0.4 }} />
                     {p.imageUrl && (
                       <img
                         src={p.imageUrl}
@@ -482,12 +301,6 @@ export default function GymShop() {
                         }}
                       />
                     )}
-                    <span
-                      className={`badge ${p.category === 'Gym Wear' ? 'badge-primary' : 'badge-info'}`}
-                      style={{ position: 'absolute', top: '10px', left: '10px' }}
-                    >
-                      {p.category}
-                    </span>
                     <span
                       className={`badge ${
                         p.status === 'Active'
@@ -510,7 +323,7 @@ export default function GymShop() {
                       </h3>
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                         {p.brand || 'No brand'}
-                        {p.size ? ` · Size: ${p.size}` : ''} · per {p.unit}
+                        {p.size ? ` · ${p.size}` : ''} · per {p.unit}
                       </div>
                     </div>
 
@@ -585,7 +398,7 @@ export default function GymShop() {
         )}
       </div>
 
-      {/* Add / Edit Product Modal */}
+      {/* Add / Edit Menu Item Modal */}
       <Modal
         isOpen={showFormModal}
         onClose={() => {
@@ -594,23 +407,23 @@ export default function GymShop() {
             setFormError('');
           }
         }}
-        title={editingProduct ? 'Edit Shop Product' : 'Add Shop Product'}
+        title={editingProduct ? 'Edit Menu Item' : 'Add Menu Item'}
         subtitle={
           editingProduct
             ? 'Update pricing, stock levels and listing details'
-            : 'List a new gym wear or food item in the shop inventory'
+            : 'Add a new drink or snack to the coffee shop menu'
         }
-        icon={ShoppingBag}
+        icon={Coffee}
         size="lg"
       >
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div className="form-group">
-              <label className="form-label">Product Name *</label>
+              <label className="form-label">Item Name *</label>
               <input
                 type="text"
                 required
-                placeholder="e.g. FitLife Performance T-Shirt / Whey Protein 2lb"
+                placeholder="e.g. Cappuccino / Iced Americano / Chicken Sandwich"
                 className="form-input"
                 value={form.name}
                 onChange={(e) => setField('name', e.target.value)}
@@ -618,19 +431,6 @@ export default function GymShop() {
             </div>
 
             <div className="form-grid">
-              <div className="form-group">
-                <label className="form-label">Category *</label>
-                <select
-                  className="form-select"
-                  value={form.category}
-                  onChange={(e) => setField('category', e.target.value)}
-                >
-                  <option value="Gym Wear">Gym Wear</option>
-                  <option value="Food">Food</option>
-                  <option value="Cafe">Cafe</option>
-                </select>
-              </div>
-
               <div className="form-group">
                 <label className="form-label">Status</label>
                 <select
@@ -648,7 +448,7 @@ export default function GymShop() {
                 <label className="form-label">Brand</label>
                 <input
                   type="text"
-                  placeholder="e.g. FitLife / Optimum Nutrition"
+                  placeholder="e.g. House Blend / Nescafé"
                   className="form-input"
                   value={form.brand}
                   onChange={(e) => setField('brand', e.target.value)}
@@ -656,13 +456,24 @@ export default function GymShop() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">{form.category === 'Gym Wear' ? 'Size / Variant' : 'Pack Size / Variant'}</label>
+                <label className="form-label">Size / Variant</label>
                 <input
                   type="text"
-                  placeholder={form.category === 'Gym Wear' ? 'e.g. M, L, XL' : 'e.g. 1kg / 12-pack / 350ml'}
+                  placeholder="e.g. Regular / Large / 350ml"
                   className="form-input"
                   value={form.size}
                   onChange={(e) => setField('size', e.target.value)}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Unit</label>
+                <input
+                  type="text"
+                  placeholder="cup / pcs / bottle"
+                  className="form-input"
+                  value={form.unit}
+                  onChange={(e) => setField('unit', e.target.value)}
                 />
               </div>
 
@@ -701,17 +512,6 @@ export default function GymShop() {
                   className="form-input"
                   value={form.stock}
                   onChange={(e) => setField('stock', e.target.value)}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Unit</label>
-                <input
-                  type="text"
-                  placeholder="pcs / kg / pack / jar"
-                  className="form-input"
-                  value={form.unit}
-                  onChange={(e) => setField('unit', e.target.value)}
                 />
               </div>
             </div>
@@ -756,7 +556,7 @@ export default function GymShop() {
               <textarea
                 className="form-textarea"
                 rows="3"
-                placeholder="Short product description shown to staff..."
+                placeholder="Short description shown to staff..."
                 value={form.description}
                 onChange={(e) => setField('description', e.target.value)}
               />
@@ -791,7 +591,7 @@ export default function GymShop() {
                 Cancel
               </button>
               <button type="submit" className="btn btn-primary" disabled={isSaving}>
-                {isSaving ? 'Saving...' : editingProduct ? 'Save Changes' : 'Add Product'}
+                {isSaving ? 'Saving...' : editingProduct ? 'Save Changes' : 'Add Menu Item'}
               </button>
             </div>
           </div>
@@ -803,19 +603,17 @@ export default function GymShop() {
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        title="Delete Shop Product"
+        title="Delete Menu Item"
         message={
           deleteTarget
-            ? `Are you sure you want to delete "${deleteTarget.name}" from the shop inventory? This removes the product listing permanently and cannot be undone.`
+            ? `Are you sure you want to delete "${deleteTarget.name}" from the coffee shop menu? This removes the item permanently and cannot be undone.`
             : ''
         }
-        confirmText="Yes, Delete Product"
-        cancelText="Keep Product"
+        confirmText="Yes, Delete Item"
+        cancelText="Keep Item"
         type="danger"
         isLoading={isDeleting}
       />
-      </>
-      )}
-    </div>
+    </>
   );
 }

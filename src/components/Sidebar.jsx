@@ -12,7 +12,6 @@ import {
   CalendarCheck,
   MessageCircle,
   Award,
-  ShoppingBag,
   Coffee,
   Cpu,
   Apple,
@@ -308,16 +307,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
           )}
         </div>
 
-        {/* 11. Gym Shop */}
-        <NavLink
-          to="/gym-shop"
-          className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-        >
-          <div className="sidebar-link-content">
-            <ShoppingBag size={18} />
-            <span>Gym Shop</span>
-          </div>
-        </NavLink>
+        {/* 11. Coffee Shop */}
         <NavLink
           to="/coffee-shop"
           className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}

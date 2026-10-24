@@ -5,7 +5,7 @@ import { useGymData } from '../context/GymDataContext';
 import { Flame, Dumbbell, Award, ShieldCheck } from 'lucide-react';
 
 export default function Login() {
-  const [email, setEmail] = useState('admin@fitlife.com');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);

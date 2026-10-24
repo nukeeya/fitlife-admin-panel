@@ -672,7 +672,7 @@ export const INITIAL_EXPENSES = [
     date: '2026-10-18',
     vendor: 'Optimum Nutrition BD Distributor',
     approvalStatus: 'Approved',
-    approvedBy: 'Gym Shop Lead',
+    approvedBy: 'Coffee Shop Lead',
     notes: 'Restocked 10 tubs Gold Standard Whey & 24 BCAA bottles',
   },
   {

@@ -18,7 +18,7 @@ Two apps live in this repo:
 Other notable root items:
 
 - `database/schema.sql` — full Supabase (PostgreSQL) schema: RBAC tables, members, invoices, discounts, lockers, attendance, SMS, AI plans, recruitment, RLS policies, seed data. Run the whole file in the Supabase SQL Editor (it is destructive — drops & recreates everything).
-- `database/migrations/` — additive, non-destructive migrations run *after* `schema.sql` (e.g. `001_shop_products.sql` creates + seeds the `shop_products` table used by the `/gym-shop` page).
+- `database/migrations/` — additive, non-destructive migrations run *after* `schema.sql` (e.g. `001_shop_products.sql` creates + seeds the `shop_products` table used by the `/coffee-shop` page).
 - `scratch/verify_fitness_engine.mjs` — a standalone script to sanity-check the fitness calculation engine.
 - `BACKEND_ARCHITECTURE.md` — a spec of the *intended* REST API / discount engine / RBAC model (aspirational blueprint, not the current code).
 - `vercel.json` — SPA rewrite for client-side routing on Vercel.

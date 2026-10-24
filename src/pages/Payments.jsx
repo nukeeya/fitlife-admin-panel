@@ -116,7 +116,7 @@ export default function Payments() {
       }, 1200);
     } catch (err) {
       console.error('Failed to collect payment:', err);
-      alert('Failed to record payment. Please try again.');
+      alert(`Failed to record payment: ${err?.message || 'Please try again.'}`);
     } finally {
       setSubmitting(false);
     }

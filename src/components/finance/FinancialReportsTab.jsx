@@ -314,7 +314,7 @@ export default function FinancialReportsTab() {
           { item: 'Equipment Maintenance & Parts', type: 'Expense (-)', amountStr: formatBDT(14500), amount: -14500 },
           { item: 'Cleaning & Sanitation Supplies', type: 'Expense (-)', amountStr: formatBDT(8200), amount: -8200 },
           { item: 'Digital Marketing & Social Ads', type: 'Expense (-)', amountStr: formatBDT(15000), amount: -15000 },
-          { item: 'Supplements & Gym Shop Restock', type: 'Expense (-)', amountStr: formatBDT(32000), amount: -32000 },
+          { item: 'Coffee Shop Restock', type: 'Expense (-)', amountStr: formatBDT(32000), amount: -32000 },
           { item: 'Administration & Miscellaneous', type: 'Expense (-)', amountStr: formatBDT(6800), amount: -6800 },
           { item: 'NET OPERATING RESULT (Accrual)', type: 'Net Profit', amountStr: formatBDT(financialMetrics.accrualNetProfit), amount: financialMetrics.accrualNetProfit },
         ];

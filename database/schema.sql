@@ -23,7 +23,9 @@
 --
 -- Security model:
 --   anon         : INSERT admission submissions, READ branches/plans/features
---   authenticated: full access to all tables (admin panel)
+--   authenticated: role-based access — see migrations/011_rbac_and_atomic_writes.sql.
+--                  The open "authenticated all" policies below are replaced by
+--                  011; ALWAYS run the migrations after this file.
 --   service_role : bypasses RLS (server-side only, never ship in VITE_ vars)
 -- =============================================================================
 

@@ -8,7 +8,6 @@ import {
   nowDisplayTime,
   toDisplayTime,
   initialsOf,
-  generateInvoiceNumber,
   mapPlan,
   mapRole,
   mapTrainer,
@@ -50,7 +49,7 @@ export const DEFAULT_BRANDING = {
 const INITIAL_DATA = { ...FALLBACK_DATA };
 
 export function GymDataProvider({ children }) {
-  const { user } = useAuth();
+  const { user, staff } = useAuth();
 
   // --- Raw DB rows -----------------------------------------------------------
   const [raw, setRaw] = useState(null); // null = still loading
@@ -359,31 +358,27 @@ export function GymDataProvider({ children }) {
   /**
    * Optimistic update pattern: mutate local state immediately (UI stays snappy),
    * fire the DB write, and reload the affected slice (or everything) on success.
-   * On DB error we roll back by reloading from the server.
+   * On DB error (or a thrown/network error) we roll back by reloading from the
+   * server and return { error } — a failed write is never reported as success.
    */
   const commit = useCallback(
     async ({ optimistic, persist, reloadAll = false }) => {
       if (optimistic) optimistic();
-      let result = null;
+      let result;
       try {
         result = await persist();
       } catch (e) {
-        console.warn('[GymDataContext] Frontend demo mode:', e.message);
-        return { data: { id: Date.now() } };
+        result = { error: e instanceof Error ? e : new Error(String(e)) };
       }
       if (result?.error) {
-        if (!loadError) {
-          console.error('[GymDataContext] DB write failed, reloading:', result.error.message);
-          await loadAll();
-          return result;
-        }
-        // In frontend demo mode, keep optimistic state active
-        return { data: { id: Date.now() } };
+        console.error('[GymDataContext] DB write failed, reloading:', result.error.message);
+        await loadAll();
+        return result;
       }
-      if (reloadAll && !loadError) await loadAll();
+      if (reloadAll) await loadAll();
       return result;
     },
-    [loadAll, loadError]
+    [loadAll]
   );
 
   // --- Branding -----------------------------------------------------------------
@@ -437,18 +432,16 @@ export function GymDataProvider({ children }) {
   };
 
   // --- Current role -----------------------------------------------------------
-  const ADMIN_ROLE_NAME = 'Super Admin';
-  const [currentUserRole, setCurrentRole] = useState(ADMIN_ROLE_NAME);
+  // Comes from the signed-in user's public.users row. These values only drive
+  // the UI; the database enforces the same rules (migration 011).
+  const currentUserRole = staff?.role?.name || '';
+  const canRoleApplyDiscount = () => Boolean(staff?.role?.canApplyDiscount);
 
-  const setCurrentUserRole = (role) => {
-    if (role === ADMIN_ROLE_NAME) {
-      setCurrentRole(role);
-    }
-  };
-
-  const canRoleApplyDiscount = () => currentUserRole === ADMIN_ROLE_NAME;
-
-  // --- addMember: creates member + discount + invoice (+ optional locker) ------
+  // --- addMember: member + discount + invoice + payment (+ locker) ------------
+  // One database transaction (create_member_with_invoice RPC). The database
+  // recalculates the price from the plan and enforces the role's discount
+  // limit, so the amounts shown here are a preview, never the source of truth.
+  // Returns { member } on success or { error }.
   const addMember = async ({
     name,
     email,
@@ -463,136 +456,67 @@ export function GymDataProvider({ children }) {
     paymentMethod = 'CASH',
     paidAmount = null,
     avatar = null,
+    submissionId = null,
+    dueDate = null,
+    notes = null,
   }) => {
     const selectedPlan = activePlans.find((p) => p.id === Number(planId)) || activePlans[0];
-    if (!selectedPlan || !raw) return null;
-
-    const pricing = calculatePricing({
-      basePrice: selectedPlan.price,
-      discountType,
-      discountValue,
-      vatPercent: 0,
-    });
-
-    const actualPaid = paidAmount !== null && paidAmount !== undefined ? Number(paidAmount) : pricing.netPayable;
-    const due = Math.max(pricing.netPayable - actualPaid, 0);
-    const joined = todayStr();
-    const expiry = addDays(joined, selectedPlan.durationDays || 30);
+    if (!selectedPlan || !raw) return { error: new Error('Select an active membership plan.') };
 
     const trainer = trainerName && trainerName !== 'None' ? trainers.find((t) => t.name === trainerName) : null;
     const locker = lockerNumber && lockerNumber !== 'None' ? lockers.find((l) => l.number === lockerNumber) : null;
-    if (locker?.isMock) return null;
-
-    const tempId = -Date.now();
-    const optimisticMember = {
-      id: tempId,
-      code: 'FLM-…',
-      name,
-      email,
-      phone,
-      gender,
-      plan: selectedPlan.name,
-      planId: selectedPlan.id,
-      joined,
-      expiry,
-      status: 'Active',
-      visits: 0,
-      avatar: avatar || initialsOf(name),
-      trainer: trainerName,
-      lockerNumber: lockerNumber || 'None',
-      balanceDue: due,
-      paidTotal: actualPaid,
-      discountApplied: 'None',
-    };
+    if (locker?.isMock) {
+      return { error: new Error('Demo lockers cannot be assigned. Add a real locker in the database first.') };
+    }
 
     const result = await commit({
-      optimistic: () => {
-        setRaw((prev) => (prev ? {
-          ...prev,
-          members: [{
-            id: tempId,
-            first_name: name,
-            last_name: '',
-            avatar,
-            member_code: 'FLM-…',
-          }, ...prev.members],
-        } : prev));
-      },
-      persist: async () => {
-        // 1. member
-        const { data: memberRow, error: memberErr } = await db.insertMember({
-          name,
-          email,
-          phone,
-          gender,
-          planName: selectedPlan.name,
-          avatar,
-          trainerId: trainer?.id,
-          lockerId: locker?.id,
-          joined,
-          expiry,
-        });
-        if (memberErr) return { error: memberErr };
-
-        // 2. discount (only when one was applied)
-        let discountId = null;
-        if (pricing.discountAmount > 0) {
-          const { data: disc, error: discErr } = await db.insertDiscount({
-            discountType,
-            discountValue,
-            discountAmount: pricing.discountAmount,
-            reason: discountReason || 'Discount',
-          });
-          if (discErr) return { error: discErr };
-          discountId = disc.id;
-        }
-
-        // 3. invoice
-        const { data: invoiceRow, error: invErr } = await db.insertInvoice({
-          invoice_number: generateInvoiceNumber(),
-          member_id: memberRow.id,
-          plan_id: selectedPlan.id,
-          discount_id: discountId,
-          base_amount: pricing.basePrice,
-          discount_amount: pricing.discountAmount,
-          tax_amount: pricing.taxAmount,
-          net_payable: pricing.netPayable,
-          paid_amount: actualPaid,
-          due_amount: due,
-          payment_status: due === 0 ? 'Paid' : actualPaid > 0 ? 'Partial' : 'Due',
-          payment_method: paymentMethod,
-          invoice_date: joined,
-        });
-        if (invErr) return { error: invErr };
-
-        if (actualPaid > 0) {
-          const { error: paymentErr } = await db.insertPayment({
-            invoice_id: invoiceRow.id,
-            member_id: memberRow.id,
-            plan: selectedPlan.name,
-            amount: actualPaid,
-            method: paymentMethod || 'CASH',
-            status: 'Paid',
-            transaction_reference: null,
-          });
-          if (paymentErr) return { error: paymentErr };
-        }
-
-        // 4. locker occupancy
-        if (locker) {
-          await db.updateLocker(locker.id, { status: 'Occupied' });
-          await db.insertLockerAssignment({ lockerId: locker.id, memberId: memberRow.id, expiryDate: expiry });
-        }
-
-        return { data: memberRow };
-      },
+      persist: () => db.createMemberWithInvoice({
+        planId: selectedPlan.id,
+        name,
+        phone,
+        email,
+        gender,
+        discountType,
+        discountValue,
+        discountReason: discountReason || 'Discount',
+        paidAmount,
+        paymentMethod,
+        trainerId: trainer?.id,
+        lockerId: locker?.id,
+        avatar,
+        submissionId,
+        dueDate,
+        notes,
+      }),
       reloadAll: true,
     });
+    if (result?.error) return { error: result.error };
 
-    return result?.error ? null : optimisticMember;
+    const row = result.data;
+    return {
+      member: {
+        id: row.member_id,
+        code: row.member_code,
+        name,
+        email,
+        phone,
+        gender,
+        plan: selectedPlan.name,
+        planId: selectedPlan.id,
+        status: 'Active',
+        invoiceNumber: row.invoice_number,
+        netPayable: Number(row.net_payable),
+        balanceDue: Number(row.due_amount),
+        paidTotal: Number(row.paid_amount),
+      },
+    };
   };
 
   // --- Applications --------------------------------------------------------------
+  // Approval = addMember with submissionId: the member is created from the
+  // submission's details and the submission is marked Approved in the same
+  // transaction, so a failed save never leaves an "Approved" application
+  // without a member.
   const approveApplication = async ({
     appId,
     planId,
@@ -607,42 +531,24 @@ export function GymDataProvider({ children }) {
     const app = applications.find((a) => a.id === appId);
     if (!app) return { ok: false, message: 'Application not found (it may already be reviewed).' };
 
-    const created = await addMember({
+    const { member, error } = await addMember({
       name: app.name,
       email: app.email,
       phone: app.phone,
       gender: app.gender || 'Male',
-      avatar: app.avatar || app.photo,
-      planId: planId || app.desiredPlanId || 1,
+      planId: planId || app.desiredPlanId,
       discountType: discountType || 'flat',
       discountValue: discountValue || 0,
       discountReason: discountReason || 'Online Application Promo',
       paymentMethod: paymentMethod || 'bKASH',
       paidAmount,
+      submissionId: appId,
+      dueDate,
+      notes,
     });
 
-    // Update application status optimistically in state
-    setRaw((prev) => {
-      if (!prev) return prev;
-      const currentApps = prev.applications || [];
-      return {
-        ...prev,
-        applications: currentApps.map((a) =>
-          a.id === appId ? { ...a, status: 'Approved', reviewed_at: new Date().toISOString() } : a
-        ),
-      };
-    });
-
-    try {
-      await db.updateApplication(appId, {
-        status: 'Approved',
-        reviewed_at: new Date().toISOString(),
-      });
-    } catch (err) {
-      console.warn('[GymDataContext] updateApplication demo note:', err.message);
-    }
-
-    return { ok: true, member: created, application: app };
+    if (error) return { ok: false, message: error.message };
+    return { ok: true, member, application: app };
   };
 
   const rejectApplication = async (appId, reason = 'Did not meet criteria') => {
@@ -851,16 +757,18 @@ export function GymDataProvider({ children }) {
   };
 
   // --- Payments ------------------------------------------------------------------------
+  // collect_payment RPC locks the invoice and recalculates paid/due on the
+  // server, so two staff collecting at once cannot overpay it. Throws on failure.
   const collectPayment = async ({ invoiceId, amount, method, trxId }) => {
     const amt = Number(amount) || 0;
     const inv = (raw?.invoices || []).find((i) => i.id === invoiceId);
-    if (!inv || !raw) return;
+    if (!inv || !raw) throw new Error('Invoice not found. Refresh and try again.');
 
     const newPaid = Number(inv.paid_amount) + amt;
     const newDue = Math.max(Number(inv.net_payable) - newPaid, 0);
     const status = newDue === 0 ? 'Paid' : 'Partial';
 
-    await commit({
+    const result = await commit({
       optimistic: () =>
         setRaw((prev) =>
           prev
@@ -872,25 +780,11 @@ export function GymDataProvider({ children }) {
               }
             : prev
         ),
-      persist: async () => {
-        const upd = await db.updateInvoice(invoiceId, {
-          paid_amount: newPaid,
-          due_amount: newDue,
-          payment_status: status,
-        });
-        if (upd.error) return upd;
-        return db.insertPayment({
-          invoice_id: invoiceId,
-          member_id: inv.member_id,
-          plan: 'Membership',
-          amount: amt,
-          method: method || 'CASH',
-          status: 'Paid',
-          transaction_reference: trxId || null,
-        });
-      },
+      persist: () => db.collectPayment({ invoiceId, amount: amt, method, reference: trxId }),
       reloadAll: true,
     });
+    if (result?.error) throw result.error;
+    return result.data;
   };
 
   // --- Expenses ---------------------------------------------------------------------------
@@ -1233,7 +1127,7 @@ export function GymDataProvider({ children }) {
     return optimisticEntry;
   };
 
-  // --- Gym Shop inventory ------------------------------------------------------------
+  // --- Coffee Shop menu / stock---------------------------------------------------------
   const saveShopProduct = async (product) => {
     const isEdit = Number(product?.id) > 0;
     const optimisticRow = shopProductToRow(product);
@@ -1410,7 +1304,6 @@ export function GymDataProvider({ children }) {
         stats,
         analytics,
         currentUserRole,
-        setCurrentUserRole,
         calculatePricing,
         canRoleApplyDiscount,
         addMember,

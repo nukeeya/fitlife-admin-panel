@@ -1,12 +1,7 @@
-admission-form
-!admission-form/
-admission-form/*
-!admission-form/src/
-admission-form/src/*
-!admission-form/src/App.css
-!admission-form/src/components/
-admission-form/src/components/*
-!admission-form/src/components/AdmissionForm.jsx
+# Separate git repositories with their own GitHub remotes — do not add here.
+/admission-form/
+/gym shop/fitlife-gymshop/
+/gym shop/Fitlife GymShop/
 
 # Logs
 logs

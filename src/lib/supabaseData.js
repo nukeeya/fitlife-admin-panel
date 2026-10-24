@@ -153,11 +153,6 @@ export function splitName(fullName) {
   };
 }
 
-/** Generate a unique invoice number: INV-2026-482913 */
-export function generateInvoiceNumber() {
-  return `INV-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
-}
-
 export function normalizeDietPreference(pref) {
   const p = String(pref || '').toLowerCase();
   if (p.includes('vegan')) return 'Vegan';
@@ -175,7 +170,7 @@ export function shopProductToRow(product) {
   };
   return {
     name: String(product.name || '').trim() || 'Unnamed Product',
-    category: ['Food', 'Cafe'].includes(product.category) ? product.category : 'Gym Wear',
+    category: 'Cafe', // the coffee shop is the only shop (see migration 010)
     brand: product.brand || null,
     price: num(product.price),
     cost: num(product.cost),
@@ -411,7 +406,7 @@ export function mapShopProduct(row) {
   return {
     id: row.id,
     name: row.name,
-    category: row.category, // 'Gym Wear' | 'Food' | 'Cafe'
+    category: row.category, // 'Cafe' (older rows may still read 'Gym Wear' | 'Food' until migration 010)
     brand: row.brand || '',
     price: Number(row.price ?? 0),
     cost: Number(row.cost ?? 0),
@@ -421,6 +416,27 @@ export function mapShopProduct(row) {
     imageUrl: row.image_url || '',
     description: row.description || '',
     status: row.status || 'Active',
+  };
+}
+
+const SMS_SETTINGS_COLUMNS = 'id, provider_name, sender_id, remaining_balance, updated_at';
+
+/**
+ * Staff profile for the signed-in auth user: public.users row + role.
+ * Returns { data: null } when the account has no active role — the database
+ * grants such accounts no access (migration 011).
+ */
+export async function fetchStaffProfile(authUid) {
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, name, email, status, role_id, roles(*)')
+    .eq('auth_uid', authUid)
+    .maybeSingle();
+  if (error) return { data: null, error };
+  if (!data || data.status !== 'Active' || !data.roles) return { data: null, error: null };
+  return {
+    data: { id: data.id, name: data.name, email: data.email, role: mapRole(data.roles) },
+    error: null,
   };
 }
 
@@ -449,7 +465,8 @@ export async function fetchAllData() {
     roles: () => supabase.from('roles').select('*').order('id'),
     users: () => supabase.from('users').select('role_id'),
     smsCampaigns: () => supabase.from('sms_campaigns').select('*').order('id', { ascending: false }),
-    smsSettings: () => supabase.from('sms_settings').select('*').limit(1),
+    // Explicit columns: api_key is not readable by the browser role (migration 011).
+    smsSettings: () => supabase.from('sms_settings').select(SMS_SETTINGS_COLUMNS).limit(1),
     jobs: () => supabase.from('job_postings').select('*').order('id', { ascending: false }),
     jobApplications: () => supabase.from('job_applications').select('job_id'),
     dietPlans: () => supabase.from('ai_diet_plans').select('*').order('id', { ascending: false }),
@@ -517,30 +534,40 @@ export const db = {
     return supabase.from('admission_submissions').update(patch).eq('id', id).select('*').single();
   },
 
-  // Discounts / Invoices / Payments --------------------------------------------
-  insertDiscount({ discountType, discountValue, discountAmount, reason }) {
-    return supabase
-      .from('discounts')
-      .insert({
-        discount_type: discountType,
-        discount_value: Number(discountValue) || 0,
-        discount_amount: Number(discountAmount) || 0,
-        reason_note: reason || null,
-      })
-      .select('*')
-      .single();
+  // Admission / Payments (server-side RPCs, migration 011) ---------------------
+  // Member + discount + invoice + payment + locker in one transaction; prices
+  // and discount limits are enforced by the database, not trusted from here.
+  createMemberWithInvoice({
+    planId, name, phone, email, gender, discountType, discountValue, discountReason,
+    paidAmount, paymentMethod, trainerId, lockerId, avatar, submissionId, dueDate, notes,
+  }) {
+    return supabase.rpc('create_member_with_invoice', {
+      p_plan_id: Number(planId),
+      p_name: name ?? null,
+      p_phone: phone ?? null,
+      p_email: email || null,
+      p_gender: gender ?? null,
+      p_discount_type: discountType || 'flat',
+      p_discount_value: Number(discountValue) || 0,
+      p_discount_reason: discountReason || null,
+      p_paid_amount: paidAmount === null || paidAmount === undefined ? null : Number(paidAmount),
+      p_payment_method: paymentMethod || 'CASH',
+      p_trainer_id: trainerId || null,
+      p_locker_id: lockerId || null,
+      p_avatar: avatar || null,
+      p_submission_id: submissionId || null,
+      p_due_date: dueDate || null,
+      p_notes: notes || null,
+    });
   },
 
-  insertInvoice(payload) {
-    return supabase.from('invoices').insert(payload).select('*').single();
-  },
-
-  updateInvoice(id, patch) {
-    return supabase.from('invoices').update(patch).eq('id', id).select('*').single();
-  },
-
-  insertPayment(payload) {
-    return supabase.from('payments').insert(payload).select('*').single();
+  collectPayment({ invoiceId, amount, method, reference }) {
+    return supabase.rpc('collect_payment', {
+      p_invoice_id: Number(invoiceId),
+      p_amount: Number(amount),
+      p_method: method || 'CASH',
+      p_reference: reference || null,
+    });
   },
 
   // Expenses -------------------------------------------------------------------
@@ -623,7 +650,7 @@ export const db = {
 
   async decrementSmsBalance(settingsId, by, current) {
     const next = Math.max(Number(current) - Number(by), 0);
-    return supabase.from('sms_settings').update({ remaining_balance: next }).eq('id', settingsId).select('*').single();
+    return supabase.from('sms_settings').update({ remaining_balance: next }).eq('id', settingsId).select(SMS_SETTINGS_COLUMNS).single();
   },
 
   // Roles ------------------------------------------------------------------------------
@@ -748,7 +775,7 @@ export const db = {
       .single();
   },
 
-  // Shop products (Gym Shop inventory) --------------------------------------------
+  // Shop products (Coffee Shop menu) ---------------------------------------------
   insertShopProduct(product) {
     return supabase.from('shop_products').insert(shopProductToRow(product)).select('*').single();
   },

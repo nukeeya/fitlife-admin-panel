@@ -96,14 +96,9 @@ export default function Admissions() {
         emergency_phone: sub.emergency_phone,
       });
 
+      // The database trigger marks the submission Approved in the same
+      // statement (migration 011), so there is no separate status update.
       if (memberError) throw memberError;
-
-      // Update submission status
-      const { error: statusError } = await supabase
-        .from('admission_submissions')
-        .update({ status: 'Approved', reviewed_at: new Date().toISOString() })
-        .eq('id', sub.id);
-      if (statusError) throw statusError;
 
       // Refresh list
       await fetchSubmissions();

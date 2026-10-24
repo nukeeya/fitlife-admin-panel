@@ -96,7 +96,7 @@ const INITIAL_MESSAGE_HISTORY = [
     recipientLabel: 'Samiul Karim (FLM-1004)',
     recipientSample: '+880 1819-334455',
     category: 'Promotion',
-    message: 'Hi Samiul, celebrate your 6-month gym streak with 20% off all Gym Shop supplements and protein shakes this weekend!',
+    message: 'Hi Samiul, celebrate your 6-month gym streak with 20% off all Coffee Shop drinks and protein shakes this weekend!',
     timestamp: '2026-10-19 02:45 PM',
     status: 'Delivered',
   },

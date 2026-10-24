@@ -69,7 +69,7 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
   // Check role discount privileges
   const hasDiscountPrivilege = canRoleApplyDiscount();
   const currentRoleObj = roles.find((r) => r.name === currentUserRole);
-  const maxDiscountAllowed = currentRoleObj?.maxDiscountPercentage ?? (hasDiscountPrivilege ? 100 : 0);
+  const maxDiscountAllowed = currentRoleObj?.maxDiscountPercent ?? 0;
 
   // Selected plan
   const selectedPlan = useMemo(() => {
@@ -158,7 +158,7 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
     let uploadedPhoto = null;
     try {
       uploadedPhoto = await uploadProfilePhoto(profilePhoto, 'members');
-      const created = await addMember({
+      const { member: created, error: createError } = await addMember({
         name: formData.name.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim(),
@@ -172,10 +172,12 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
         paymentMethod: formData.paymentMethod,
         paidAmount: payNum,
         avatar: uploadedPhoto,
+        dueDate: outstandingDue > 0 ? formData.dueDate : null,
+        notes: formData.paymentRemarks,
       });
 
-      if (!created) {
-        setErrorMsg('Failed to save the member record. Please check your connection and try again.');
+      if (createError) {
+        setErrorMsg(`Failed to save the member record: ${createError.message}`);
         return;
       }
 
@@ -205,9 +207,10 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
         memberName: formData.name.trim(),
         memberCode: created?.code || `FLM-${String(Date.now()).slice(-4)}`,
         planName: selectedPlan.name,
-        netPayable: pricing.netPayable,
-        initialPayment: payNum,
-        outstandingDue,
+        // Amounts as saved by the database (it recalculates the price).
+        netPayable: created.netPayable,
+        initialPayment: created.paidTotal,
+        outstandingDue: created.balanceDue,
         dueDate: outstandingDue > 0 ? formData.dueDate : 'Paid in Full (৳0 Due)',
       });
 

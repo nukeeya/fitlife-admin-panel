@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Coffee, Minus, Plus, RefreshCw, Search, ShoppingCart, Trash2 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
 import { supabase } from '../lib/supabase';
+import CoffeeMenuManager from '../components/coffee/CoffeeMenuManager';
+import CoffeeOnlineOrders from '../components/coffee/CoffeeOnlineOrders';
 
 const PAYMENT_METHODS = ['Cash', 'bKash', 'Card'];
 const money = (amount) => `৳${Number(amount || 0).toLocaleString('en-BD', { maximumFractionDigits: 2 })}`;
@@ -14,6 +16,9 @@ const todayStart = () => {
 
 export default function CoffeeShop() {
   const { shopProducts, refresh } = useGymData();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeView = ['menu', 'orders'].includes(searchParams.get('tab')) ? searchParams.get('tab') : 'pos';
+  const setActiveView = (view) => setSearchParams(view === 'pos' ? {} : { tab: view });
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState({});
   const [customerName, setCustomerName] = useState('');
@@ -135,15 +140,48 @@ export default function CoffeeShop() {
           <p className="page-subtitle">Walk-in sales are welcome — customers do not need a gym membership.</p>
         </div>
         <div className="page-actions">
-          <Link className="btn btn-secondary" to="/gym-shop?category=Cafe">
-            Manage menu &amp; stock
-          </Link>
           <button className="btn btn-secondary" type="button" onClick={refreshPage}>
             <RefreshCw size={16} /> Refresh
           </button>
         </div>
       </div>
 
+      <div className="filter-bar" role="tablist" aria-label="Coffee Shop sections">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeView === 'pos'}
+          className={`btn btn-sm ${activeView === 'pos' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveView('pos')}
+        >
+          Point of Sale
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeView === 'menu'}
+          className={`btn btn-sm ${activeView === 'menu' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveView('menu')}
+        >
+          Menu &amp; Stock
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeView === 'orders'}
+          className={`btn btn-sm ${activeView === 'orders' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveView('orders')}
+        >
+          Online Orders
+        </button>
+      </div>
+
+      {activeView === 'menu' ? (
+        <CoffeeMenuManager />
+      ) : activeView === 'orders' ? (
+        <CoffeeOnlineOrders />
+      ) : (
+      <>
       <div className="stats-grid">
         <div className="stat-card">
           <span className="stat-card-title">TODAY'S SALES</span>
@@ -171,7 +209,7 @@ export default function CoffeeShop() {
             <div>
               <strong>Menu</strong>
               <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: 4 }}>
-                Add or update cafe menu items and stock through Gym Shop → Cafe.
+                Add or update menu items and stock in the Menu &amp; Stock tab.
               </div>
             </div>
             <label className="search-box" style={{ maxWidth: 240 }}>
@@ -189,7 +227,7 @@ export default function CoffeeShop() {
             <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>
               <Coffee size={32} style={{ marginBottom: 10 }} />
               <p>No active cafe menu items found.</p>
-              <Link className="btn btn-primary btn-sm" to="/gym-shop?category=Cafe">Add menu items</Link>
+              <button className="btn btn-primary btn-sm" type="button" onClick={() => setActiveView('menu')}>Add menu items</button>
             </div>
           ) : (
             <div className="coffee-menu-grid">
@@ -317,6 +355,8 @@ export default function CoffeeShop() {
           </table>
         </div>
       </section>
+      </>
+      )}
     </div>
   );
 }

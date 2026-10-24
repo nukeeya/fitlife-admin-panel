@@ -13,8 +13,12 @@ For an existing Supabase project, apply the SQL files in `database/migrations`
 in numeric order. Apply `008_admission_plan_details.sql` before deploying the
 admission form update. Apply `009_coffee_shop_pos.sql` after `001_shop_products.sql`
 to enable authenticated Coffee Shop sales. The migration adds a dedicated `Cafe`
-product category. Add or manage cafe menu items under Gym Shop → Cafe. Checkout
-records walk-in sales and deducts stock in one database transaction.
+product category. Checkout records walk-in sales and deducts stock in one
+database transaction. Apply `010_coffee_shop_transfer.sql` to retire the Gym
+Shop: Food products become coffee shop menu items, Gym Wear is moved over as
+Archived, and the public storefront and online orders only accept coffee shop
+items. Manage the menu under Coffee Shop → Menu & Stock and online orders under
+Coffee Shop → Online Orders.
 
 ## Local development
 

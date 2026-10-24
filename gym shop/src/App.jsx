@@ -4,7 +4,7 @@ import {
   ArrowRight,
   Check,
   ChevronDown,
-  Dumbbell,
+  Coffee,
   Minus,
   Plus,
   Search,
@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { supabase } from './supabase';
 
+// The store sells the gym's coffee shop menu only (see admin migration 010).
+const MENU_CATEGORY = 'Cafe';
 const PRODUCT_COLUMNS = 'id,name,category,brand,price,stock,unit,size,image_url,description,status';
 const EMPTY_FORM = { name: '', phone: '', email: '', address: '', note: '' };
 const money = (amount) => `৳${Number(amount || 0).toLocaleString('en-BD', { maximumFractionDigits: 2 })}`;
@@ -41,9 +43,8 @@ function ProductCard({ product, onAdd }) {
         {product.imageUrl ? (
           <img src={product.imageUrl} alt={product.name} loading="lazy" />
         ) : (
-          <div className="image-placeholder"><Dumbbell size={38} /></div>
+          <div className="image-placeholder"><Coffee size={38} /></div>
         )}
-        <span className="product-category">{product.category}</span>
         {!isAvailable && <span className="stock-pill sold-out">Sold out</span>}
         {isAvailable && product.stock <= 5 && (
           <span className="stock-pill low-stock">Only {product.stock} left</span>
@@ -99,8 +100,8 @@ function BagPanel({ cart, products, onClose, onQuantityChange, onCheckout }) {
           <div className="bag-empty">
             <ShoppingBag size={34} />
             <h3>Your bag is empty</h3>
-            <p>Find something that keeps you moving.</p>
-            <button className="text-button" type="button" onClick={onClose}>Explore the shop <ArrowRight size={15} /></button>
+            <p>Pick a drink or a snack to get started.</p>
+            <button className="text-button" type="button" onClick={onClose}>Browse the menu <ArrowRight size={15} /></button>
           </div>
         ) : (
           <>
@@ -110,7 +111,7 @@ function BagPanel({ cart, products, onClose, onQuantityChange, onCheckout }) {
                   <div className="bag-line-image">
                     {product.imageUrl
                       ? <img src={product.imageUrl} alt="" />
-                      : <Dumbbell size={22} />}
+                      : <Coffee size={22} />}
                   </div>
                   <div className="bag-line-info">
                     <strong>{product.name}</strong>
@@ -136,7 +137,7 @@ function BagPanel({ cart, products, onClose, onQuantityChange, onCheckout }) {
             </div>
             <div className="bag-summary">
               <div className="subtotal-row"><span>Subtotal</span><strong>{money(total)}</strong></div>
-              <p>Delivery and payment are confirmed by the gym after you submit your request.</p>
+              <p>Delivery and payment are confirmed by the coffee shop after you submit your request.</p>
               <button className="checkout-button" type="button" onClick={onCheckout}>
                 Continue to details <ArrowRight size={17} />
               </button>
@@ -185,7 +186,7 @@ function CheckoutDialog({ form, setForm, onClose, onSubmit, isSubmitting, error 
           </label>
           <label>
             Note <span className="optional-label">Optional</span>
-            <textarea maxLength="1000" rows="2" placeholder="Size, preferred time, or anything else we should know" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
+            <textarea maxLength="1000" rows="2" placeholder="Cup size, sugar, preferred time, or anything else we should know" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
           </label>
           {error && <div className="form-error" role="alert">{error}</div>}
           <button className="checkout-button" type="submit" disabled={isSubmitting}>
@@ -205,7 +206,6 @@ export default function App() {
   const [loadError, setLoadError] = useState(
     supabase ? '' : 'The shop is not configured yet. Please try again later.',
   );
-  const [category, setCategory] = useState('All');
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState('featured');
   const [cart, setCart] = useState([]);
@@ -226,19 +226,20 @@ export default function App() {
           .from('shop_products')
           .select(PRODUCT_COLUMNS)
           .eq('status', 'Active')
+          .eq('category', MENU_CATEGORY)
           .order('id', { ascending: false });
 
         if (!mounted) return;
         if (error) {
-          console.error('[GymShop storefront] product load failed:', error);
-          setLoadError('We could not load the shop right now. Please try again.');
+          console.error('[CoffeeShop storefront] menu load failed:', error);
+          setLoadError('We could not load the menu right now. Please try again.');
         } else {
           setProducts((data || []).map(mapProduct));
           setLoadError('');
         }
       } catch (error) {
-        console.error('[GymShop storefront] product load failed:', error);
-        if (mounted) setLoadError('We could not load the shop right now. Please try again.');
+        console.error('[CoffeeShop storefront] menu load failed:', error);
+        if (mounted) setLoadError('We could not load the menu right now. Please try again.');
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -260,22 +261,14 @@ export default function App() {
     };
   }, []);
 
-  const categories = useMemo(
-    () => ['All', ...new Set(products.map((product) => product.category).filter(Boolean))],
-    [products],
-  );
   const visibleProducts = useMemo(() => {
     const term = query.trim().toLowerCase();
-    const list = products.filter((product) => {
-      const matchesCategory = category === 'All' || product.category === category;
-      const matchesQuery = !term || [product.name, product.brand, product.description]
-        .some((value) => String(value || '').toLowerCase().includes(term));
-      return matchesCategory && matchesQuery;
-    });
+    const list = products.filter((product) => !term || [product.name, product.brand, product.description]
+      .some((value) => String(value || '').toLowerCase().includes(term)));
     if (sort === 'price-low') list.sort((a, b) => a.price - b.price);
     if (sort === 'price-high') list.sort((a, b) => b.price - a.price);
     return list;
-  }, [products, category, query, sort]);
+  }, [products, query, sort]);
   const bagCount = cart.reduce((sum, line) => sum + line.quantity, 0);
 
   const addToBag = (product) => {
@@ -324,7 +317,7 @@ export default function App() {
       setOrderId(data);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
-      console.error('[GymShop storefront] order submission failed:', error);
+      console.error('[CoffeeShop storefront] order submission failed:', error);
       setSubmitError('We could not submit your request. Please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
@@ -333,16 +326,14 @@ export default function App() {
 
   return (
     <div className="storefront">
-      <div className="announcement"><span>TRAIN WITH INTENTION. SHOW UP STRONG.</span><span>FITLIFE GYM · DHAKA</span></div>
+      <div className="announcement"><span>FRESHLY MADE. READY WHEN YOU ARE.</span><span>FITLIFE COFFEE SHOP · DHAKA</span></div>
       <header className="store-header">
-        <a className="wordmark" href="/" aria-label="FitLife Shop home">
-          <span className="wordmark-icon"><Dumbbell size={19} /></span>
-          <span>FIT<span>LIFE</span><small>TRAINING GOODS</small></span>
+        <a className="wordmark" href="/" aria-label="FitLife Coffee Shop home">
+          <span className="wordmark-icon"><Coffee size={19} /></span>
+          <span>FIT<span>LIFE</span><small>COFFEE SHOP</small></span>
         </a>
         <nav className="desktop-nav" aria-label="Shop sections">
-          <a href="#shop">Shop all</a>
-          <a href="#shop" onClick={() => setCategory('Gym Wear')}>Apparel</a>
-          <a href="#shop" onClick={() => setCategory('Food')}>Nutrition</a>
+          <a href="#shop">Menu</a>
         </nav>
         <button className="bag-trigger" type="button" onClick={() => setIsBagOpen(true)}>
           <ShoppingBag size={18} />
@@ -361,50 +352,40 @@ export default function App() {
         )}
         <section className="hero">
           <div className="hero-content">
-            <span className="hero-label"><span /> FITLIFE GYM SHOP</span>
-            <h1>BUILT FOR<br /><em>THE WORK.</em></h1>
-            <p>Gear and good fuel for the days you show up. Find your next training essential.</p>
-            <a href="#shop" className="hero-button">Shop the collection <ArrowDownWideNarrow size={16} /></a>
+            <span className="hero-label"><span /> FITLIFE COFFEE SHOP</span>
+            <h1>FUEL FOR<br /><em>THE DAY.</em></h1>
+            <p>Coffee, shakes and snacks made fresh at the gym. Order ahead and we&apos;ll have it ready.</p>
+            <a href="#shop" className="hero-button">See the menu <ArrowDownWideNarrow size={16} /></a>
           </div>
           <div className="hero-art" aria-hidden="true">
             <div className="hero-orbit orbit-one" />
             <div className="hero-orbit orbit-two" />
-            <div className="hero-figure"><Dumbbell size={158} strokeWidth={1.1} /></div>
-            <span className="hero-art-caption">MOVE WITH PURPOSE<br />EST. EVERY DAY</span>
+            <div className="hero-figure"><Coffee size={158} strokeWidth={1.1} /></div>
+            <span className="hero-art-caption">BREWED FRESH<br />EVERY DAY</span>
             <span className="hero-serial">FL / 001</span>
           </div>
-          <div className="hero-index">01 — TRAINING ESSENTIALS</div>
+          <div className="hero-index">01 — TODAY&apos;S MENU</div>
         </section>
 
         <section className="shop-section" id="shop">
           <div className="section-heading">
             <div>
-              <span className="eyebrow">THE FITLIFE EDIT</span>
-              <h2>Find your <em>gear.</em></h2>
-              <p>Curated essentials to keep your training moving.</p>
+              <span className="eyebrow">THE FITLIFE MENU</span>
+              <h2>Pick your <em>order.</em></h2>
+              <p>Drinks and snacks from the gym coffee shop.</p>
             </div>
-            <div className="result-count">{visibleProducts.length} PRODUCTS <span>·</span> UPDATED LIVE</div>
+            <div className="result-count">{visibleProducts.length} ITEMS <span>·</span> UPDATED LIVE</div>
           </div>
 
           <div className="shop-toolbar">
-            <div className="category-tabs" aria-label="Product categories">
-              {categories.map((item) => (
-                <button
-                  type="button"
-                  key={item}
-                  className={category === item ? 'category-tab active' : 'category-tab'}
-                  onClick={() => setCategory(item)}
-                >{item === 'Food' ? 'Nutrition' : item === 'Gym Wear' ? 'Apparel' : 'All goods'}</button>
-              ))}
-            </div>
             <div className="toolbar-controls">
               <label className="search-field">
                 <Search size={16} />
-                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search products" aria-label="Search products" />
+                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search the menu" aria-label="Search the menu" />
               </label>
               <label className="sort-field">
                 <span>Sort</span>
-                <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort products">
+                <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort menu">
                   <option value="featured">Featured</option>
                   <option value="price-low">Price: low to high</option>
                   <option value="price-high">Price: high to low</option>
@@ -416,16 +397,16 @@ export default function App() {
 
           {loadError ? (
             <div className="state-panel">
-              <h3>Shop temporarily unavailable</h3>
+              <h3>Menu temporarily unavailable</h3>
               <p>{loadError}</p>
               <button className="secondary-button" type="button" onClick={() => window.location.reload()}>Try again</button>
             </div>
           ) : isLoading ? (
-            <div className="state-panel"><div className="loader" /><p>Finding your training essentials…</p></div>
+            <div className="state-panel"><div className="loader" /><p>Loading the menu…</p></div>
           ) : visibleProducts.length === 0 ? (
             <div className="state-panel">
-              <h3>{products.length ? 'No products found' : 'The collection is on its way'}</h3>
-              <p>{products.length ? 'Try another search or category.' : 'Check back soon for the latest gear.'}</p>
+              <h3>{products.length ? 'Nothing matches your search' : 'The menu is on its way'}</h3>
+              <p>{products.length ? 'Try another search.' : 'Check back soon.'}</p>
             </div>
           ) : (
             <div className="product-grid">
@@ -435,15 +416,15 @@ export default function App() {
         </section>
 
         <section className="shop-note">
-          <span className="note-mark"><Dumbbell size={20} /></span>
-          <div><strong>Good gear. Better sessions.</strong><p>Submit an order request and our gym team will confirm availability, delivery, and payment directly with you.</p></div>
-          <a href="#shop">Explore the shop <ArrowRight size={16} /></a>
+          <span className="note-mark"><Coffee size={20} /></span>
+          <div><strong>Good coffee. Better sessions.</strong><p>Submit an order request and our coffee shop team will confirm availability, delivery, and payment directly with you.</p></div>
+          <a href="#shop">Browse the menu <ArrowRight size={16} /></a>
         </section>
       </main>
 
       <footer className="store-footer">
-        <a className="wordmark footer-wordmark" href="#"><span className="wordmark-icon"><Dumbbell size={17} /></span><span>FIT<span>LIFE</span><small>TRAINING GOODS</small></span></a>
-        <span>© {new Date().getFullYear()} FITLIFE GYM. TRAIN WITH PURPOSE.</span>
+        <a className="wordmark footer-wordmark" href="#"><span className="wordmark-icon"><Coffee size={17} /></span><span>FIT<span>LIFE</span><small>COFFEE SHOP</small></span></a>
+        <span>© {new Date().getFullYear()} FITLIFE GYM COFFEE SHOP.</span>
         <a href="#shop">Back to top ↑</a>
       </footer>
 

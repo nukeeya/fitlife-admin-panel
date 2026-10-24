@@ -1,6 +1,6 @@
-# FitLife Gym Shop
+# FitLife Coffee Shop
 
-Standalone customer storefront for Cloudflare Pages. Product listings come from the same Supabase `shop_products` table used by the admin panel. Active product changes are synchronized with Supabase Realtime and a one-minute refresh fallback. The storefront does not read internal product costs.
+Standalone customer ordering site for the gym coffee shop, hosted on Cloudflare Pages. Menu items come from the same Supabase `shop_products` table used by the admin panel (category `Cafe`). Active menu changes are synchronized with Supabase Realtime and a one-minute refresh fallback. The storefront does not read internal product costs.
 
 ## Local development
 
@@ -10,7 +10,7 @@ Standalone customer storefront for Cloudflare Pages. Product listings come from 
 
 ## Supabase setup
 
-Apply `supabase/001_shop_products.sql` if the shop products table has not been created yet, then apply `supabase/007_public_gym_shop.sql` in the Supabase SQL editor. The new migration allows public read access only to active products and selected public columns; customer requests are accepted through a database function that recalculates prices from the live catalogue. Orders are visible to authenticated staff in the admin panel under **Gym Shop → Customer Orders**.
+Apply `supabase/001_shop_products.sql` if the shop products table has not been created yet, then apply `007_public_gym_shop.sql`, `009_coffee_shop_pos.sql` and `010_coffee_shop_transfer.sql` from the admin repo's `database/migrations` folder in the Supabase SQL editor. Together they allow public read access only to active coffee shop menu items and selected public columns; customer requests are accepted through a database function that recalculates prices from the live catalogue. Orders are visible to authenticated staff in the admin panel under **Coffee Shop → Online Orders**.
 
 ## Cloudflare Pages
 

@@ -53,6 +53,11 @@ export default function Accounts() {
           <p className="page-subtitle">
             Comprehensive accounting suite: partial-payment dues tracking, monthly closing reconciliation, multi-channel gateways, dynamic revenue recognition, and reconciled statements.
           </p>
+          {/* FinanceContext runs on financeMockData — keep this until it reads the real tables. */}
+          <div className="whatsapp-setup-notice" role="status">
+            <strong>Demo data:</strong> this section shows sample figures and is not saved to the database.
+            Real invoices and payments are on the Payments and Member pages.
+          </div>
         </div>
 
         {/* Subtabs Bar — Scrollable on mobile, interactive */}

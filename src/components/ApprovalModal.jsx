@@ -50,7 +50,7 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
 
   const hasDiscountPrivilege = canRoleApplyDiscount();
   const currentRoleObj = roles.find((r) => r.name === currentUserRole);
-  const maxDiscountAllowed = currentRoleObj?.maxDiscountPercentage ?? 100;
+  const maxDiscountAllowed = currentRoleObj?.maxDiscountPercent ?? 0;
 
   const pricing = useMemo(() => {
     return calculatePricing({

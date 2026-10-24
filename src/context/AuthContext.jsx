@@ -1,79 +1,54 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { fetchStaffProfile } from '../lib/supabaseData';
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  // Staff profile (public.users row + role). null = signed in but no active
+  // role yet — the database grants such accounts no access at all.
+  const [staff, setStaff] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
 
-    // Check cached session or initialize demo admin session for local frontend preview
-    try {
-      const cached = localStorage.getItem('fitlife-demo-session');
-      if (cached) {
-        setUser(JSON.parse(cached));
-      } else {
-        const demoUser = { id: 'demo-admin-id', email: 'admin@fitlife.com', user_metadata: { role: 'admin' } };
-        setUser(demoUser);
+    const applySession = async (session) => {
+      const nextUser = session?.user ?? null;
+      let nextStaff = null;
+      if (nextUser) {
+        const { data, error } = await fetchStaffProfile(nextUser.id);
+        if (error) console.error('[AuthContext] staff profile load failed:', error.message);
+        nextStaff = data;
       }
-    } catch {
-      const demoUser = { id: 'demo-admin-id', email: 'admin@fitlife.com', user_metadata: { role: 'admin' } };
-      setUser(demoUser);
-    }
-    setLoading(false);
+      if (!mounted) return;
+      setUser(nextUser);
+      setStaff(nextStaff);
+      setLoading(false);
+    };
 
-    try {
-      supabase.auth.getSession().then(({ data }) => {
-        if (mounted && data?.session?.user) {
-          setUser(data.session.user);
-        }
-      }).catch(() => {
-        // offline / demo fallback already active
+    supabase.auth.getSession()
+      .then(({ data }) => applySession(data?.session))
+      .catch((err) => {
+        console.error('[AuthContext] getSession failed:', err);
+        if (mounted) setLoading(false);
       });
 
-      const { data: authListener } = supabase.auth.onAuthStateChange(
-        (_event, session) => {
-          if (mounted && session?.user) {
-            setUser(session.user);
-          }
-        }
-      );
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Defer: supabase-js warns against awaiting other supabase calls inside this callback.
+      setTimeout(() => applySession(session), 0);
+    });
 
-      return () => {
-        mounted = false;
-        authListener?.subscription?.unsubscribe();
-      };
-    } catch {
-      // offline / demo mode
-    }
+    return () => {
+      mounted = false;
+      authListener?.subscription?.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email, password) => {
     try {
-      const res = await supabase.auth.signInWithPassword({ email, password });
-      if (!res.error && res.data?.user) {
-        setUser(res.data.user);
-        return res;
-      }
-      // Demo session fallback when backend is in demo mode
-      const demoUser = { id: 'demo-admin-id', email: email || 'admin@fitlife.com', user_metadata: { role: 'admin' } };
-      setUser(demoUser);
-      localStorage.setItem('fitlife-demo-session', JSON.stringify(demoUser));
-      return { data: { user: demoUser }, error: null };
-    } catch {
-      const demoUser = { id: 'demo-admin-id', email: email || 'admin@fitlife.com', user_metadata: { role: 'admin' } };
-      setUser(demoUser);
-      localStorage.setItem('fitlife-demo-session', JSON.stringify(demoUser));
-      return { data: { user: demoUser }, error: null };
-    }
-  };
-
-  const signUp = async (email, password) => {
-    try {
-      return await supabase.auth.signUp({ email, password });
+      return await supabase.auth.signInWithPassword({ email, password });
     } catch (err) {
       return { data: null, error: err };
     }
@@ -97,6 +72,7 @@ export function AuthProvider({ children }) {
       await supabase.auth.signOut();
     } finally {
       setUser(null);
+      setStaff(null);
       clearLocalCaches();
     }
   };
@@ -120,7 +96,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, resetPassword, updatePassword }}>
+    <AuthContext.Provider value={{ user, staff, loading, signIn, signOut, resetPassword, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );

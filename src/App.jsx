@@ -19,7 +19,6 @@ import Payments from './pages/Payments';
 import Memberships from './pages/Memberships';
 import SMSManagement from './pages/SMSManagement';
 import SubscriptionPlans from './pages/SubscriptionPlans';
-import GymShop from './pages/GymShop';
 import CoffeeShop from './pages/CoffeeShop';
 import AIWorkoutManagement from './pages/AIWorkoutManagement';
 import DietPlans from './pages/DietPlans';
@@ -65,7 +64,7 @@ export default function App() {
               <Route path="/device" element={<Navigate to="/devices" replace />} />
               <Route path="/subscription-plans" element={<SubscriptionPlans />} />
               <Route path="/advertisements" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/gym-shop" element={<GymShop />} />
+              <Route path="/gym-shop" element={<Navigate to="/coffee-shop?tab=menu" replace />} />
               <Route path="/coffee-shop" element={<CoffeeShop />} />
               <Route path="/ai-workouts" element={<AIWorkoutManagement />} />
               <Route path="/diet-plans" element={<DietPlans />} />
