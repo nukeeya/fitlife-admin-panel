@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useGymData } from '../context/GymDataContext';
 import { Flame, Dumbbell, Award, ShieldCheck } from 'lucide-react';
@@ -12,8 +12,13 @@ export default function Login() {
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState('');
   const navigate = useNavigate();
-  const { signIn, resetPassword } = useAuth();
+  const { signIn, resetPassword, user, loading: authLoading } = useAuth();
   const { branding } = useGymData();
+
+  // Once the auth state settles after sign-in, redirect away from the login page
+  if (!authLoading && user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -25,9 +30,8 @@ export default function Login() {
     if (authError) {
       setError(authError.message);
       setLoading(false);
-    } else {
-      navigate('/dashboard');
     }
+    // On success: don't navigate manually — the user state update above handles it
   };
 
   const handleForgotPassword = async () => {
