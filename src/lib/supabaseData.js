@@ -323,7 +323,7 @@ export function mapMemberBase(row) {
   };
 }
 
-export function mapExpense(row, approvedByLabel = 'Admin') {
+export function mapExpense(row) {
   if (!row) return null;
   return {
     id: row.id,
@@ -332,8 +332,52 @@ export function mapExpense(row, approvedByLabel = 'Admin') {
     amount: Number(row.amount ?? 0),
     method: row.payment_method || 'BANK',
     date: row.expense_date,
+    vendor: row.vendor || '',
+    approvalStatus: row.approval_status || 'Approved',
+    approvedBy: row.approved_by_name || '',
     notes: row.notes || '',
-    approvedBy: approvedByLabel,
+  };
+}
+
+// UI expense fields -> expenses row. Only defined fields are written, so the
+// same helper serves inserts and partial updates.
+function expenseToRow({ title, category, amount, method, date, vendor, approvalStatus, approvedBy, notes }) {
+  const row = {
+    expense_title: title,
+    category,
+    amount: amount === undefined ? undefined : Number(amount) || 0,
+    payment_method: method,
+    expense_date: date,
+    vendor: vendor === undefined ? undefined : vendor || null,
+    approval_status: approvalStatus,
+    approved_by_name: approvedBy === undefined ? undefined : approvedBy || null,
+    notes: notes === undefined ? undefined : notes || null,
+  };
+  return Object.fromEntries(Object.entries(row).filter(([, v]) => v !== undefined));
+}
+
+export function mapMonthClosing(row) {
+  if (!row) return null;
+  return {
+    isClosed: true,
+    closedAt: row.closed_at,
+    closedBy: row.closed_by_name || '',
+    notes: row.notes || '',
+    financialSummary: row.summary || {},
+  };
+}
+
+export function mapPeriodAdjustment(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    monthKey: row.month_key,
+    type: row.adjustment_type,
+    amount: Number(row.amount ?? 0),
+    reason: row.reason,
+    authorizedBy: row.authorized_by || '',
+    date: String(row.created_at || '').slice(0, 10),
+    timestamp: row.created_at,
   };
 }
 
@@ -452,7 +496,7 @@ export async function fetchAllData() {
     members: () => supabase.from('members').select('*').order('id', { ascending: false }),
     applications: () => supabase.from('admission_submissions').select('*').order('submitted_at', { ascending: false }),
     payments: () => supabase.from('payments')
-      .select('id, invoice_id, amount, method, transaction_reference, payment_date')
+      .select('id, receipt_number, invoice_id, amount, method, transaction_reference, payment_date')
       .order('payment_date'),
     lockers: () => supabase.from('lockers').select('*').order('id'),
     lockerAssignments: () => supabase.from('locker_assignments').select('*'),
@@ -461,6 +505,10 @@ export async function fetchAllData() {
     invoices: () => supabase.from('invoices').select('*').order('id', { ascending: false }),
     discounts: () => supabase.from('discounts').select('*').order('id', { ascending: false }),
     expenses: () => supabase.from('expenses').select('*').order('id', { ascending: false }),
+    // Finance state tables (migration 012)
+    expenseCategories: () => supabase.from('expense_categories').select('name').order('id'),
+    monthClosings: () => supabase.from('finance_month_closings').select('*'),
+    periodAdjustments: () => supabase.from('finance_period_adjustments').select('*').order('id'),
     attendance: () => supabase.from('attendance').select('*').order('id', { ascending: false }),
     roles: () => supabase.from('roles').select('*').order('id'),
     users: () => supabase.from('users').select('role_id'),
@@ -570,18 +618,54 @@ export const db = {
     });
   },
 
+  extendInvoiceDueDate({ invoiceId, newDueDate, reason, authorizedBy }) {
+    return supabase.rpc('extend_invoice_due_date', {
+      p_invoice_id: Number(invoiceId),
+      p_new_due_date: newDueDate,
+      p_reason: reason,
+      p_authorized_by: authorizedBy || null,
+    });
+  },
+
   // Expenses -------------------------------------------------------------------
-  insertExpense({ title, category, amount, method, notes, approvedById }) {
+  insertExpense({ title, category, amount, method, date, vendor, approvalStatus, approvedBy, notes }) {
     return supabase
       .from('expenses')
+      .insert(expenseToRow({ title, category, amount, method, date: date || todayStr(), vendor, approvalStatus, approvedBy, notes }))
+      .select('*')
+      .single();
+  },
+
+  updateExpense(id, fields) {
+    return supabase.from('expenses').update(expenseToRow(fields)).eq('id', id).select('*').single();
+  },
+
+  deleteExpense(id) {
+    return supabase.from('expenses').delete().eq('id', id);
+  },
+
+  insertExpenseCategory(name) {
+    return supabase.from('expense_categories').insert({ name }).select('name').single();
+  },
+
+  // Monthly closing (migration 012) --------------------------------------------
+  insertMonthClosing({ monthKey, closedByName, notes, summary }) {
+    return supabase
+      .from('finance_month_closings')
+      .insert({ month_key: monthKey, closed_by_name: closedByName || null, notes: notes || null, summary })
+      .select('*')
+      .single();
+  },
+
+  insertPeriodAdjustment({ monthKey, type, amount, reason, authorizedBy }) {
+    return supabase
+      .from('finance_period_adjustments')
       .insert({
-        expense_title: title,
-        category,
+        month_key: monthKey,
+        adjustment_type: type,
         amount: Number(amount) || 0,
-        payment_method: method || 'CASH',
-        expense_date: todayStr(),
-        notes: notes || null,
-        approved_by: approvedById || null,
+        reason,
+        authorized_by: authorizedBy || null,
       })
       .select('*')
       .single();

@@ -4,8 +4,10 @@ import Modal from '../../common/Modal';
 import {
   formatBDT,
   calculateRevenueRecognition,
-  REFERENCE_TODAY,
+  todayIso,
 } from '../../../utils/financeCalculators';
+
+const firstOfThisMonth = () => `${todayIso().slice(0, 7)}-01`;
 
 export default function RevenueSimulatorModal({
   isOpen,
@@ -13,7 +15,7 @@ export default function RevenueSimulatorModal({
 }) {
   const [packagePrice, setPackagePrice] = useState('15000');
   const [discountAmount, setDiscountAmount] = useState('0');
-  const [startDate, setStartDate] = useState('2026-10-01');
+  const [startDate, setStartDate] = useState(firstOfThisMonth);
   const [durationMonths, setDurationMonths] = useState(3);
   const [method, setMethod] = useState('equal_monthly');
 
@@ -22,9 +24,9 @@ export default function RevenueSimulatorModal({
     try {
       const [y, m, d] = startDate.split('-').map(Number);
       const date = new Date(y, m - 1 + Number(durationMonths), d - 1);
-      return date.toISOString().slice(0, 10);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     } catch {
-      return '2026-12-31';
+      return startDate;
     }
   }, [startDate, durationMonths]);
 
@@ -35,7 +37,7 @@ export default function RevenueSimulatorModal({
       discountAmount: Number(discountAmount) || 0,
       startDate,
       endDate: calculatedEndDate,
-      asOfDate: REFERENCE_TODAY,
+      asOfDate: todayIso(),
       method,
     });
   }, [packagePrice, discountAmount, startDate, calculatedEndDate, method]);
@@ -45,7 +47,7 @@ export default function RevenueSimulatorModal({
     setPackagePrice(String(price));
     setDiscountAmount(String(disc));
     setDurationMonths(months);
-    setStartDate('2026-10-01');
+    setStartDate(firstOfThisMonth());
   };
 
   return (

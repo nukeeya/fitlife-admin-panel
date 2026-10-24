@@ -10,7 +10,7 @@ export default function FinanceDateFilterBar({ showReset = true }) {
     customDateRange,
     setCustomDateRange,
     activeDateRange,
-    resetToMockDefaults,
+    resetFilters,
   } = useFinance();
 
   const [tempStart, setTempStart] = useState(customDateRange.start);
@@ -26,7 +26,7 @@ export default function FinanceDateFilterBar({ showReset = true }) {
   };
 
   const handleReset = () => {
-    resetToMockDefaults();
+    resetFilters();
     setResetNotice(true);
     setTimeout(() => setResetNotice(false), 2500);
   };

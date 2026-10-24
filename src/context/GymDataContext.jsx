@@ -16,6 +16,8 @@ import {
   mapApplication,
   mapMemberBase,
   mapExpense,
+  mapMonthClosing,
+  mapPeriodAdjustment,
   mapSmsCampaign,
   mapJob,
   mapDietPlan,
@@ -251,10 +253,12 @@ export function GymDataProvider({ children }) {
       const payments = paymentsByInvoice.get(invoiceId) || [];
       payments.push({
         id: payment.id,
+        receiptNumber: payment.receipt_number || `PAY-${payment.id}`,
         amount: Number(payment.amount) || 0,
         method: payment.method || '—',
+        methodId: payment.method || null,
         reference: payment.transaction_reference || '',
-        date: payment.payment_date,
+        date: String(payment.payment_date || '').slice(0, 10),
       });
       paymentsByInvoice.set(invoiceId, payments);
     }
@@ -263,6 +267,7 @@ export function GymDataProvider({ children }) {
       const m = membersById[row.member_id] || {};
       const plan = row.plan_id ? plansById[row.plan_id] : null;
       const disc = row.discount_id ? discountsById[row.discount_id] : null;
+      const durationDays = Number(plan?.duration_days) || 30;
       return {
         id: row.id,
         number: row.invoice_number,
@@ -271,7 +276,22 @@ export function GymDataProvider({ children }) {
         memberCode: m.member_code || `FLM-${String(row.member_id).padStart(4, '0')}`,
         memberPhone: m.phone || '',
         memberEmail: m.email || '',
+        memberAvatar: profilePhotoUrls[m.avatar] || (m.avatar?.startsWith('http') ? m.avatar : null),
+        planId: row.plan_id || null,
         planName: plan?.name || m.plan || 'Plan',
+        durationMonths: Math.max(1, Math.round(durationDays / 30)),
+        startDate: row.invoice_date,
+        endDate: addDays(row.invoice_date, durationDays - 1), // inclusive last day of service
+        isExtended: Boolean(row.due_extended_at),
+        extensionHistory: row.due_extended_at
+          ? [{
+              originalDueDate: row.original_due_date,
+              extendedDueDate: row.due_date,
+              reason: row.due_extension_reason || '',
+              extendedAt: row.due_extended_at,
+              extendedBy: row.due_extended_by_name || '',
+            }]
+          : [],
         baseAmount: Number(row.base_amount),
         discountType: disc?.discount_type || null,
         discountValue: disc ? Number(disc.discount_value) : null,
@@ -289,9 +309,21 @@ export function GymDataProvider({ children }) {
         payments: paymentsByInvoice.get(Number(row.id)) || [],
       };
     });
-  }, [raw]);
+  }, [raw, profilePhotoUrls]);
 
   const expenses = useMemo(() => (raw?.expenses ? raw.expenses.map((r) => mapExpense(r)) : INITIAL_DATA.expenses), [raw]);
+
+  // Finance state (migration 012). Missing tables load as empty.
+  const expenseCategories = useMemo(() => (raw?.expenseCategories || []).map((r) => r.name), [raw]);
+  const monthClosings = useMemo(
+    () => Object.fromEntries((raw?.monthClosings || []).map((r) => [r.month_key, mapMonthClosing(r)])),
+    [raw]
+  );
+  const periodAdjustments = useMemo(() => {
+    const byMonth = {};
+    for (const r of raw?.periodAdjustments || []) (byMonth[r.month_key] ||= []).push(mapPeriodAdjustment(r));
+    return byMonth;
+  }, [raw]);
 
   const attendance = useMemo(() => {
     if (!raw?.attendance || !raw?.members) return INITIAL_DATA.attendance;
@@ -787,9 +819,18 @@ export function GymDataProvider({ children }) {
     return result.data;
   };
 
+  // One-time rule is enforced by the extend_invoice_due_date RPC (migration 012).
+  const extendInvoiceDueDate = ({ invoiceId, newDueDate, reason, authorizedBy }) =>
+    commit({
+      persist: () => db.extendInvoiceDueDate({ invoiceId, newDueDate, reason, authorizedBy }),
+      reloadAll: true,
+    });
+
   // --- Expenses ---------------------------------------------------------------------------
-  const addExpense = async ({ title, category, amount, method, notes }) => {
-    await commit({
+  // Each returns { error } on failure. A closed accounting month is rejected
+  // by a database trigger (migration 012).
+  const addExpense = (expense) =>
+    commit({
       optimistic: () =>
         setRaw((prev) =>
           prev
@@ -798,22 +839,45 @@ export function GymDataProvider({ children }) {
                 expenses: [
                   {
                     id: -Date.now(),
-                    expense_title: title,
-                    category,
-                    amount: Number(amount) || 0,
-                    payment_method: method || 'CASH',
-                    expense_date: todayStr(),
-                    notes: notes || null,
+                    expense_title: expense.title,
+                    category: expense.category,
+                    amount: Number(expense.amount) || 0,
+                    payment_method: expense.method || 'CASH',
+                    expense_date: expense.date || todayStr(),
+                    vendor: expense.vendor || null,
+                    approval_status: expense.approvalStatus || 'Approved',
+                    approved_by_name: expense.approvedBy || null,
+                    notes: expense.notes || null,
                   },
                   ...(prev.expenses || []),
                 ],
               }
             : prev
         ),
-      persist: () => db.insertExpense({ title, category, amount, method, notes }),
+      persist: () => db.insertExpense(expense),
       reloadAll: true,
     });
-  };
+
+  const updateExpense = (id, fields) =>
+    commit({ persist: () => db.updateExpense(id, fields), reloadAll: true });
+
+  const deleteExpense = (id) =>
+    commit({
+      optimistic: () =>
+        setRaw((prev) => (prev ? { ...prev, expenses: (prev.expenses || []).filter((e) => e.id !== id) } : prev)),
+      persist: () => db.deleteExpense(id),
+      reloadAll: true,
+    });
+
+  const addExpenseCategory = (name) =>
+    commit({ persist: () => db.insertExpenseCategory(name), reloadAll: true });
+
+  // --- Monthly closing ------------------------------------------------------------------
+  const closeMonth = ({ monthKey, closedByName, notes, summary }) =>
+    commit({ persist: () => db.insertMonthClosing({ monthKey, closedByName, notes, summary }), reloadAll: true });
+
+  const addPeriodAdjustment = (adjustment) =>
+    commit({ persist: () => db.insertPeriodAdjustment(adjustment), reloadAll: true });
 
   // --- Lockers -------------------------------------------------------------------------------
   const assignLocker = async ({ lockerId, memberId, expiryDate }) => {
@@ -1314,7 +1378,16 @@ export function GymDataProvider({ children }) {
         updateMemberAssignments,
         bulkCheckIn,
         collectPayment,
+        extendInvoiceDueDate,
         addExpense,
+        updateExpense,
+        deleteExpense,
+        expenseCategories,
+        addExpenseCategory,
+        monthClosings,
+        closeMonth,
+        periodAdjustments,
+        addPeriodAdjustment,
         assignLocker,
         releaseLocker,
         sendSMS,

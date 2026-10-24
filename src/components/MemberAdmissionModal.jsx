@@ -10,7 +10,6 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
-import { useFinance } from '../context/FinanceContext';
 import ProfilePhotoField from './ProfilePhotoField';
 import { uploadProfilePhoto } from '../lib/profilePhotos';
 import Modal from './common/Modal';
@@ -26,9 +25,6 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
     roles,
     addMember,
   } = useGymData();
-
-  const financeContext = useFinance();
-  const addAdmissionInvoice = financeContext?.addAdmissionInvoice;
 
   const defaultFormState = useMemo(() => ({
     name: '',
@@ -181,31 +177,9 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
         return;
       }
 
-      if (addAdmissionInvoice) {
-        addAdmissionInvoice({
-          memberId: created?.id || Date.now(),
-          memberName: formData.name.trim(),
-          memberCode: created?.code || `FLM-${String(Date.now()).slice(-4)}`,
-          memberPhone: formData.phone.trim(),
-          memberAvatar: uploadedPhoto,
-          planId: selectedPlan.id,
-          planName: selectedPlan.name,
-          durationMonths: selectedPlan.durationDays ? Math.round(selectedPlan.durationDays / 30) : 1,
-          baseAmount: pricing.basePrice,
-          discountAmount: pricing.discountAmount,
-          discountReason: formData.discountReason,
-          netPayable: pricing.netPayable,
-          initialPayment: payNum,
-          dueAmount: outstandingDue,
-          dueDate: outstandingDue > 0 ? formData.dueDate : 'Paid in Full',
-          paymentMethod: formData.paymentMethod,
-          notes: formData.paymentRemarks,
-        });
-      }
-
       setSuccessDetails({
         memberName: formData.name.trim(),
-        memberCode: created?.code || `FLM-${String(Date.now()).slice(-4)}`,
+        memberCode: created?.code || '—',
         planName: selectedPlan.name,
         // Amounts as saved by the database (it recalculates the price).
         netPayable: created.netPayable,

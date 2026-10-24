@@ -35,8 +35,8 @@ export default function App() {
     <ErrorBoundary>
       <AuthProvider>
         <ThemeProvider>
-          <FinanceProvider>
-            <GymDataProvider>
+          <GymDataProvider>
+            <FinanceProvider>
               <BrowserRouter>
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -76,8 +76,8 @@ export default function App() {
             </Route>
           </Routes>
         </BrowserRouter>
-      </GymDataProvider>
-    </FinanceProvider>
+      </FinanceProvider>
+    </GymDataProvider>
   </ThemeProvider>
   </AuthProvider>
     </ErrorBoundary>

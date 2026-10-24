@@ -11,6 +11,7 @@ import {
 import Modal from '../../common/Modal';
 import Avatar from '../../common/Avatar';
 import { useFinance } from '../../../context/FinanceContext';
+import { useAuth } from '../../../context/AuthContext';
 import { formatBDT, formatDatePretty } from '../../../utils/financeCalculators';
 
 export default function ExtendDueDateModal({
@@ -18,13 +19,15 @@ export default function ExtendDueDateModal({
   onClose,
   dueRecord,
 }) {
-  const { extendDueDate, demoDate } = useFinance();
+  const { extendDueDate, today } = useFinance();
+  const { staff } = useAuth();
 
   const [newDueDate, setNewDueDate] = useState('');
   const [reason, setReason] = useState('');
-  const [adminName, setAdminName] = useState('Front Desk Lead');
+  const [adminName, setAdminName] = useState(staff?.name || '');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   if (!dueRecord) return null;
 
@@ -33,8 +36,9 @@ export default function ExtendDueDateModal({
     (dueRecord.extensionHistory && dueRecord.extensionHistory.length > 0)
   );
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
     setError('');
 
     if (isAlreadyExtended) {
@@ -57,12 +61,14 @@ export default function ExtendDueDateModal({
       return;
     }
 
-    const res = extendDueDate({
+    setSaving(true);
+    const res = await extendDueDate({
       invoiceId: dueRecord.id,
       newDueDate,
       reason,
       adminName,
     });
+    setSaving(false);
 
     if (!res.success) {
       setError(res.error);
@@ -94,6 +100,7 @@ export default function ExtendDueDateModal({
               type="submit"
               form="extend-due-form"
               className="btn btn-primary"
+              disabled={saving}
             >
               Confirm One-Time Extension
             </button>
@@ -167,7 +174,7 @@ export default function ExtendDueDateModal({
               <div>
                 <strong>Extension Already Used (Permanently Locked)</strong>
                 <p style={{ margin: '4px 0 0 0', fontSize: '12px' }}>
-                  A one-time extension has already been consumed for this due record. Second extension attempts are strictly rejected by frontend business rules.
+                  A one-time extension has already been used for this due record. The database rejects any further extension.
                 </p>
                 {dueRecord.extensionHistory && dueRecord.extensionHistory.length > 0 && (
                   <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-secondary)' }}>
@@ -237,7 +244,7 @@ export default function ExtendDueDateModal({
                     className="form-control"
                     value={newDueDate}
                     onChange={(e) => setNewDueDate(e.target.value)}
-                    min={dueRecord.dueDate || demoDate}
+                    min={dueRecord.dueDate || today}
                     required
                   />
                 </div>

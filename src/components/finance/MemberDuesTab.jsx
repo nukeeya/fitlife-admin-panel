@@ -31,8 +31,7 @@ export default function MemberDuesTab() {
     extendedDues,
     clearedDues,
     packages,
-    demoDate,
-    setDemoDate,
+    today,
   } = useFinance();
 
   // Due Category Tabs: 'all' | 'upcoming' | 'today' | 'overdue' | 'extended' | 'cleared'
@@ -90,18 +89,15 @@ export default function MemberDuesTab() {
     .filter((d) => d.effectiveStatus === 'Overdue')
     .reduce((s, d) => s + (Number(d.dueAmount) || 0), 0);
 
-  const handlePaymentSuccess = (newPayment, updatedInvoice) => {
+  const handlePaymentSuccess = (payment, invoice) => {
     setSuccessBanner({
-      message: `Demo Payment of ${formatBDT(newPayment.amount)} recorded for ${updatedInvoice.memberName} (${updatedInvoice.memberCode}) via ${newPayment.method}! New Balance: ${formatBDT(updatedInvoice.dueAmount)}`,
-      payment: newPayment,
-      invoice: updatedInvoice,
+      message: `Payment of ${formatBDT(payment.amount)} recorded for ${invoice.memberName} (${invoice.memberCode}) via ${payment.method}.`,
     });
     setTimeout(() => setSuccessBanner(null), 6000);
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* Controllable Demo Simulation Date Bar */}
       <div
         style={{
           padding: '14px 18px',
@@ -110,100 +106,17 @@ export default function MemberDuesTab() {
           borderRadius: 'var(--radius-lg)',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
+          gap: '10px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Clock size={20} style={{ color: 'var(--primary)', flexShrink: 0 }} />
-          <div>
-            <strong style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
-              Due Reminder Dashboard & Aging Controller
-            </strong>
-            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
-              Current evaluation date: <strong>{formatDatePretty(demoDate)}</strong> ({demoDate}). Toggle dates to test overdue alerts.
-            </p>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Simulate Date:</span>
-          <button
-            type="button"
-            className={`btn btn-sm ${demoDate === '2026-10-22' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ fontSize: '12px', padding: '4px 10px' }}
-            onClick={() => setDemoDate('2026-10-22')}
-          >
-            Today (22 Oct)
-          </button>
-          <button
-            type="button"
-            className={`btn btn-sm ${demoDate === '2026-10-26' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ fontSize: '12px', padding: '4px 10px' }}
-            onClick={() => setDemoDate('2026-10-26')}
-            title="Sets date past 25 Oct deadline to test Farhan Ahmed becoming overdue"
-          >
-            Advance to 26 Oct (Triggers Overdue)
-          </button>
-          <input
-            type="date"
-            className="form-control"
-            value={demoDate}
-            onChange={(e) => setDemoDate(e.target.value)}
-            style={{ width: '135px', height: '32px', fontSize: '12px', padding: '2px 8px' }}
-            title="Custom simulation date"
-          />
-        </div>
-      </div>
-
-      {/* Demo Scenario Callout Box (Farhan Ahmed scenario) */}
-      <div
-        style={{
-          padding: '12px 18px',
-          background: 'rgba(59, 130, 246, 0.08)',
-          border: '1px solid rgba(59, 130, 246, 0.3)',
-          borderRadius: 'var(--radius-lg)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Clock size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} />
-          <div>
-            <strong style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
-              Featured Case: Farhan Ahmed (FLM-1008)
-            </strong>
-            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
-              3-Month Package ৳15,000 · Paid ৳10,000 + ৳3,000 · Remaining Due: <strong>৳2,000</strong> by <strong>25 Oct 2026</strong>.
-              Record payment or grant the one-time extension.
-            </p>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            onClick={() => {
-              const farhan = memberDues.find((m) => m.memberCode === 'FLM-1008');
-              if (farhan) setPaymentTargetInvoice(farhan);
-            }}
-            style={{ whiteSpace: 'nowrap' }}
-          >
-            Pay Farhan's Due (৳2,000)
-          </button>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={() => navigate('/members/8')}
-            style={{ whiteSpace: 'nowrap' }}
-          >
-            View Farhan's Profile
-          </button>
+        <Clock size={20} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+        <div>
+          <strong style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
+            Due Reminder Dashboard
+          </strong>
+          <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+            Overdue status evaluated as of today, <strong>{formatDatePretty(today)}</strong>.
+          </p>
         </div>
       </div>
 
@@ -399,7 +312,7 @@ export default function MemberDuesTab() {
             <span className="badge badge-primary">{displayedDues.length} Records</span>
           </div>
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-            Evaluated against simulation date {demoDate}
+            Evaluated as of {today}
           </span>
         </div>
 

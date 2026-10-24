@@ -1,28 +1,33 @@
 /**
  * FitLife Enterprise Gym - Financial Calculation Engine
- * Scope: FRONTEND DEMO ONLY
  * Deterministic helpers for date filtering, revenue recognition, dues & balance sheet
  */
 
-export const REFERENCE_TODAY = '2026-10-19';
+// Local-time YYYY-MM-DD. toISOString() would shift the date in UTC+ zones.
+const ymd = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+export const todayIso = () => ymd(new Date());
 
 export const DATE_FILTER_PRESETS = [
-  { key: 'today', label: 'Today (19 Oct 2026)' },
-  { key: 'yesterday', label: 'Yesterday (18 Oct 2026)' },
+  { key: 'today', label: 'Today' },
+  { key: 'yesterday', label: 'Yesterday' },
   { key: 'this_week', label: 'This Week' },
   { key: 'last_week', label: 'Last Week' },
-  { key: 'this_month', label: 'This Month (Oct 2026)' },
-  { key: 'last_month', label: 'Last Month (Sep 2026)' },
-  { key: 'this_quarter', label: 'This Quarter (Q4 2026)' },
-  { key: 'this_year', label: 'This Year (2026)' },
-  { key: 'last_year', label: 'Last Year (2025)' },
+  { key: 'this_month', label: 'This Month' },
+  { key: 'last_month', label: 'Last Month' },
+  { key: 'this_quarter', label: 'This Quarter' },
+  { key: 'this_year', label: 'This Year' },
+  { key: 'last_year', label: 'Last Year' },
   { key: 'custom', label: 'Custom Date Range' },
 ];
+
+const monthLabel = (d) => d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
 /**
  * Returns { start: 'YYYY-MM-DD', end: 'YYYY-MM-DD', label: string }
  */
-export function getDateRange(presetKey = 'this_month', customRange = null, referenceDate = REFERENCE_TODAY) {
+export function getDateRange(presetKey = 'this_month', customRange = null, referenceDate = todayIso()) {
   if (presetKey === 'custom' && customRange?.start && customRange?.end) {
     return {
       start: customRange.start,
@@ -31,85 +36,49 @@ export function getDateRange(presetKey = 'this_month', customRange = null, refer
     };
   }
 
-  const [refY, refM, refD] = referenceDate.split('-').map(Number);
-  const refDateObj = new Date(refY, refM - 1, refD);
+  const [y, m, d] = referenceDate.split('-').map(Number);
+  const ref = new Date(y, m - 1, d);
+  const range = (start, end, label) => ({ start: ymd(start), end: ymd(end), label });
+  const pretty = (date) => formatDatePretty(ymd(date));
 
   switch (presetKey) {
     case 'today':
-      return { start: referenceDate, end: referenceDate, label: 'Today (19 Oct 2026)' };
+      return range(ref, ref, `Today (${pretty(ref)})`);
 
     case 'yesterday': {
-      const y = new Date(refDateObj);
-      y.setDate(y.getDate() - 1);
-      const yStr = y.toISOString().slice(0, 10);
-      return { start: yStr, end: yStr, label: 'Yesterday (18 Oct 2026)' };
+      const yd = new Date(y, m - 1, d - 1);
+      return range(yd, yd, `Yesterday (${pretty(yd)})`);
     }
 
-    case 'this_week': {
-      // Mon to Sun of current week
-      const day = refDateObj.getDay();
-      const diffToMon = refDateObj.getDate() - (day === 0 ? 6 : day - 1);
-      const mon = new Date(refDateObj.setDate(diffToMon));
-      const sun = new Date(mon);
-      sun.setDate(sun.getDate() + 6);
-      return {
-        start: mon.toISOString().slice(0, 10),
-        end: sun.toISOString().slice(0, 10),
-        label: 'This Week (19 Oct - 25 Oct 2026)',
-      };
-    }
-
+    case 'this_week':
     case 'last_week': {
-      const mon = new Date(2026, 9, 12);
-      const sun = new Date(2026, 9, 18);
-      return {
-        start: mon.toISOString().slice(0, 10),
-        end: sun.toISOString().slice(0, 10),
-        label: 'Last Week (12 Oct - 18 Oct 2026)',
-      };
+      // Monday to Sunday
+      const offset = (ref.getDay() + 6) % 7 + (presetKey === 'last_week' ? 7 : 0);
+      const mon = new Date(y, m - 1, d - offset);
+      const sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
+      const name = presetKey === 'last_week' ? 'Last Week' : 'This Week';
+      return range(mon, sun, `${name} (${pretty(mon)} - ${pretty(sun)})`);
     }
 
-    case 'this_month':
-      return {
-        start: '2026-10-01',
-        end: '2026-10-31',
-        label: 'This Month (October 2026)',
-      };
+    case 'last_month': {
+      const start = new Date(y, m - 2, 1);
+      return range(start, new Date(y, m - 1, 0), `Last Month (${monthLabel(start)})`);
+    }
 
-    case 'last_month':
-      return {
-        start: '2026-09-01',
-        end: '2026-09-30',
-        label: 'Last Month (September 2026)',
-      };
-
-    case 'this_quarter':
-      return {
-        start: '2026-10-01',
-        end: '2026-12-31',
-        label: 'This Quarter (Q4 Oct-Dec 2026)',
-      };
+    case 'this_quarter': {
+      const q = Math.floor((m - 1) / 3);
+      return range(new Date(y, q * 3, 1), new Date(y, q * 3 + 3, 0), `This Quarter (Q${q + 1} ${y})`);
+    }
 
     case 'this_year':
-      return {
-        start: '2026-01-01',
-        end: '2026-12-31',
-        label: 'This Year (2026 Full Year)',
-      };
+      return range(new Date(y, 0, 1), new Date(y, 11, 31), `This Year (${y})`);
 
     case 'last_year':
-      return {
-        start: '2025-01-01',
-        end: '2025-12-31',
-        label: 'Last Year (2025)',
-      };
+      return range(new Date(y - 1, 0, 1), new Date(y - 1, 11, 31), `Last Year (${y - 1})`);
 
+    case 'this_month':
     default:
-      return {
-        start: '2026-10-01',
-        end: '2026-10-31',
-        label: 'This Month (October 2026)',
-      };
+      return range(new Date(y, m - 1, 1), new Date(y, m, 0), `This Month (${monthLabel(ref)})`);
   }
 }
 
@@ -146,7 +115,7 @@ export function formatDatePretty(dateStr) {
 /**
  * Calculates days overdue for unpaid/partial dues
  */
-export function calculateDaysOverdue(dueDate, dueAmount, referenceDate = REFERENCE_TODAY) {
+export function calculateDaysOverdue(dueDate, dueAmount, referenceDate = todayIso()) {
   if (!dueDate || Number(dueAmount || 0) <= 0) return 0;
   const due = new Date(dueDate);
   const ref = new Date(referenceDate);
@@ -169,9 +138,9 @@ export function calculateDaysOverdue(dueDate, dueAmount, referenceDate = REFEREN
 export function calculateRevenueRecognition({
   packagePrice = 0,
   discountAmount = 0,
-  startDate = '2026-10-01',
-  endDate = '2026-12-31',
-  asOfDate = REFERENCE_TODAY,
+  startDate = todayIso(),
+  endDate = todayIso(),
+  asOfDate = todayIso(),
   method = 'equal_monthly', // 'equal_monthly' | 'service_days'
 }) {
   const price = Math.max(0, Number(packagePrice) || 0);
@@ -218,8 +187,8 @@ export function calculateRevenueRecognition({
       year,
       month,
       daysInService,
-      monthStartStr: effStart.toISOString().slice(0, 10),
-      monthEndStr: effEnd.toISOString().slice(0, 10),
+      monthStartStr: ymd(effStart),
+      monthEndStr: ymd(effEnd),
     });
 
     curr.setMonth(curr.getMonth() + 1);

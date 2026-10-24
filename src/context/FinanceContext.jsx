@@ -1,20 +1,14 @@
 /**
  * FitLife Enterprise Gym - Finance State Management
- * Scope: FRONTEND DEMO ONLY
- * Centralized React Context providing synchronized financial state,
- * dynamic dues tracking, one-time due extensions, controllable demo date,
- * overdue reminder notifications, monthly account closing, and custom expense categories.
+ * Derives finance views (dues, collections, revenue recognition, closings)
+ * from the invoices, payments and expenses loaded by GymDataContext, and
+ * routes every write through it to Supabase. Must render inside GymDataProvider.
  */
 import { createContext, useContext, useState, useMemo, useCallback } from 'react';
-import {
-  INITIAL_INVOICES,
-  INITIAL_EXPENSES,
-  INITIAL_REFUNDS,
-  PAYMENT_METHODS,
-  DEMO_PACKAGES,
-  EXPENSE_CATEGORIES,
-} from '../data/financeMockData';
-import { MOCK_MEMBERS } from '../data/mockProfiles';
+import { useGymData } from './GymDataContext';
+import { useAuth } from './AuthContext';
+import { PAYMENT_METHODS, EXPENSE_CATEGORIES } from '../data/financeConfig';
+import { todayStr } from '../lib/supabaseData';
 import {
   getDateRange,
   isDateInRange,
@@ -24,90 +18,68 @@ import {
 
 const FinanceContext = createContext(null);
 
-// Default reference simulation date (Current demo date: 22 October 2026)
-export const DEFAULT_DEMO_DATE = '2026-10-22';
+const sameMethod = (a, b) => String(a || '').toUpperCase() === String(b || '').toUpperCase();
+
+const currentMonthRange = () => {
+  const today = todayStr();
+  const [y, m] = today.split('-').map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  return { start: `${today.slice(0, 7)}-01`, end: `${today.slice(0, 7)}-${String(lastDay).padStart(2, '0')}` };
+};
+
+// supabase-js / RPC errors -> { success: false, error } for the UI.
+const failure = (err, fallback) => ({ success: false, error: err?.message || fallback });
 
 export function FinanceProvider({ children }) {
-  // Controllable Demo Simulation Date
-  const [demoDate, setDemoDate] = useState(DEFAULT_DEMO_DATE);
+  const gym = useGymData();
+  const { staff } = useAuth();
+  const { invoices, expenses, plans, monthClosings: closedMonths, periodAdjustments, expenseCategories } = gym;
 
-  // Invoices (enriched with member photos from MOCK_MEMBERS)
-  const [invoices, setInvoices] = useState(() => {
-    const memberMap = new Map();
-    MOCK_MEMBERS.forEach((m) => {
-      memberMap.set(m.code, m);
-      memberMap.set(m.name.toLowerCase(), m);
-    });
+  // Overdue and aging are always evaluated against the real calendar date.
+  const today = todayStr();
 
-    return INITIAL_INVOICES.map((inv) => {
-      const match = memberMap.get(inv.memberCode) || memberMap.get(inv.memberName.toLowerCase());
-      return {
-        ...inv,
-        memberAvatar: match?.avatar || inv.memberAvatar || null,
-        isExtended: Boolean(inv.isExtended),
-        extensionHistory: inv.extensionHistory || [],
-      };
-    });
-  });
+  // No refunds table exists yet; refund views render empty.
+  const refunds = useMemo(() => [], []);
+  const paymentMethods = PAYMENT_METHODS;
 
-  const [expenses, setExpenses] = useState(INITIAL_EXPENSES);
-  const [refunds, setRefunds] = useState(INITIAL_REFUNDS);
-  const [paymentMethods] = useState(PAYMENT_METHODS);
-  const [packages] = useState(DEMO_PACKAGES);
-
-  // Custom Expense Categories
-  const [customCategories, setCustomCategories] = useState([
-    'Sauna & Steam Maintenance',
-    'Biometric & RFID Hardware',
-  ]);
-
-  // One-time Due Extensions Record: { [invoiceId]: { originalDueDate, extendedDueDate, reason, extendedAt, extendedBy } }
-  const [oneTimeExtensions, setOneTimeExtensions] = useState({});
-
-  // Monthly Account Closing Simulation State
-  // { '2026-08': { isClosed: true, closedAt: 'Aug 31, 2026', closedBy: 'Tahmina Akhter (Finance Lead)', notes: 'Audited' } }
-  const [closedMonths, setClosedMonths] = useState({
-    '2026-08': {
-      isClosed: true,
-      closedAt: '2026-08-31 23:59',
-      closedBy: 'Tahmina Akhter (Finance Lead)',
-      notes: 'August 2026 monthly closing reconciled and audit sealed.',
-      financialSummary: {
-        totalInvoiced: 215000,
-        totalCollected: 198000,
-        outstandingDues: 17000,
-        totalExpenses: 84000,
-        netProfit: 114000,
-      },
-    },
-  });
-
-  // Demo audit adjustments for closed periods
-  const [periodAdjustments, setPeriodAdjustments] = useState({});
+  const packages = useMemo(
+    () => plans.map((p) => ({
+      id: p.id,
+      name: p.name,
+      durationDays: p.durationDays,
+      durationMonths: Math.max(1, Math.round((p.durationDays || 30) / 30)),
+      price: p.price,
+    })),
+    [plans]
+  );
 
   // Overdue Reminder Modal popup visibility
   const [showOverduePopup, setShowOverduePopup] = useState(false);
 
   // Global Date Filter State
-  const [dateFilterKey, setDateFilterKey] = useState('this_month'); // default: October 2026
-  const [customDateRange, setCustomDateRange] = useState({
-    start: '2026-10-01',
-    end: '2026-10-31',
-  });
+  const [dateFilterKey, setDateFilterKey] = useState('this_month');
+  const [customDateRange, setCustomDateRange] = useState(currentMonthRange);
 
   // Revenue Recognition Policy: 'equal_monthly' | 'service_days'
   const [recognitionPolicy, setRecognitionPolicy] = useState('equal_monthly');
 
-  // Compute Active Date Range
   const activeDateRange = useMemo(() => {
-    return getDateRange(dateFilterKey, customDateRange, demoDate);
-  }, [dateFilterKey, customDateRange, demoDate]);
+    return getDateRange(dateFilterKey, customDateRange, today);
+  }, [dateFilterKey, customDateRange, today]);
 
-  // All combined Expense Categories
+  const resetFilters = useCallback(() => {
+    setDateFilterKey('this_month');
+    setCustomDateRange(currentMonthRange());
+  }, []);
+
   const allExpenseCategories = useMemo(() => {
-    const set = new Set([...EXPENSE_CATEGORIES, ...customCategories]);
-    return Array.from(set);
-  }, [customCategories]);
+    const seen = new Map();
+    for (const c of [...EXPENSE_CATEGORIES, ...expenseCategories]) {
+      const key = c.trim().toLowerCase();
+      if (!seen.has(key)) seen.set(key, c);
+    }
+    return Array.from(seen.values());
+  }, [expenseCategories]);
 
   // Flatten all individual payment transactions across invoices
   const allPayments = useMemo(() => {
@@ -142,23 +114,21 @@ export function FinanceProvider({ children }) {
     return invoices.filter((inv) => isDateInRange(inv.date, activeDateRange));
   }, [invoices, activeDateRange]);
 
-  // Date-filtered Expenses
   const filteredExpenses = useMemo(() => {
     return expenses.filter((e) => isDateInRange(e.date, activeDateRange));
   }, [expenses, activeDateRange]);
 
-  // Date-filtered Refunds
   const filteredRefunds = useMemo(() => {
     return refunds.filter((r) => isDateInRange(r.date, activeDateRange));
   }, [refunds, activeDateRange]);
 
-  // Member Dues Ledger (computes overdue days against controllable demoDate)
+  // Member Dues Ledger (computes overdue days against today)
   const memberDues = useMemo(() => {
     return invoices.map((inv) => {
-      const daysOverdue = calculateDaysOverdue(inv.dueDate, inv.dueAmount, demoDate);
+      const daysOverdue = calculateDaysOverdue(inv.dueDate, inv.dueAmount, today);
       const isOverdue = daysOverdue > 0 && inv.dueAmount > 0;
 
-      let effectiveStatus = inv.status;
+      let effectiveStatus;
       if (inv.dueAmount <= 0) {
         effectiveStatus = 'Paid';
       } else if (isOverdue) {
@@ -178,20 +148,20 @@ export function FinanceProvider({ children }) {
         isOverdue,
       };
     });
-  }, [invoices, demoDate]);
+  }, [invoices, today]);
 
   // Categorized Dues Slices for Tabbed Due Reminder Dashboard
   const upcomingDues = useMemo(() => {
     return memberDues.filter(
-      (d) => d.dueAmount > 0 && d.dueDate > demoDate && !d.isExtended
+      (d) => d.dueAmount > 0 && d.dueDate > today && !d.isExtended
     );
-  }, [memberDues, demoDate]);
+  }, [memberDues, today]);
 
   const todayDues = useMemo(() => {
     return memberDues.filter(
-      (d) => d.dueAmount > 0 && d.dueDate === demoDate
+      (d) => d.dueAmount > 0 && d.dueDate === today
     );
-  }, [memberDues, demoDate]);
+  }, [memberDues, today]);
 
   const overdueDues = useMemo(() => {
     return memberDues.filter((d) => d.effectiveStatus === 'Overdue');
@@ -215,7 +185,7 @@ export function FinanceProvider({ children }) {
         discountAmount: inv.discountAmount,
         startDate: inv.startDate || inv.date,
         endDate: inv.endDate || inv.date,
-        asOfDate: demoDate,
+        asOfDate: today,
         method: recognitionPolicy,
       });
 
@@ -224,9 +194,9 @@ export function FinanceProvider({ children }) {
         recognition,
       };
     });
-  }, [invoices, recognitionPolicy, demoDate]);
+  }, [invoices, recognitionPolicy, today]);
 
-  // Financial Metrics (Accurate, strictly reconciled across all tabs)
+  // Financial Metrics (reconciled across all tabs)
   const financialMetrics = useMemo(() => {
     const totalInvoiced = filteredInvoices.reduce((sum, i) => sum + (Number(i.netPayable) || 0), 0);
     const totalBasePrice = filteredInvoices.reduce((sum, i) => sum + (Number(i.baseAmount) || 0), 0);
@@ -289,279 +259,86 @@ export function FinanceProvider({ children }) {
   // Method Breakdown Summary
   const paymentMethodSummary = useMemo(() => {
     return paymentMethods.map((method) => {
-      const methodPayments = filteredPayments.filter(
-        (p) => p.methodId === method.id || p.method?.toLowerCase() === method.name.toLowerCase()
-      );
+      const methodPayments = filteredPayments.filter((p) => sameMethod(p.methodId || p.method, method.id));
       const totalAmount = methodPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-      const count = methodPayments.length;
-      const methodRefunds = filteredRefunds.filter(
-        (r) => r.methodId === method.id || r.method?.toLowerCase() === method.name.toLowerCase()
-      );
+      const methodRefunds = filteredRefunds.filter((r) => sameMethod(r.methodId || r.method, method.id));
       const refundAmount = methodRefunds.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-      const netCollection = Math.max(0, totalAmount - refundAmount);
 
       return {
         ...method,
         totalAmount,
-        count,
+        count: methodPayments.length,
         refundCount: methodRefunds.length,
         refundAmount,
-        netCollection,
+        netCollection: Math.max(0, totalAmount - refundAmount),
         transactions: methodPayments,
       };
     });
   }, [paymentMethods, filteredPayments, filteredRefunds]);
 
   // ===========================================================================
-  // ACTION: Record Demo Payment (simulates partial or full settlement)
+  // ACTION: Record Payment — collect_payment RPC recalculates paid/due server-side
   // ===========================================================================
-  const recordDemoPayment = useCallback(({
-    invoiceId,
-    amount,
-    method = 'bKash',
-    reference = '',
-    notes = '',
-    date = demoDate,
-  }) => {
+  const recordPayment = useCallback(async ({ invoiceId, amount, method = 'CASH', reference = '' }) => {
     const payNum = Math.max(0, Number(amount) || 0);
     if (!payNum) return { success: false, error: 'Invalid payment amount' };
-
-    let updatedInvoice = null;
-    let newPaymentObj = null;
-
-    setInvoices((prev) =>
-      prev.map((inv) => {
-        if (inv.id !== invoiceId && inv.number !== invoiceId) return inv;
-
-        const effectivePay = Math.min(payNum, inv.dueAmount > 0 ? inv.dueAmount : inv.netPayable);
-        const newPaid = inv.paidAmount + effectivePay;
-        const newDue = Math.max(0, inv.netPayable - newPaid);
-        const newStatus = newDue <= 0 ? 'Paid' : 'Partially Paid';
-
-        const paymentMethodObj =
-          paymentMethods.find((m) => m.name.toLowerCase() === method.toLowerCase()) || paymentMethods[1];
-
-        newPaymentObj = {
-          id: `pay-${Date.now()}`,
-          receiptNumber: `REC-2026-0${Math.floor(100 + Math.random() * 900)}`,
-          amount: effectivePay,
-          method: paymentMethodObj.name,
-          methodId: paymentMethodObj.id,
-          reference: reference || `REF-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-          date,
-          notes: notes || 'Demo payment recorded',
-          collectedBy: 'Reception Desk 1 (Demo)',
-        };
-
-        updatedInvoice = {
-          ...inv,
-          paidAmount: newPaid,
-          dueAmount: newDue,
-          status: newStatus,
-          payments: [...(inv.payments || []), newPaymentObj],
-        };
-
-        return updatedInvoice;
-      })
-    );
-
-    return {
-      success: true,
-      updatedInvoice,
-      newPayment: newPaymentObj,
-    };
-  }, [paymentMethods, demoDate]);
+    try {
+      await gym.collectPayment({ invoiceId, amount: payNum, method, trxId: reference });
+      return { success: true };
+    } catch (err) {
+      return failure(err, 'Failed to record payment');
+    }
+  }, [gym]);
 
   // ===========================================================================
-  // ACTION: One-Time Due-Date Extension
-  // Enforces strict one-time policy: second attempt is rejected permanently.
+  // ACTION: One-Time Due-Date Extension (rule enforced by the database)
   // ===========================================================================
-  const extendDueDate = useCallback(({
-    invoiceId,
-    newDueDate,
-    reason,
-    adminName = 'Finance Director (Demo)',
-  }) => {
-    if (!newDueDate) {
-      return { success: false, error: 'Please select a valid new due date.' };
+  const extendDueDate = useCallback(async ({ invoiceId, newDueDate, reason, adminName }) => {
+    if (!newDueDate) return { success: false, error: 'Please select a valid new due date.' };
+    if (!reason || !reason.trim()) return { success: false, error: 'Extension reason is mandatory.' };
+
+    const target = invoices.find((i) => i.id === invoiceId);
+    if (!target) return { success: false, error: 'Invoice due record not found.' };
+    if (target.isExtended) {
+      return { success: false, error: 'Extension Already Used: only one due-date extension is permitted per invoice.' };
     }
-    if (!reason || !reason.trim()) {
-      return { success: false, error: 'Extension reason is mandatory.' };
+    if (target.dueDate && newDueDate <= target.dueDate) {
+      return { success: false, error: `New due date must be after the current deadline (${target.dueDate}).` };
     }
 
-    const target = invoices.find((i) => i.id === invoiceId || i.number === invoiceId);
-    if (!target) {
-      return { success: false, error: 'Invoice due record not found.' };
-    }
-
-    // Strict Enforcement of One-Time Extension Limit
-    if (target.isExtended || oneTimeExtensions[target.id] || target.extensionHistory?.length > 0) {
-      return {
-        success: false,
-        error: 'Extension Already Used: Only one due-date extension is permitted per mock record. Further extensions are permanently locked in this demo simulation.',
-      };
-    }
-
-    if (newDueDate <= target.dueDate) {
-      return {
-        success: false,
-        error: `New due date must be after the current deadline (${target.dueDate}).`,
-      };
-    }
-
-    const extensionEntry = {
-      id: `ext-${Date.now()}`,
-      originalDueDate: target.dueDate,
-      extendedDueDate: newDueDate,
+    const { error } = await gym.extendInvoiceDueDate({
+      invoiceId,
+      newDueDate,
       reason: reason.trim(),
-      extendedAt: new Date().toISOString(),
-      extendedBy: adminName,
-    };
-
-    let updatedInvoice = null;
-
-    setInvoices((prev) =>
-      prev.map((inv) => {
-        if (inv.id !== target.id) return inv;
-        updatedInvoice = {
-          ...inv,
-          dueDate: newDueDate,
-          isExtended: true,
-          extensionReason: reason.trim(),
-          extendedAt: extensionEntry.extendedAt,
-          extensionHistory: [...(inv.extensionHistory || []), extensionEntry],
-        };
-        return updatedInvoice;
-      })
-    );
-
-    setOneTimeExtensions((prev) => ({
-      ...prev,
-      [target.id]: extensionEntry,
-    }));
-
-    return {
-      success: true,
-      updatedInvoice,
-      extension: extensionEntry,
-    };
-  }, [invoices, oneTimeExtensions]);
-
-  // ===========================================================================
-  // ACTION: Admission Approval Invoice Integration
-  // Automatically creates linked invoice, initial payment, & due record
-  // ===========================================================================
-  const addAdmissionInvoice = useCallback(({
-    memberId,
-    memberName,
-    memberCode,
-    memberPhone,
-    memberAvatar,
-    planId,
-    planName,
-    durationMonths = 3,
-    baseAmount,
-    discountAmount = 0,
-    discountReason = '',
-    netPayable,
-    initialPayment,
-    dueAmount,
-    dueDate,
-    paymentMethod = 'bKash',
-    notes = '',
-  }) => {
-    const invNumber = `INV-2026-0${Math.floor(100 + Math.random() * 900)}`;
-    const payNum = Math.max(0, Number(initialPayment) || 0);
-
-    const initialPayObj = payNum > 0 ? {
-      id: `pay-${Date.now()}`,
-      receiptNumber: `REC-2026-0${Math.floor(100 + Math.random() * 900)}`,
-      amount: payNum,
-      method: paymentMethod,
-      methodId: paymentMethod.toUpperCase(),
-      reference: `ADM-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
-      date: demoDate,
-      notes: notes || 'Initial admission installment payment',
-      collectedBy: 'Front Desk Admission Officer',
-    } : null;
-
-    const newInvoice = {
-      id: `inv-${Date.now()}`,
-      number: invNumber,
-      memberId: String(memberId),
-      memberName,
-      memberCode,
-      memberPhone,
-      memberAvatar,
-      planId,
-      planName,
-      durationMonths,
-      startDate: demoDate,
-      endDate: '2027-01-22',
-      date: demoDate,
-      dueDate: dueAmount > 0 ? (dueDate || '2026-10-25') : demoDate,
-      baseAmount: Number(baseAmount),
-      discountAmount: Number(discountAmount),
-      discountReason,
-      taxAmount: 0,
-      netPayable: Number(netPayable),
-      paidAmount: payNum,
-      dueAmount: Math.max(0, Number(dueAmount)),
-      status: dueAmount > 0 ? (payNum > 0 ? 'Partially Paid' : 'Unpaid') : 'Paid',
-      isExtended: false,
-      extensionHistory: [],
-      payments: initialPayObj ? [initialPayObj] : [],
-    };
-
-    setInvoices((prev) => [newInvoice, ...prev]);
-
-    return {
-      success: true,
-      newInvoice,
-    };
-  }, [demoDate]);
+      authorizedBy: adminName || staff?.name,
+    });
+    return error ? failure(error, 'Failed to extend the due date.') : { success: true };
+  }, [gym, invoices, staff]);
 
   // ===========================================================================
   // ACTION: Custom Expense Categories
   // ===========================================================================
-  const addCustomExpenseCategory = useCallback((categoryName) => {
+  const addCustomExpenseCategory = useCallback(async (categoryName) => {
     const trimmed = String(categoryName || '').trim();
-    if (!trimmed) {
-      return { success: false, error: 'Category name cannot be empty.' };
-    }
+    if (!trimmed) return { success: false, error: 'Category name cannot be empty.' };
 
-    const allCats = [...EXPENSE_CATEGORIES, ...customCategories];
-    const isDuplicate = allCats.some(
-      (c) => c.trim().toLowerCase() === trimmed.toLowerCase()
-    );
+    const isDuplicate = allExpenseCategories.some((c) => c.trim().toLowerCase() === trimmed.toLowerCase());
+    if (isDuplicate) return { success: false, error: `Category "${trimmed}" already exists.` };
 
-    if (isDuplicate) {
-      return {
-        success: false,
-        error: `Category "${trimmed}" already exists (case-insensitive check).`,
-      };
-    }
-
-    setCustomCategories((prev) => [...prev, trimmed]);
-    return {
-      success: true,
-      category: trimmed,
-    };
-  }, [customCategories]);
+    const { error } = await gym.addExpenseCategory(trimmed);
+    return error ? failure(error, 'Failed to save the category.') : { success: true, category: trimmed };
+  }, [gym, allExpenseCategories]);
 
   // ===========================================================================
   // ACTION: Monthly Account Closing
   // ===========================================================================
-  const closeMonth = useCallback(({
-    monthKey, // e.g. '2026-10'
-    notes = '',
-    closedBy = 'Imran Admin (Finance Director)',
-  }) => {
+  const isMonthClosed = useCallback((monthKey) => {
+    return Boolean(closedMonths[monthKey]?.isClosed);
+  }, [closedMonths]);
+
+  const closeMonth = useCallback(async ({ monthKey, notes = '', closedBy }) => {
     if (closedMonths[monthKey]?.isClosed) {
-      return {
-        success: false,
-        error: `Month ${monthKey} is already finalized and closed in demo state.`,
-      };
+      return { success: false, error: `Month ${monthKey} is already finalized and closed.` };
     }
 
     // Snapshot current metrics for the closing period
@@ -573,40 +350,21 @@ export function FinanceProvider({ children }) {
     const totalCollected = monthPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
     const outstandingDues = monthInvoices.reduce((s, i) => s + (Number(i.dueAmount) || 0), 0);
     const totalExpenses = monthExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
-    const netProfit = totalCollected - totalExpenses;
 
-    const closingRecord = {
-      isClosed: true,
-      closedAt: new Date().toISOString(),
-      closedAtDisplay: new Date().toLocaleString('en-US', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      }),
-      closedBy,
+    const { error } = await gym.closeMonth({
+      monthKey,
+      closedByName: closedBy || staff?.name,
       notes: notes || 'Monthly account closed after complete reconciliation review.',
-      financialSummary: {
+      summary: {
         totalInvoiced,
         totalCollected,
         outstandingDues,
         totalExpenses,
-        netProfit,
+        netProfit: totalCollected - totalExpenses,
       },
-    };
-
-    setClosedMonths((prev) => ({
-      ...prev,
-      [monthKey]: closingRecord,
-    }));
-
-    return {
-      success: true,
-      closingRecord,
-    };
-  }, [closedMonths, invoices, allPayments, expenses]);
-
-  const isMonthClosed = useCallback((monthKey) => {
-    return Boolean(closedMonths[monthKey]?.isClosed);
-  }, [closedMonths]);
+    });
+    return error ? failure(error, 'Failed to close the month.') : { success: true };
+  }, [gym, staff, closedMonths, invoices, allPayments, expenses]);
 
   // Check if a transaction date belongs to a finalized closed period
   const checkPeriodEditable = useCallback((dateStr) => {
@@ -623,107 +381,64 @@ export function FinanceProvider({ children }) {
     return { editable: true };
   }, [closedMonths]);
 
-  // Demo Adjustment for a closed month
-  const addPeriodAdjustment = useCallback(({
-    monthKey,
-    type,
-    amount,
-    reason,
-    authorizedBy = 'Auditor Lead',
-  }) => {
-    const entry = {
-      id: `adj-${Date.now()}`,
+  const addPeriodAdjustment = useCallback(async ({ monthKey, type, amount, reason, authorizedBy }) => {
+    const { error } = await gym.addPeriodAdjustment({
       monthKey,
-      type, // 'credit' | 'debit' | 'reclassification'
+      type,
       amount: Number(amount) || 0,
       reason,
-      authorizedBy,
-      date: demoDate,
-      timestamp: new Date().toISOString(),
-    };
-
-    setPeriodAdjustments((prev) => ({
-      ...prev,
-      [monthKey]: [...(prev[monthKey] || []), entry],
-    }));
-
-    return { success: true, entry };
-  }, [demoDate]);
+      authorizedBy: authorizedBy || staff?.name,
+    });
+    return error ? failure(error, 'Failed to save the adjustment.') : { success: true };
+  }, [gym, staff]);
 
   // ===========================================================================
   // Operating Expenses Operations
   // ===========================================================================
-  const addDemoExpense = useCallback((expenseData) => {
-    // Check if expense date falls in closed period
-    const editCheck = checkPeriodEditable(expenseData.date || demoDate);
-    if (!editCheck.editable) {
-      return {
-        success: false,
-        error: editCheck.message,
-        isPeriodClosed: true,
-      };
+  // Returns a failure result when any of the dates is in a closed month.
+  const lockedResult = useCallback((...dates) => {
+    for (const d of dates) {
+      const check = checkPeriodEditable(d);
+      if (!check.editable) return { success: false, error: check.message, isPeriodClosed: true };
     }
+    return null;
+  }, [checkPeriodEditable]);
 
-    const newExp = {
-      id: `exp-${Date.now()}`,
-      title: expenseData.title || 'Demo Expense',
-      category: expenseData.category || 'Miscellaneous & Administration',
+  const addExpense = useCallback(async (expenseData) => {
+    const date = expenseData.date || today;
+    const locked = lockedResult(date);
+    if (locked) return locked;
+
+    const { error } = await gym.addExpense({
+      ...expenseData,
       amount: Math.max(0, Number(expenseData.amount) || 0),
-      method: expenseData.method || 'Bank Transfer',
-      methodId: expenseData.methodId || 'BANK',
-      date: expenseData.date || demoDate,
-      vendor: expenseData.vendor || 'Local Vendor',
-      approvalStatus: expenseData.approvalStatus || 'Approved',
-      approvedBy: expenseData.approvedBy || 'Accounts Lead',
-      notes: expenseData.notes || '',
-    };
+      category: expenseData.category || 'Miscellaneous & Administration',
+      method: expenseData.method || 'BANK',
+      date,
+    });
+    return error ? failure(error, 'Failed to save the expense.') : { success: true };
+  }, [gym, lockedResult, today]);
 
-    setExpenses((prev) => [newExp, ...prev]);
-    return { success: true, newExpense: newExp };
-  }, [checkPeriodEditable, demoDate]);
-
-  const updateDemoExpense = useCallback((id, updatedFields) => {
+  const updateExpense = useCallback(async (id, updatedFields) => {
     const existing = expenses.find((e) => e.id === id);
-    if (existing) {
-      const editCheck = checkPeriodEditable(existing.date);
-      if (!editCheck.editable) {
-        return { success: false, error: editCheck.message, isPeriodClosed: true };
-      }
-    }
+    const locked = lockedResult(existing?.date, updatedFields.date);
+    if (locked) return locked;
 
-    setExpenses((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, ...updatedFields } : e))
-    );
-    return { success: true };
-  }, [expenses, checkPeriodEditable]);
+    const { error } = await gym.updateExpense(id, updatedFields);
+    return error ? failure(error, 'Failed to update the expense.') : { success: true };
+  }, [gym, expenses, lockedResult]);
 
-  const deleteDemoExpense = useCallback((id) => {
+  const deleteExpense = useCallback(async (id) => {
     const existing = expenses.find((e) => e.id === id);
-    if (existing) {
-      const editCheck = checkPeriodEditable(existing.date);
-      if (!editCheck.editable) {
-        return { success: false, error: editCheck.message, isPeriodClosed: true };
-      }
-    }
+    const locked = lockedResult(existing?.date);
+    if (locked) return locked;
 
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
-    return { success: true };
-  }, [expenses, checkPeriodEditable]);
-
-  // Reset to original mock state
-  const resetToMockDefaults = useCallback(() => {
-    setInvoices(INITIAL_INVOICES);
-    setExpenses(INITIAL_EXPENSES);
-    setRefunds(INITIAL_REFUNDS);
-    setDemoDate(DEFAULT_DEMO_DATE);
-    setOneTimeExtensions({});
-    setCustomCategories(['Sauna & Steam Maintenance', 'Biometric & RFID Hardware']);
-  }, []);
+    const { error } = await gym.deleteExpense(id);
+    return error ? failure(error, 'Failed to delete the expense.') : { success: true };
+  }, [gym, expenses, lockedResult]);
 
   const value = {
-    // Controllable Demo Date
-    demoDate,
-    setDemoDate,
+    today,
 
     // Raw Lists
     invoices,
@@ -749,7 +464,6 @@ export function FinanceProvider({ children }) {
 
     // Categories
     allExpenseCategories,
-    customCategories,
     addCustomExpenseCategory,
 
     // Metrics & Summaries
@@ -762,6 +476,7 @@ export function FinanceProvider({ children }) {
     customDateRange,
     setCustomDateRange,
     activeDateRange,
+    resetFilters,
 
     // Revenue Policy
     recognitionPolicy,
@@ -771,11 +486,9 @@ export function FinanceProvider({ children }) {
     showOverduePopup,
     setShowOverduePopup,
 
-    // One-Time Due Date Extension
-    oneTimeExtensions,
     extendDueDate,
 
-    // Monthly Closing Simulation
+    // Monthly Closing
     closedMonths,
     closeMonth,
     isMonthClosed,
@@ -784,12 +497,10 @@ export function FinanceProvider({ children }) {
     addPeriodAdjustment,
 
     // Financial Actions
-    recordDemoPayment,
-    addAdmissionInvoice,
-    addDemoExpense,
-    updateDemoExpense,
-    deleteDemoExpense,
-    resetToMockDefaults,
+    recordPayment,
+    addExpense,
+    updateExpense,
+    deleteExpense,
   };
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>;

@@ -25,8 +25,7 @@ export default function OverdueReminderModal({ isOpen, onClose }) {
   const {
     overdueDues,
     overdueCount,
-    demoDate,
-    setDemoDate,
+    today,
   } = useFinance();
 
   const [paymentTargetInvoice, setPaymentTargetInvoice] = useState(null);
@@ -44,7 +43,7 @@ export default function OverdueReminderModal({ isOpen, onClose }) {
         isOpen={isOpen}
         onClose={onClose}
         title={`Overdue Receivables & Action Center (${overdueCount} Alerts)`}
-        subtitle={`Critical payment deadlines exceeded as of evaluation date (${demoDate})`}
+        subtitle={`Payment deadlines exceeded as of today (${formatDatePretty(today)})`}
         icon={AlertTriangle}
         size="lg"
         footer={
@@ -59,48 +58,6 @@ export default function OverdueReminderModal({ isOpen, onClose }) {
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Date Controller inside Overdue Reminder */}
-          <div
-            style={{
-              padding: '12px 16px',
-              borderRadius: 'var(--radius-md)',
-              background: 'rgba(239, 68, 68, 0.08)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '10px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Clock size={16} color="var(--danger)" />
-              <span style={{ fontSize: '12px', color: 'var(--text-primary)' }}>
-                <strong>Evaluation Date:</strong> Reference date is set to <strong>{demoDate}</strong>.
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <button
-                type="button"
-                className={`btn btn-sm ${demoDate === '2026-10-22' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ fontSize: '11px', padding: '3px 8px' }}
-                onClick={() => setDemoDate('2026-10-22')}
-              >
-                Today (22 Oct)
-              </button>
-              <button
-                type="button"
-                className={`btn btn-sm ${demoDate === '2026-10-26' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ fontSize: '11px', padding: '3px 8px' }}
-                onClick={() => setDemoDate('2026-10-26')}
-                title="Tests Farhan Ahmed (FLM-1008) becoming overdue on Oct 26"
-              >
-                Simulate 26 Oct (Triggers Farhan)
-              </button>
-            </div>
-          </div>
-
           {/* Overdue Items List */}
           {overdueCount === 0 ? (
             <div

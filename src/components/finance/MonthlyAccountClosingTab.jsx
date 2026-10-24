@@ -19,6 +19,7 @@ import {
   Info,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
+import { useAuth } from '../../context/AuthContext';
 import { formatBDT, formatDatePretty } from '../../utils/financeCalculators';
 import { exportReportToExcel } from '../../utils/excelExporter';
 import Modal from '../common/Modal';
@@ -34,30 +35,37 @@ export default function MonthlyAccountClosingTab() {
     isMonthClosed,
     periodAdjustments,
     addPeriodAdjustment,
-    demoDate,
+    revenueRecognitionSchedules,
+    today,
   } = useFinance();
+  const { staff } = useAuth();
+
+  // Current month plus the previous 11, newest first
+  const monthOptions = useMemo(() => {
+    const [y, m] = today.split('-').map(Number);
+    return Array.from({ length: 12 }, (_, i) => {
+      const d = new Date(y, m - 1 - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const name = d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+      const suffix = i === 0 ? ' (Current Period)' : closedMonths[key]?.isClosed ? ' (Closed)' : '';
+      return { key, label: `${name}${suffix}` };
+    });
+  }, [today, closedMonths]);
 
   // Selected Month for Closing Review
-  const [selectedMonth, setSelectedMonth] = useState('2026-10'); // 'YYYY-MM'
+  const [selectedMonth, setSelectedMonth] = useState(() => today.slice(0, 7)); // 'YYYY-MM'
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [closingNotes, setClosingNotes] = useState('');
-  const [closingAdmin, setClosingAdmin] = useState('Imran Admin (Finance Director)');
+  const [closingAdmin, setClosingAdmin] = useState(staff?.name || '');
   const [successBanner, setSuccessBanner] = useState(null);
+  const [saving, setSaving] = useState(false);
 
-  // Demo Adjustment Modal
+  // Period Adjustment Modal
   const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
   const [adjType, setAdjType] = useState('credit');
   const [adjAmount, setAdjAmount] = useState('');
   const [adjReason, setAdjReason] = useState('');
-  const [adjAuditor, setAdjAuditor] = useState('External Audit Lead');
-
-  // Month metadata options
-  const monthOptions = [
-    { key: '2026-10', label: 'October 2026 (Current Period)' },
-    { key: '2026-09', label: 'September 2026' },
-    { key: '2026-08', label: 'August 2026 (Audited & Closed)' },
-    { key: '2026-07', label: 'July 2026' },
-  ];
+  const [adjAuditor, setAdjAuditor] = useState(staff?.name || '');
 
   const isCurrentSelectedClosed = isMonthClosed(selectedMonth);
   const closedRecord = closedMonths[selectedMonth];
@@ -88,36 +96,36 @@ export default function MonthlyAccountClosingTab() {
 
     // 2. Liquid Collections & Gateways
     const totalCollected = monthPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
-    const cashCollected = monthPayments
-      .filter((p) => p.method?.toLowerCase() === 'cash' || p.methodId === 'CASH')
+    // Payment methods are stored as CASH / bKASH / NAGAD / ROCKET / CARD / BANK.
+    const collectedVia = (...codes) => monthPayments
+      .filter((p) => codes.includes(String(p.methodId || p.method || '').toUpperCase()))
       .reduce((s, p) => s + (Number(p.amount) || 0), 0);
-    const bkashCollected = monthPayments
-      .filter((p) => p.method?.toLowerCase().includes('bkash') || p.methodId === 'BKASH')
-      .reduce((s, p) => s + (Number(p.amount) || 0), 0);
-    const nagadCollected = monthPayments
-      .filter((p) => p.method?.toLowerCase().includes('nagad') || p.methodId === 'NAGAD')
-      .reduce((s, p) => s + (Number(p.amount) || 0), 0);
-    const rocketCollected = monthPayments
-      .filter((p) => p.method?.toLowerCase().includes('rocket') || p.methodId === 'ROCKET')
-      .reduce((s, p) => s + (Number(p.amount) || 0), 0);
-    const bankCollected = monthPayments
-      .filter(
-        (p) =>
-          p.method?.toLowerCase().includes('bank') ||
-          p.method?.toLowerCase().includes('card') ||
-          p.methodId === 'BANK'
-      )
-      .reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    const cashCollected = collectedVia('CASH');
+    const bkashCollected = collectedVia('BKASH');
+    const nagadCollected = collectedVia('NAGAD');
+    const rocketCollected = collectedVia('ROCKET');
+    const bankCollected = collectedVia('BANK', 'CARD');
 
     // 3. Receivables & Dues
     const outstandingDues = monthInvoices.reduce((s, i) => s + (Number(i.dueAmount) || 0), 0);
     const overdueDues = monthInvoices
-      .filter((i) => i.dueAmount > 0 && i.dueDate && i.dueDate < demoDate)
+      .filter((i) => i.dueAmount > 0 && i.dueDate && i.dueDate < today)
       .reduce((s, i) => s + (Number(i.dueAmount) || 0), 0);
 
-    // 4. Accrual Recognition (estimated for period)
-    const recognizedRevenue = Math.round(totalInvoiced * 0.72);
-    const deferredRevenue = Math.max(0, totalInvoiced - recognizedRevenue);
+    // 4. Accrual Recognition: revenue allocated to this month across all
+    // memberships, and what this month's invoices still owe to later months.
+    let recognizedRevenue = 0;
+    let deferredRevenue = 0;
+    for (const inv of revenueRecognitionSchedules) {
+      for (const slot of inv.recognition.monthlySchedule) {
+        if (slot.monthKey === selectedMonth) recognizedRevenue += slot.allocatedRevenue;
+        if ((inv.date || '').startsWith(selectedMonth) && slot.monthKey > selectedMonth) {
+          deferredRevenue += slot.allocatedRevenue;
+        }
+      }
+    }
+    recognizedRevenue = Math.round(recognizedRevenue * 100) / 100;
+    deferredRevenue = Math.round(deferredRevenue * 100) / 100;
 
     // 5. Refunds & Expenses
     const totalRefunds = monthRefunds.reduce((s, r) => s + (Number(r.amount) || 0), 0);
@@ -146,18 +154,21 @@ export default function MonthlyAccountClosingTab() {
       netCashOperatingResult,
       netAccrualProfit,
     };
-  }, [monthInvoices, monthPayments, monthExpenses, monthRefunds, demoDate]);
+  }, [monthInvoices, monthPayments, monthExpenses, monthRefunds, revenueRecognitionSchedules, selectedMonth, today]);
 
   // Adjustments list for this month
   const adjustments = periodAdjustments[selectedMonth] || [];
 
   // Handle Closing Execution
-  const handleExecuteClose = () => {
-    const res = closeMonth({
+  const handleExecuteClose = async () => {
+    if (saving) return;
+    setSaving(true);
+    const res = await closeMonth({
       monthKey: selectedMonth,
       notes: closingNotes,
       closedBy: closingAdmin,
     });
+    setSaving(false);
 
     if (res.success) {
       setShowConfirmModal(false);
@@ -211,9 +222,10 @@ export default function MonthlyAccountClosingTab() {
     });
   };
 
-  // Save Demo Adjustment
-  const handleSaveAdjustment = (e) => {
+  // Save Period Adjustment
+  const handleSaveAdjustment = async (e) => {
     e.preventDefault();
+    if (saving) return;
     if (!adjAmount || Number(adjAmount) <= 0) {
       alert('Please enter a valid adjustment amount.');
       return;
@@ -223,13 +235,19 @@ export default function MonthlyAccountClosingTab() {
       return;
     }
 
-    addPeriodAdjustment({
+    setSaving(true);
+    const res = await addPeriodAdjustment({
       monthKey: selectedMonth,
       type: adjType,
       amount: Number(adjAmount),
       reason: adjReason.trim(),
-      authorizedBy: adjAuditor.trim() || 'Internal Auditor',
+      authorizedBy: adjAuditor.trim(),
     });
+    setSaving(false);
+    if (!res.success) {
+      alert(res.error);
+      return;
+    }
 
     setShowAdjustmentModal(false);
     setAdjAmount('');
@@ -397,7 +415,7 @@ export default function MonthlyAccountClosingTab() {
                 Period Finalized & Locked
               </strong>
               <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
-                Closed on: <strong>{closedRecord.closedAtDisplay || closedRecord.closedAt}</strong> · Authorized by: <strong>{closedRecord.closedBy}</strong> · Notes: <em>{closedRecord.notes}</em>
+                Closed on: <strong>{new Date(closedRecord.closedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</strong> · Authorized by: <strong>{closedRecord.closedBy}</strong> · Notes: <em>{closedRecord.notes}</em>
               </p>
             </div>
           </div>
@@ -407,7 +425,7 @@ export default function MonthlyAccountClosingTab() {
         </div>
       )}
 
-      {/* Warning Notice about Demo Simulation Scope */}
+      {/* Closing scope notice */}
       <div
         style={{
           padding: '10px 14px',
@@ -423,7 +441,7 @@ export default function MonthlyAccountClosingTab() {
       >
         <Info size={16} color="var(--primary)" style={{ flexShrink: 0 }} />
         <span>
-          <strong>Closing Audit Notice:</strong> This closing action simulates an accounting lock in application state. Records are finalized and protected to maintain statement reconciliation.
+          <strong>Closing Audit Notice:</strong> Closing a month is saved to the database and locks its expenses. Only a Super Admin can re-open a closed month; use period adjustments for later corrections.
         </span>
       </div>
 

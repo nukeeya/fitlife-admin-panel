@@ -11,7 +11,6 @@ import {
   Clock,
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
-import { useFinance } from '../context/FinanceContext';
 import { formatBDT } from '../utils/financeCalculators';
 import Modal from './common/Modal';
 import Avatar from './common/Avatar';
@@ -25,8 +24,6 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
     roles,
     approveApplication,
   } = useGymData();
-
-  const { addAdmissionInvoice, demoDate } = useFinance();
 
   const [planId, setPlanId] = useState(application?.desiredPlanId || activePlans[0]?.id || 1);
   const [discountType, setDiscountType] = useState('flat');
@@ -132,7 +129,7 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
     }
 
     try {
-      // 1. Activate member in GymDataContext
+      // The approval RPC creates the member, invoice and first payment together.
       const res = await approveApplication({
         appId: application.id,
         planId,
@@ -150,27 +147,7 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
         return;
       }
 
-      // 2. Synchronize invoice and dues in FinanceContext
-      const memberCode = res.member?.code || `FLM-${String(Date.now()).slice(-4)}`;
-      addAdmissionInvoice({
-        memberId: res.member?.id || application.id,
-        memberName: application.name,
-        memberCode,
-        memberPhone: application.phone,
-        memberAvatar: application.photo || application.avatar,
-        planId: selectedPlan.id,
-        planName: selectedPlan.name,
-        durationMonths: selectedPlan.durationDays ? Math.round(selectedPlan.durationDays / 30) : 3,
-        baseAmount: pricing.basePrice,
-        discountAmount: pricing.discountAmount,
-        discountReason,
-        netPayable: pricing.netPayable,
-        initialPayment: payNum,
-        dueAmount: outstandingDue,
-        dueDate: outstandingDue > 0 ? dueDate : demoDate,
-        paymentMethod,
-        notes,
-      });
+      const memberCode = res.member?.code || '—';
 
       setSuccessDetails({
         memberName: application.name,

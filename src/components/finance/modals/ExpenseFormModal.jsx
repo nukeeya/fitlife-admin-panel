@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { DollarSign, Plus, CheckCircle2, AlertCircle, X, ShieldAlert } from 'lucide-react';
 import Modal from '../../common/Modal';
 import { useFinance } from '../../../context/FinanceContext';
+import { useAuth } from '../../../context/AuthContext';
 
 export default function ExpenseFormModal({
   isOpen,
@@ -12,22 +13,25 @@ export default function ExpenseFormModal({
     paymentMethods,
     allExpenseCategories,
     addCustomExpenseCategory,
-    addDemoExpense,
-    updateDemoExpense,
+    addExpense,
+    updateExpense,
     checkPeriodEditable,
-    demoDate,
+    today,
   } = useFinance();
+  const { staff } = useAuth();
+  const defaultApprover = staff?.name || '';
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState(allExpenseCategories[0] || 'Rent & Facility Lease');
   const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState('Bank Transfer');
+  const [method, setMethod] = useState('BANK');
   const [vendor, setVendor] = useState('');
-  const [date, setDate] = useState(demoDate);
+  const [date, setDate] = useState(today);
   const [approvalStatus, setApprovalStatus] = useState('Approved');
-  const [approvedBy, setApprovedBy] = useState('Accounts Lead');
+  const [approvedBy, setApprovedBy] = useState(defaultApprover);
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   // Inline Custom Category Creation
   const [isAddingCustomCategory, setIsAddingCustomCategory] = useState(false);
@@ -41,29 +45,29 @@ export default function ExpenseFormModal({
       setTitle(expenseToEdit.title || '');
       setCategory(expenseToEdit.category || allExpenseCategories[0]);
       setAmount(String(expenseToEdit.amount || ''));
-      setMethod(expenseToEdit.method || 'Bank Transfer');
+      setMethod(expenseToEdit.method || 'BANK');
       setVendor(expenseToEdit.vendor || '');
-      setDate(expenseToEdit.date || demoDate);
+      setDate(expenseToEdit.date || today);
       setApprovalStatus(expenseToEdit.approvalStatus || 'Approved');
-      setApprovedBy(expenseToEdit.approvedBy || 'Accounts Lead');
+      setApprovedBy(expenseToEdit.approvedBy || '');
       setNotes(expenseToEdit.notes || '');
       setError('');
     } else {
       setTitle('');
       setCategory(allExpenseCategories[0] || 'Rent & Facility Lease');
       setAmount('');
-      setMethod('Bank Transfer');
+      setMethod('BANK');
       setVendor('');
-      setDate(demoDate);
+      setDate(today);
       setApprovalStatus('Approved');
-      setApprovedBy('Accounts Lead');
+      setApprovedBy(defaultApprover);
       setNotes('');
       setError('');
     }
     setIsAddingCustomCategory(false);
     setNewCategoryName('');
     setCustomCatError('');
-  }, [expenseToEdit, isOpen, demoDate, allExpenseCategories]);
+  }, [expenseToEdit, isOpen, today, allExpenseCategories, defaultApprover]);
 
   // Handle Category select change
   const handleCategoryChange = (e) => {
@@ -78,12 +82,12 @@ export default function ExpenseFormModal({
   };
 
   // Save new custom category
-  const handleSaveCustomCategory = (e) => {
+  const handleSaveCustomCategory = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     setCustomCatError('');
 
-    const res = addCustomExpenseCategory(newCategoryName);
+    const res = await addCustomExpenseCategory(newCategoryName);
     if (!res.success) {
       setCustomCatError(res.error);
       return;
@@ -102,8 +106,9 @@ export default function ExpenseFormModal({
     setCustomCatError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
     const num = Number(amount);
     if (!title.trim()) {
       setError('Please provide an expense title.');
@@ -126,21 +131,20 @@ export default function ExpenseFormModal({
       category,
       amount: num,
       method,
-      vendor: vendor.trim() || 'General Supplier',
+      vendor: vendor.trim(),
       date,
       approvalStatus,
-      approvedBy: approvedBy.trim() || 'Internal Admin',
+      approvedBy: approvedBy.trim(),
       notes: notes.trim(),
     };
 
-    let result;
-    if (isEditing) {
-      result = updateDemoExpense(expenseToEdit.id, payload);
-    } else {
-      result = addDemoExpense(payload);
-    }
+    setSaving(true);
+    const result = isEditing
+      ? await updateExpense(expenseToEdit.id, payload)
+      : await addExpense(payload);
+    setSaving(false);
 
-    if (result && !result.success) {
+    if (!result.success) {
       setError(result.error);
       return;
     }
@@ -161,9 +165,9 @@ export default function ExpenseFormModal({
           <button type="button" className="btn btn-secondary" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" form="expense-form" className="btn btn-primary">
+          <button type="submit" form="expense-form" className="btn btn-primary" disabled={saving}>
             <CheckCircle2 size={16} />
-            {isEditing ? 'Save Changes' : 'Record Expense'}
+            {saving ? 'Saving…' : isEditing ? 'Save Changes' : 'Record Expense'}
           </button>
         </div>
       }
@@ -310,7 +314,7 @@ export default function ExpenseFormModal({
               onChange={(e) => setMethod(e.target.value)}
             >
               {paymentMethods.map((m) => (
-                <option key={m.id} value={m.name}>
+                <option key={m.id} value={m.id}>
                   {m.name}
                 </option>
               ))}

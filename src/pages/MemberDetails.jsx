@@ -45,12 +45,7 @@ import InvoiceViewModal from '../components/finance/modals/InvoiceViewModal';
 export default function MemberDetails() {
   const { id } = useParams();
   const { members, checkInMember } = useGymData();
-  const {
-    invoices,
-    demoDate,
-    oneTimeExtensions,
-    addAdmissionInvoice,
-  } = useFinance();
+  const { invoices, today: demoDate } = useFinance();
 
   // Active Tab state
   const [activeTab, setActiveTab] = useState('profile');
@@ -175,7 +170,7 @@ export default function MemberDetails() {
     let days = 0;
 
     if (activeInv && activeInv.dueAmount > 0 && activeInv.dueDate) {
-      days = calculateDaysOverdue(activeInv.dueDate, demoDate);
+      days = calculateDaysOverdue(activeInv.dueDate, activeInv.dueAmount, demoDate);
       overdueFlag = days > 0;
     }
 
@@ -466,23 +461,8 @@ export default function MemberDetails() {
   const handleConfirmRenewal = (e) => {
     e.preventDefault();
     const calculatedDue = Math.max(0, renewPrice - renewInitialPay);
-    addAdmissionInvoice?.({
-      memberId: member.id,
-      memberName: member.name,
-      memberCode: member.code,
-      memberPhone: member.phone,
-      memberAvatar: member.avatar,
-      planName: `${renewPlan} Renewal Package`,
-      baseAmount: renewPrice,
-      discountAmount: 0,
-      discountReason: 'Renewal Standard',
-      netPayable: renewPrice,
-      paidAmount: renewInitialPay,
-      dueAmount: calculatedDue,
-      dueDate: renewDueDate,
-      paymentMethod: 'bKash',
-      notes: `Membership renewal for ${renewPlan}`,
-    });
+    // TODO: renewals need a server RPC (invoice + payment + expiry update);
+    // until then this only updates the on-screen subscription list.
 
     const newSub = {
       id: `sub-renew-${Date.now()}`,
@@ -527,7 +507,7 @@ export default function MemberDetails() {
 
     setLocalSubscriptions([newSub, ...subscriptions]);
     setIsRenewModalOpen(false);
-    setCheckInNotice(`Membership renewed for ${renewPlan}! New invoice & subscription ledger updated.`);
+    setCheckInNotice(`Renewal for ${renewPlan} shown on this screen only — it is not saved and no invoice was created.`);
     setTimeout(() => setCheckInNotice(''), 4500);
   };
 
@@ -543,11 +523,7 @@ export default function MemberDetails() {
   }
 
   // Determine extension state for active invoice
-  const isInvoiceExtended = Boolean(
-    activeDueInvoice?.isExtended ||
-      oneTimeExtensions[activeDueInvoice?.id] ||
-      (activeDueInvoice?.extensionHistory && activeDueInvoice.extensionHistory.length > 0)
-  );
+  const isInvoiceExtended = Boolean(activeDueInvoice?.isExtended);
 
   return (
     <div className="page">
@@ -2279,7 +2255,7 @@ export default function MemberDetails() {
           onClose={() => setIsPaymentModalOpen(false)}
           invoice={activeDueInvoice}
           onPaymentSuccess={(newPay, updatedInv) => {
-            setCheckInNotice(`Payment of ${formatBDT(newPay.amount)} recorded successfully! Receipt: ${newPay.receiptNumber}`);
+            setCheckInNotice(`Payment of ${formatBDT(newPay.amount)} recorded successfully via ${newPay.method}.`);
             setTimeout(() => setCheckInNotice(''), 4500);
           }}
         />

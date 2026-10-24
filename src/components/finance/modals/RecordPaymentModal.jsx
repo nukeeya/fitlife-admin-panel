@@ -10,21 +10,19 @@ export default function RecordPaymentModal({
   invoice,
   onPaymentSuccess,
 }) {
-  const { paymentMethods, recordDemoPayment } = useFinance();
+  const { paymentMethods, recordPayment } = useFinance();
 
   const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState('bKash');
+  const [method, setMethod] = useState('CASH');
   const [reference, setReference] = useState('');
-  const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (invoice) {
-      const initialPay = invoice.dueAmount > 0 ? invoice.dueAmount : invoice.netPayable;
-      setAmount(String(initialPay));
-      setMethod('bKash');
-      setReference(`TRX-${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
-      setNotes('Installment payment');
+      setAmount(String(Number(invoice.dueAmount) || 0));
+      setMethod('CASH');
+      setReference('');
       setError('');
     }
   }, [invoice]);
@@ -36,27 +34,34 @@ export default function RecordPaymentModal({
   const simulatedRemaining = Math.max(0, currentDue - payNum);
   const isSettlingFull = payNum >= currentDue;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
+    if (currentDue <= 0) {
+      setError('This invoice has no outstanding balance.');
+      return;
+    }
     if (payNum <= 0) {
       setError('Please enter a valid payment amount greater than 0.');
       return;
     }
-    if (payNum > currentDue && currentDue > 0) {
+    if (payNum > currentDue) {
       setError(`Payment cannot exceed outstanding due of ${formatBDT(currentDue)}.`);
       return;
     }
 
-    const result = recordDemoPayment({
+    setSaving(true);
+    const result = await recordPayment({
       invoiceId: invoice.id,
       amount: payNum,
       method,
       reference,
-      notes,
     });
+    setSaving(false);
 
     if (result.success) {
-      onPaymentSuccess?.(result.newPayment, result.updatedInvoice);
+      const methodName = paymentMethods.find((m) => m.id === method)?.name || method;
+      onPaymentSuccess?.({ amount: payNum, method: methodName }, invoice);
       onClose();
     } else {
       setError(result.error || 'Failed to record payment');
@@ -81,9 +86,9 @@ export default function RecordPaymentModal({
           <button type="button" className="btn btn-secondary" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" form="record-payment-form" className="btn btn-primary">
+          <button type="submit" form="record-payment-form" className="btn btn-primary" disabled={saving}>
             <CheckCircle2 size={16} />
-            Confirm Payment ({formatBDT(payNum)})
+            {saving ? 'Saving…' : `Confirm Payment (${formatBDT(payNum)})`}
           </button>
         </div>
       }
@@ -251,35 +256,22 @@ export default function RecordPaymentModal({
             required
           >
             {paymentMethods.map((m) => (
-              <option key={m.id} value={m.name}>
+              <option key={m.id} value={m.id}>
                 {m.name} — {m.accountNumber} ({m.feePercent}% Fee)
               </option>
             ))}
           </select>
         </div>
 
-        {/* Transaction Reference & Notes */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <div>
-            <label className="form-label">Transaction Ref / Trx ID</label>
-            <input
-              type="text"
-              className="form-control"
-              value={reference}
-              onChange={(e) => setReference(e.target.value)}
-              placeholder="e.g. BK-9X82K1"
-            />
-          </div>
-          <div>
-            <label className="form-label">Installment Notes</label>
-            <input
-              type="text"
-              className="form-control"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. 2nd partial installment"
-            />
-          </div>
+        <div>
+          <label className="form-label">Transaction Ref / Trx ID</label>
+          <input
+            type="text"
+            className="form-control"
+            value={reference}
+            onChange={(e) => setReference(e.target.value)}
+            placeholder="e.g. BK-9X82K1"
+          />
         </div>
       </form>
     </Modal>

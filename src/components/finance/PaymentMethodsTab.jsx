@@ -9,7 +9,7 @@ export default function PaymentMethodsTab() {
   const { paymentMethodSummary, filteredPayments, filteredRefunds, invoices } = useFinance();
 
   const [activeViewMode, setActiveViewMode] = useState('combined'); // 'combined' | 'individual'
-  const [selectedMethodId, setSelectedMethodId] = useState('BKASH');
+  const [selectedMethodId, setSelectedMethodId] = useState('bKASH');
   const [searchTerm, setSearchTerm] = useState('');
   const [viewInvoice, setViewInvoice] = useState(null);
 

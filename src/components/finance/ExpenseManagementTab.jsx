@@ -13,7 +13,13 @@ import FinanceDateFilterBar from './FinanceDateFilterBar';
 import ExpenseFormModal from './modals/ExpenseFormModal';
 
 export default function ExpenseManagementTab() {
-  const { filteredExpenses, deleteDemoExpense, activeDateRange, allExpenseCategories } = useFinance();
+  const { filteredExpenses, deleteExpense, activeDateRange, allExpenseCategories } = useFinance();
+
+  const handleDelete = async (exp) => {
+    if (!window.confirm(`Delete expense "${exp.title}"? This cannot be undone.`)) return;
+    const res = await deleteExpense(exp.id);
+    if (!res.success) alert(res.error);
+  };
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
@@ -28,7 +34,7 @@ export default function ExpenseManagementTab() {
     return filteredExpenses.filter((exp) => {
       const matchSearch =
         exp.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        exp.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (exp.vendor || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (exp.notes && exp.notes.toLowerCase().includes(searchTerm.toLowerCase()));
 
       const matchCat =
@@ -252,8 +258,8 @@ export default function ExpenseManagementTab() {
                         <button
                           type="button"
                           className="btn btn-secondary btn-sm"
-                          onClick={() => deleteDemoExpense(exp.id)}
-                          title="Delete demo expense"
+                          onClick={() => handleDelete(exp)}
+                          title="Delete expense"
                           style={{ padding: '3px 6px', color: 'var(--danger)' }}
                         >
                           <Trash2 size={12} />
