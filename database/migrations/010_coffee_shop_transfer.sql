@@ -2,7 +2,7 @@
 -- Food items become active coffee shop menu items. Gym Wear has no place on a cafe menu, so it is
 -- moved over as Archived — the rows (and their stock/cost history) are kept for staff to review
 -- or delete from Coffee Shop → Menu & Stock, but nothing is sold until someone reactivates it.
-
+-- got it everything cleared
 update public.shop_products
   set category = 'Cafe'
   where category = 'Food';
