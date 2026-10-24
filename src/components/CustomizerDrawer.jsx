@@ -12,7 +12,7 @@ import {
   Palette,
   Columns,
   Rows,
-  Sparkles,
+  Flame,
   ExternalLink,
 } from 'lucide-react';
 import {
@@ -72,7 +72,7 @@ export default function CustomizerDrawer() {
           <div className="customizer-section" style={{ background: 'var(--bg-app)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-base)', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
               <span className="customizer-label" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Sparkles size={14} color="var(--primary)" /> Gym Identity
+                <Flame size={14} color="var(--primary)" /> Gym Identity
               </span>
               <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-light)', padding: '2px 8px', borderRadius: '12px' }}>
                 {branding?.gymName || 'FitLife'}

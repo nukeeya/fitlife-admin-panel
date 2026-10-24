@@ -6,6 +6,8 @@ import {
   UserCheck,
   Dumbbell,
   Briefcase,
+  UserPlus,
+  ScanFace,
   CreditCard,
   CalendarCheck,
   MessageCircle,
@@ -56,6 +58,16 @@ export default function HorizontalNav() {
       <NavLink to="/employees" className="h-nav-link">
         <Briefcase size={16} />
         <span>Employees</span>
+      </NavLink>
+
+      <NavLink to="/visitors" className="h-nav-link">
+        <UserPlus size={16} />
+        <span>Visitors</span>
+      </NavLink>
+
+      <NavLink to="/devices" className="h-nav-link">
+        <ScanFace size={16} />
+        <span>Device</span>
       </NavLink>
 
       {/* Accounts Dropdown */}
@@ -152,6 +164,9 @@ export default function HorizontalNav() {
             <NavLink to="/subscription-plans?tab=plans" className="submenu-link" onClick={() => setActiveDropdown(null)}>
               Plan List
             </NavLink>
+            <NavLink to="/subscription-plans?tab=trial" className="submenu-link" onClick={() => setActiveDropdown(null)}>
+              One-Day Trial Registration
+            </NavLink>
             <NavLink to="/subscription-plans?tab=features" className="submenu-link" onClick={() => setActiveDropdown(null)}>
               Feature List
             </NavLink>
@@ -174,12 +189,12 @@ export default function HorizontalNav() {
 
       <NavLink to="/ai-workouts" className="h-nav-link">
         <Cpu size={16} />
-        <span>AI Workout</span>
+        <span>Make Workout Plan</span>
       </NavLink>
 
       <NavLink to="/diet-plans" className="h-nav-link">
         <Apple size={16} />
-        <span>AI Diet</span>
+        <span>Make Diet Plan</span>
       </NavLink>
 
       <NavLink to="/job-postings" className="h-nav-link">

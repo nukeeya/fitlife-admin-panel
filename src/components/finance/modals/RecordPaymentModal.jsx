@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
+import { CreditCard, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import Modal from '../../common/Modal';
 import { useFinance } from '../../../context/FinanceContext';
 import { formatBDT } from '../../../utils/financeCalculators';
@@ -24,7 +24,7 @@ export default function RecordPaymentModal({
       setAmount(String(initialPay));
       setMethod('bKash');
       setReference(`TRX-${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
-      setNotes('Demo installment payment');
+      setNotes('Installment payment');
       setError('');
     }
   }, [invoice]);
@@ -72,7 +72,7 @@ export default function RecordPaymentModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Record Demo Payment"
+      title="Record Payment"
       subtitle={`Invoice #${invoice.number} — ${invoice.memberName} (${invoice.memberCode})`}
       icon={CreditCard}
       size="md"
@@ -89,7 +89,7 @@ export default function RecordPaymentModal({
       }
     >
       <form id="record-payment-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {/* Demo Notice Banner */}
+        {/* Payment Notice Banner */}
         <div style={{
           padding: '10px 14px',
           borderRadius: 'var(--radius-md)',
@@ -99,9 +99,9 @@ export default function RecordPaymentModal({
           alignItems: 'center',
           gap: '10px',
         }}>
-          <Sparkles size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+          <Info size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} />
           <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-            <strong>Demo Simulator:</strong> This transaction will update the local mock state, dues ledger, and balance sheet immediately without hitting production payment gateways.
+            <strong>Transaction Notice:</strong> This transaction will update the payment ledger, dues balance, and monthly accounts immediately.
           </span>
         </div>
 

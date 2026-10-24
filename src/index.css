@@ -13,6 +13,7 @@
   --primary: #C8FF00;
   --primary-glow: rgba(200, 255, 0, 0.25);
   --primary-hover: #b4e600;
+  --primary-text: #000000;
   --bg-base: #080808;
   --bg-card: #141416;
   --bg-surface: #1B1B1F;
@@ -31,8 +32,8 @@
   --radius-lg: 14px;
   --radius-full: 9999px;
   --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
-  --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-spring: 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --transition-smooth: 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-spring: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Legacy & Semantic Compatibility Aliases (Dark Theme) */
   --lime: var(--primary);
@@ -51,6 +52,7 @@
   --primary: #0066FF;
   --primary-glow: rgba(0, 102, 255, 0.18);
   --primary-hover: #0052cc;
+  --primary-text: #FFFFFF;
   --bg-base: #F8FAFC;
   --bg-card: #FFFFFF;
   --bg-surface: #F1F5F9;
@@ -85,30 +87,48 @@ html, body, #root {
   transition: background-color var(--transition-smooth), color var(--transition-smooth);
 }
 
-/* Global Theme Transition for Smooth Mode Switching */
+/* Global Theme Transition for Smooth, Synchronous Mode Switching */
 .app-layout,
 .app-header,
 .sidebar,
 .main-content,
 .stat-widget,
+.stat-card,
 .activity-card,
+.trainer-card,
+.plan-card,
+.diet-card,
+.locker-card,
 .custom-table,
+.custom-table th,
+.custom-table td,
 .customizer-panel,
 .modal-content,
+.modal-header,
+.modal-footer,
 .form-input,
 .form-select,
-.form-textarea {
+.form-textarea,
+.form-control,
+.header-search,
+.header-icon-btn,
+.user-profile-pill,
+.btn-secondary,
+.h-nav-dropdown,
+.horizontal-nav-bar,
+.member-options-menu,
+.card {
   transition: background-color var(--transition-smooth), 
               border-color var(--transition-smooth), 
               color var(--transition-smooth), 
               box-shadow var(--transition-smooth);
 }
 
-/* Page Entry Fade and Slide Animation */
+/* Page Entry Fade and Slide Animation (Subtle & Fluid) */
 @keyframes pageFadeSlideIn {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -117,7 +137,75 @@ html, body, #root {
 }
 
 .page {
-  animation: pageFadeSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: pageFadeSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: opacity, transform;
+}
+
+/* Native-feel Modal Pop-In Animation */
+@keyframes modalScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Dropdown Menu Glide-In Animation */
+@keyframes dropdownMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Alert & Toast Slide-Up Entrance */
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Automatic Modal Background Scroll Locking */
+body:has(.modal-overlay) {
+  overflow: hidden;
+}
+
+/* Clear, Accessible Focus States */
+button:focus-visible,
+.btn:focus-visible,
+a:focus-visible,
+.header-icon-btn:focus-visible,
+.sidebar-link:focus-visible,
+.sidebar-close:focus-visible,
+.form-input:focus-visible,
+.form-select:focus-visible,
+.form-textarea:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Respect Reduced Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Skeleton Shimmer Animation */
@@ -245,4 +333,32 @@ a {
 [data-menu='gradient'] .sidebar {
   background: linear-gradient(180deg, #101014 0%, #171228 100%) !important;
   border-right: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+@keyframes faceLaserScan {
+  0% {
+    top: 25px;
+    opacity: 0.8;
+  }
+  50% {
+    top: 195px;
+    opacity: 1;
+  }
+  100% {
+    top: 25px;
+    opacity: 0.8;
+  }
+}
+
+.spin-animation {
+  animation: spin 1.2s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

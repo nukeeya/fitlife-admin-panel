@@ -212,7 +212,7 @@ export default function Reports() {
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                 <XAxis dataKey="month" stroke={textColor} />
                 <YAxis stroke={textColor} />
-                <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderColor: 'var(--border-base)', borderRadius: '8px' }} />
+                <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderColor: 'var(--border-base)', borderRadius: '8px', color: theme === 'light' ? '#0F172A' : '#FFFFFF' }} />
                 <Bar dataKey="revenue" fill={primaryColor} name="Billed revenue (৳)" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="expense" fill="#EF4444" name="Expenses (৳)" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -236,7 +236,7 @@ export default function Reports() {
                   <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                   <XAxis dataKey="month" stroke={textColor} />
                   <YAxis stroke={textColor} />
-                  <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderColor: 'var(--border-base)', borderRadius: '8px' }} />
+                  <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderColor: 'var(--border-base)', borderRadius: '8px', color: theme === 'light' ? '#0F172A' : '#FFFFFF' }} />
                   <Area type="monotone" dataKey="members" name="Members" stroke="#10B981" fill="rgba(16, 185, 129, 0.2)" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>

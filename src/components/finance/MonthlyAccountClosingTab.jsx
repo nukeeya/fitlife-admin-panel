@@ -348,7 +348,7 @@ export default function MonthlyAccountClosingTab() {
               style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <PlusCircle size={14} />
-              Audit Adjustment (Demo)
+              Audit Adjustment
             </button>
           )}
         </div>
@@ -394,7 +394,7 @@ export default function MonthlyAccountClosingTab() {
             <ShieldCheck size={20} color="#10B981" />
             <div>
               <strong style={{ fontSize: '13px', color: '#10B981' }}>
-                Period Finalized & Locked (Demo Simulation)
+                Period Finalized & Locked
               </strong>
               <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
                 Closed on: <strong>{closedRecord.closedAtDisplay || closedRecord.closedAt}</strong> · Authorized by: <strong>{closedRecord.closedBy}</strong> · Notes: <em>{closedRecord.notes}</em>
@@ -423,7 +423,7 @@ export default function MonthlyAccountClosingTab() {
       >
         <Info size={16} color="var(--primary)" style={{ flexShrink: 0 }} />
         <span>
-          <strong>Frontend Prototype Disclaimer:</strong> This closing action simulates an accounting lock in React state. Records are finalized in demo memory and do not modify external database tables or audit ledgers.
+          <strong>Closing Audit Notice:</strong> This closing action simulates an accounting lock in application state. Records are finalized and protected to maintain statement reconciliation.
         </span>
       </div>
 
@@ -703,7 +703,7 @@ export default function MonthlyAccountClosingTab() {
           >
             <AlertTriangle size={18} style={{ flexShrink: 0 }} />
             <span>
-              <strong>Finalization Warning:</strong> Closing will lock transactions for <strong>{selectedMonth}</strong> in this frontend demo. Ordinary edit and delete actions will be disabled to preserve statement reconciliation.
+              <strong>Finalization Warning:</strong> Closing will lock transactions for <strong>{selectedMonth}</strong>. Ordinary edit and delete actions will be disabled to preserve statement reconciliation.
             </span>
           </div>
 

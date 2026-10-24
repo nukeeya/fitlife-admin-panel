@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, Sparkles, RotateCcw, Check } from 'lucide-react';
+import { Calendar, RotateCcw, Check } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { DATE_FILTER_PRESETS } from '../../utils/financeCalculators';
 
@@ -62,35 +62,16 @@ export default function FinanceDateFilterBar({ showReset = true }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px',
-              fontSize: '11px',
-              fontWeight: 700,
-              padding: '4px 10px',
-              borderRadius: 'var(--radius-full)',
-              background: 'rgba(59, 130, 246, 0.1)',
-              color: 'var(--primary)',
-              border: '1px solid rgba(59, 130, 246, 0.25)',
-            }}
-            title="Frontend Simulation Mode: Realistic mock financial data"
-          >
-            <Sparkles size={13} />
-            Frontend Demo Simulator
-          </span>
-
           {showReset && (
             <button
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={handleReset}
-              title="Reset all mock balances to initial demo seed"
+              title="Reset all filters to defaults"
               style={{ padding: '4px 10px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
             >
               {resetNotice ? <Check size={13} style={{ color: '#10B981' }} /> : <RotateCcw size={13} />}
-              {resetNotice ? 'Reset Done' : 'Reset Demo Seed'}
+              {resetNotice ? 'Reset Done' : 'Reset Filters'}
             </button>
           )}
         </div>
@@ -120,7 +101,7 @@ export default function FinanceDateFilterBar({ showReset = true }) {
                 border: '1px solid',
                 borderColor: isActive ? 'var(--primary)' : 'var(--border-base)',
                 background: isActive ? 'var(--primary)' : 'var(--bg-surface)',
-                color: isActive ? '#FFFFFF' : 'var(--text-secondary)',
+                color: isActive ? 'var(--primary-text)' : 'var(--text-secondary)',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
                 transition: 'all 0.15s ease',

@@ -11,7 +11,6 @@ import {
   Upload,
   RotateCcw,
   CheckCircle2,
-  Sparkles,
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
 
@@ -168,13 +167,13 @@ export default function SystemManagement() {
                   height: '36px',
                   borderRadius: 'var(--radius-md)',
                   background: 'var(--primary)',
-                  color: '#000',
+                  color: 'var(--primary-text)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <Sparkles size={20} />
+                <Flame size={20} />
               </div>
               <div>
                 <h2 style={{ fontSize: '18px', fontWeight: 800 }}>Gym Identity & Logo Customizer</h2>
@@ -371,7 +370,7 @@ export default function SystemManagement() {
                     height: '42px',
                     borderRadius: 'var(--radius-md)',
                     background: 'var(--primary)',
-                    color: '#000000',
+                    color: 'var(--primary-text)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',

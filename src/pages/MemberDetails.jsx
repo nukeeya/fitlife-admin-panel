@@ -15,7 +15,7 @@ import {
   Dumbbell,
   Utensils,
   Award,
-  Sparkles,
+  Droplets,
   Phone,
   Mail,
   Printer,
@@ -847,7 +847,7 @@ export default function MemberDetails() {
           { key: 'invoices', label: 'Invoices', icon: Receipt, badge: memberInvoices.length },
           { key: 'installments', label: 'Installment Schedule', icon: Calendar, badge: totalDue > 0 ? 'Due' : null, badgeColor: totalDue > 0 ? 'var(--danger)' : null },
           { key: 'attendance', label: 'Attendance', icon: Clock, badge: `${attendanceLogs.length} logs` },
-          { key: 'features', label: 'Features & Perks', icon: Sparkles },
+          { key: 'features', label: 'Features & Perks', icon: Award },
           { key: 'locker', label: 'Locker', icon: Lock },
           { key: 'workout', label: 'Workout Plan', icon: Dumbbell },
           { key: 'diet', label: 'Diet Plan', icon: Utensils },
@@ -869,11 +869,11 @@ export default function MemberDetails() {
                 fontWeight: isActive ? 700 : 500,
                 border: 'none',
                 background: isActive ? 'var(--primary)' : 'var(--bg-surface)',
-                color: isActive ? '#fff' : 'var(--text-muted)',
+                color: isActive ? 'var(--primary-text)' : 'var(--text-muted)',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
                 transition: 'all 0.15s ease',
-                boxShadow: isActive ? '0 2px 8px rgba(255, 107, 0, 0.3)' : 'none',
+                boxShadow: isActive ? '0 2px 8px var(--primary-glow)' : 'none',
               }}
             >
               <Icon size={14} />
@@ -1712,7 +1712,7 @@ export default function MemberDetails() {
               {[
                 { title: 'Gym Floor & Cardio Suite Access', desc: 'Unlimited peak and off-peak entry to all strength, barbell, and cardio zones.', badge: 'Unlimited', icon: Dumbbell },
                 { title: 'Dedicated Executive Locker', desc: `Assigned locker ${member.lockerNumber || 'B-003'} in Zone B executive wing with RFID lock.`, badge: 'Active', icon: Lock },
-                { title: 'Steam & Sauna Privileges', desc: 'Complimentary weekend hydrotherapy, infrared sauna, and eucalyptus steam room access.', badge: 'Included', icon: Sparkles },
+                { title: 'Steam & Sauna Privileges', desc: 'Complimentary weekend hydrotherapy, infrared sauna, and eucalyptus steam room access.', badge: 'Included', icon: Droplets },
                 { title: 'Trainer Review & Bi-weekly Check-in', desc: `Assigned coach: ${member.trainer || 'Tanvir Rahman'}. Includes form check and weight adjustments.`, badge: 'Bi-Weekly', icon: User },
                 { title: 'InBody 770 Body Composition Scans', desc: 'Monthly medical-grade impedance body fat, visceral fat, and muscle mass report.', badge: '1x / Month', icon: Activity },
                 { title: 'Combat & Functional Turf Zone', desc: 'Heavy bag suite, sled pushes, battle ropes, and kettlebell conditioning zone access.', badge: 'All Batches', icon: Flame },

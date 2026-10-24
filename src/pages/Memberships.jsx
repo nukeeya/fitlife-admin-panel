@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react';
+import { Check, CalendarCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useGymData } from '../context/GymDataContext';
 
@@ -13,6 +13,15 @@ export default function Memberships() {
           <h1 className="page-title">MEMBERSHIP PLANS</h1>
           <p className="page-subtitle">CHOOSE THE PLAN THAT FITS YOUR GOALS.</p>
         </div>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => navigate('/subscription-plans?tab=trial')}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <CalendarCheck size={16} />
+          One-Day Trial Registration
+        </button>
       </div>
 
       <div className="plans-grid">

@@ -103,9 +103,9 @@ export default function ResearchPipelineModal({ isOpen, onClose, onComplete }) {
             height: '48px',
             borderRadius: '50%',
             background: 'var(--primary)',
-            color: '#fff',
+            color: 'var(--primary-text)',
             marginBottom: '0.75rem',
-            boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)'
+            boxShadow: '0 4px 14px var(--primary-glow)'
           }}>
             <Cpu size={24} className="spin-slow" />
           </div>

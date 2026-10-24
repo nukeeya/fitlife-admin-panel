@@ -152,7 +152,7 @@ export default function ExpenseFormModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditing ? 'Edit Expense Record (Demo)' : 'Log New Operating Expense (Demo)'}
+      title={isEditing ? 'Edit Expense Record' : 'Log New Operating Expense'}
       subtitle="Track gym facility rent, salaries, utilities, equipment repair and supplies"
       icon={DollarSign}
       size="md"

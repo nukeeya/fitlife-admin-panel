@@ -7,7 +7,6 @@ import {
   Clock,
   Heart,
   Target,
-  Sparkles,
   LayoutGrid,
   List,
   Eye,
@@ -240,7 +239,6 @@ export default function ApprovalManagement() {
                         style={{ flex: 2, justifyContent: 'center' }}
                         onClick={() => setSelectedAppForApproval(app)}
                       >
-                        <Sparkles size={14} />
                         Approve
                       </button>
                       <button
@@ -346,7 +344,7 @@ export default function ApprovalManagement() {
                                 onClick={() => setSelectedAppForApproval(app)}
                                 title="Approve with dynamic discount"
                               >
-                                <Sparkles size={13} /> Approve
+                                Approve
                               </button>
                               <button
                                 className="btn btn-danger btn-sm"
@@ -391,7 +389,7 @@ export default function ApprovalManagement() {
                   setSelectedAppForApproval(target);
                 }}
               >
-                <Sparkles size={14} /> Proceed to Approve & Discount
+                Proceed to Approve & Discount
               </button>
             )}
           </div>

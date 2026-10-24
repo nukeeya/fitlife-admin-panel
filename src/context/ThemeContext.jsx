@@ -77,6 +77,7 @@ export function ThemeProvider({ children }) {
     root.style.setProperty('--primary-hover', `${settings.primaryColor}E6`);
 
     if (settings.theme === 'dark') {
+      root.style.setProperty('--primary-text', '#000000');
       root.style.setProperty('--bg-base', settings.bgColor || '#080808');
       root.style.setProperty('--bg-card', '#141416');
       root.style.setProperty('--bg-surface', '#1B1B1F');
@@ -87,6 +88,7 @@ export function ThemeProvider({ children }) {
       root.style.setProperty('--text-secondary', '#94A3B8');
       root.style.setProperty('--text-muted', '#64748B');
     } else {
+      root.style.setProperty('--primary-text', '#FFFFFF');
       root.style.setProperty('--bg-base', settings.bgColor || '#F8FAFC');
       root.style.setProperty('--bg-card', '#FFFFFF');
       root.style.setProperty('--bg-surface', '#F1F5F9');

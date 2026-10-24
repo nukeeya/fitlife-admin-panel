@@ -26,6 +26,8 @@ import DietPlans from './pages/DietPlans';
 import JobPosting from './pages/JobPosting';
 import Reports from './pages/Reports';
 import SystemManagement from './pages/SystemManagement';
+import VisitorEntry from './pages/VisitorEntry';
+import DeviceManagement from './pages/DeviceManagement';
 import ErrorBoundary from './components/ErrorBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -57,6 +59,10 @@ export default function App() {
               <Route path="/memberships" element={<Memberships />} />
               <Route path="/whatsapp" element={<SMSManagement />} />
               <Route path="/sms" element={<Navigate to="/whatsapp" replace />} />
+              <Route path="/visitors" element={<VisitorEntry />} />
+              <Route path="/visitor-entry" element={<Navigate to="/visitors" replace />} />
+              <Route path="/devices" element={<DeviceManagement />} />
+              <Route path="/device" element={<Navigate to="/devices" replace />} />
               <Route path="/subscription-plans" element={<SubscriptionPlans />} />
               <Route path="/advertisements" element={<Navigate to="/dashboard" replace />} />
               <Route path="/gym-shop" element={<GymShop />} />

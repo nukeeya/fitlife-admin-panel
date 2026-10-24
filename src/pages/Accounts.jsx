@@ -51,7 +51,7 @@ export default function Accounts() {
         <div className="page-title-group">
           <h1 className="page-title">Accounts & Financial Management</h1>
           <p className="page-subtitle">
-            Comprehensive accounting suite: partial-payment dues simulator, monthly closing reconciliation, multi-channel gateways, dynamic revenue recognition, and reconciled statements.
+            Comprehensive accounting suite: partial-payment dues tracking, monthly closing reconciliation, multi-channel gateways, dynamic revenue recognition, and reconciled statements.
           </p>
         </div>
 

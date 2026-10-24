@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Check, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Check, Plus, RotateCcw, Trash2, CalendarCheck, Award } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
 import { supabase } from '../lib/supabase';
 import Modal from '../components/common/Modal';
+import OneDayTrialManagement from '../components/OneDayTrialManagement';
 
 const EMPTY_FORM = {
   name: '',
@@ -12,6 +14,8 @@ const EMPTY_FORM = {
 };
 
 export default function SubscriptionPlans() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentTab = searchParams.get('tab') || 'plans';
   const { plans, activePlans, refresh } = useGymData();
   const [showAddModal, setShowAddModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -116,21 +120,49 @@ export default function SubscriptionPlans() {
       <div className="page-header">
         <div className="page-title-group">
           <h1 className="page-title">Subscription Plans & Package Catalog</h1>
-          <p className="page-subtitle">Membership offers available at the Dhanmondi branch.</p>
+          <p className="page-subtitle">Membership tiers, duration terms, and one-day trial registration.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => {
-          setForm(EMPTY_FORM);
-          setError('');
-          setShowAddModal(true);
-        }}>
-          <Plus size={16} /> ADD PLAN
+        {currentTab === 'plans' && (
+          <button className="btn btn-primary" onClick={() => {
+            setForm(EMPTY_FORM);
+            setError('');
+            setShowAddModal(true);
+          }}>
+            <Plus size={16} /> ADD PLAN
+          </button>
+        )}
+      </div>
+
+      {/* Subtabs Bar */}
+      <div className="subtabs-bar" style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+        <button
+          type="button"
+          className={`subtab-btn ${currentTab === 'plans' ? 'active' : ''}`}
+          onClick={() => setSearchParams({ tab: 'plans' })}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <Award size={14} />
+          <span>Subscription Plans ({plans.length})</span>
+        </button>
+        <button
+          type="button"
+          className={`subtab-btn ${currentTab === 'trial' ? 'active' : ''}`}
+          onClick={() => setSearchParams({ tab: 'trial' })}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <CalendarCheck size={14} />
+          <span>One-Day Trial Registration</span>
         </button>
       </div>
 
-      {notice && <p role="status" style={{ color: 'var(--success, #10B981)' }}>{notice}</p>}
-      {error && !showAddModal && <p role="alert" style={{ color: 'var(--danger)' }}>{error}</p>}
+      {currentTab === 'trial' ? (
+        <OneDayTrialManagement />
+      ) : (
+        <>
+          {notice && <p role="status" style={{ color: 'var(--success, #10B981)' }}>{notice}</p>}
+          {error && !showAddModal && <p role="alert" style={{ color: 'var(--danger)' }}>{error}</p>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
         {plans.map((plan) => (
           <div
             key={plan.id}
@@ -192,6 +224,8 @@ export default function SubscriptionPlans() {
           </div>
         ))}
       </div>
+        </>
+      )}
 
       <Modal
         isOpen={showAddModal}

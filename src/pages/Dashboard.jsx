@@ -13,6 +13,7 @@ import {
   DollarSign,
   Activity,
   UserX,
+  UserPlus,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -123,6 +124,16 @@ export default function Dashboard() {
           <p className="page-subtitle">
             Enterprise analytics, multi-branch tracking & real-time gym floor activity.
           </p>
+        </div>
+        <div className="page-actions" style={{ display: 'flex', gap: '10px' }}>
+          <Link
+            to="/visitors"
+            className="btn btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <UserPlus size={16} />
+            Visitor Entry
+          </Link>
         </div>
       </div>
 
@@ -359,6 +370,7 @@ export default function Dashboard() {
                   backgroundColor: tooltipBg,
                   borderColor: tooltipBorder,
                   borderRadius: '8px',
+                  color: theme === 'light' ? '#0F172A' : '#FFFFFF',
                 }}
               />
               <Bar dataKey="count" fill={primaryColor} radius={[4, 4, 0, 0]} />

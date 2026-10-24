@@ -153,7 +153,7 @@ export default function RevenueRecognitionTab() {
             style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
           >
             <Calculator size={14} />
-            Duration Simulator
+            Duration Calculator
           </button>
 
           <button

@@ -174,7 +174,7 @@ export default function ExpenseManagementTab() {
             style={{ display: 'flex', alignItems: 'center', gap: '6px', height: '36px', fontWeight: 700 }}
           >
             <Plus size={15} />
-            Add Demo Expense
+            Add Expense
           </button>
         </div>
       </div>

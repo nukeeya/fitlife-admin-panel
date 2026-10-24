@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   Eye,
   History,
-  Sparkles,
   Clock,
   AlertTriangle,
   Lock,
@@ -120,10 +119,10 @@ export default function MemberDuesTab() {
           <Clock size={20} style={{ color: 'var(--primary)', flexShrink: 0 }} />
           <div>
             <strong style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
-              Due Reminder Dashboard & Aging Controller (Frontend Simulation)
+              Due Reminder Dashboard & Aging Controller
             </strong>
             <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
-              Current simulated evaluation date: <strong>{formatDatePretty(demoDate)}</strong> ({demoDate}). Toggle demo dates to test overdue alerts without waiting for time to pass.
+              Current evaluation date: <strong>{formatDatePretty(demoDate)}</strong> ({demoDate}). Toggle dates to test overdue alerts.
             </p>
           </div>
         </div>
@@ -173,14 +172,14 @@ export default function MemberDuesTab() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Sparkles size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+          <Clock size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} />
           <div>
             <strong style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
-              Interactive Demo Case: Farhan Ahmed (FLM-1008)
+              Featured Case: Farhan Ahmed (FLM-1008)
             </strong>
             <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
               3-Month Package ৳15,000 · Paid ৳10,000 + ৳3,000 · Remaining Due: <strong>৳2,000</strong> by <strong>25 Oct 2026</strong>.
-              Test recording payment or granting the one-time extension!
+              Record payment or grant the one-time extension.
             </p>
           </div>
         </div>
@@ -453,7 +452,7 @@ export default function MemberDuesTab() {
                             {item.memberName}
                             {item.memberCode === 'FLM-1008' && (
                               <span className="badge badge-info" style={{ marginLeft: '6px', fontSize: '9px', padding: '1px 5px' }}>
-                                Demo Case
+                                Priority Due
                               </span>
                             )}
                           </span>

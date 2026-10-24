@@ -6,6 +6,8 @@ import {
   UserCheck,
   Dumbbell,
   Briefcase,
+  UserPlus,
+  ScanFace,
   CreditCard,
   CalendarCheck,
   MessageCircle,
@@ -158,6 +160,28 @@ export default function Sidebar({ isOpen = false, onClose }) {
           </div>
         </NavLink>
 
+        {/* Walk-In Visitors */}
+        <NavLink
+          to="/visitors"
+          className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+        >
+          <div className="sidebar-link-content">
+            <UserPlus size={18} />
+            <span>Walk-In Visitors</span>
+          </div>
+        </NavLink>
+
+        {/* Access Control & Biometric Device */}
+        <NavLink
+          to="/devices"
+          className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+        >
+          <div className="sidebar-link-content">
+            <ScanFace size={18} />
+            <span>Device</span>
+          </div>
+        </NavLink>
+
         <span className="nav-section-title">Finance & Attendance</span>
 
         {/* 7. Accounts (Submenus) */}
@@ -271,6 +295,9 @@ export default function Sidebar({ isOpen = false, onClose }) {
               <NavLink to="/subscription-plans?tab=plans" className="submenu-link">
                 • Subscription Plan List
               </NavLink>
+              <NavLink to="/subscription-plans?tab=trial" className="submenu-link">
+                • One-Day Trial Registration
+              </NavLink>
               <NavLink to="/subscription-plans?tab=features" className="submenu-link">
                 • Subscription Feature List
               </NavLink>
@@ -301,25 +328,25 @@ export default function Sidebar({ isOpen = false, onClose }) {
           </div>
         </NavLink>
 
-        {/* 13. AI Workout Management */}
+        {/* 13. Make Workout Plan */}
         <NavLink
           to="/ai-workouts"
           className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
         >
           <div className="sidebar-link-content">
             <Cpu size={18} />
-            <span>AI Workout Management</span>
+            <span>Make Workout Plan</span>
           </div>
         </NavLink>
 
-        {/* 13. AI Diet Plan */}
+        {/* 13. Make Diet Plan */}
         <NavLink
           to="/diet-plans"
           className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
         >
           <div className="sidebar-link-content">
             <Apple size={18} />
-            <span>AI Diet Plan</span>
+            <span>Make Diet Plan</span>
           </div>
         </NavLink>
 

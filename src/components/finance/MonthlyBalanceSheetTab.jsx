@@ -83,7 +83,7 @@ export default function MonthlyBalanceSheetTab() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Scale size={18} style={{ color: '#F59E0B', flexShrink: 0 }} />
           <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-            <strong>Internal Management Accounts (Demo):</strong> Reconciled operational statement separating cash-basis liquid inflows from accrual recognized revenue. This display represents management accounting, not statutory audit compliance.
+            <strong>Internal Management Accounts:</strong> Reconciled operational statement separating cash-basis liquid inflows from accrual recognized revenue. This display represents management accounting, not statutory audit compliance.
           </span>
         </div>
 

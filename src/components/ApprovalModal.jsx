@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect } from 'react';
 import {
   CheckCircle2,
   ShieldAlert,
-  Sparkles,
   UserCheck,
   Calculator,
   Calendar,
@@ -651,8 +650,7 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Sparkles size={15} />
+            <button type="submit" className="btn btn-primary">
               Confirm Approval & Issue Billing
             </button>
           </div>

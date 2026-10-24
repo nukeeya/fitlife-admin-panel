@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Calculator, Sparkles, CheckCircle2, RotateCcw } from 'lucide-react';
+import { Calculator, CheckCircle2, RotateCcw } from 'lucide-react';
 import Modal from '../../common/Modal';
 import {
   formatBDT,
@@ -52,7 +52,7 @@ export default function RevenueSimulatorModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Dynamic Revenue Recognition Simulator"
+      title="Dynamic Revenue Recognition Calculator"
       subtitle="Interactive multi-duration modeling engine with penny-rounding reconciliation"
       icon={Calculator}
       size="xl"
@@ -62,7 +62,7 @@ export default function RevenueSimulatorModal({
             Sum of allocations: <strong>{formatBDT(simulation.monthlySchedule.reduce((s, m) => s + m.allocatedRevenue, 0))}</strong> (Strictly equals Net Consideration {formatBDT(simulation.netConsideration)})
           </span>
           <button type="button" className="btn btn-secondary" onClick={onClose}>
-            Close Simulator
+            Close Calculator
           </button>
         </div>
       }

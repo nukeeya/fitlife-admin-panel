@@ -44,7 +44,7 @@ export default function OverdueReminderModal({ isOpen, onClose }) {
         isOpen={isOpen}
         onClose={onClose}
         title={`Overdue Receivables & Action Center (${overdueCount} Alerts)`}
-        subtitle={`Critical payment deadlines exceeded as of demo simulation date (${demoDate})`}
+        subtitle={`Critical payment deadlines exceeded as of evaluation date (${demoDate})`}
         icon={AlertTriangle}
         size="lg"
         footer={
@@ -59,7 +59,7 @@ export default function OverdueReminderModal({ isOpen, onClose }) {
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Demo Date Controller inside Overdue Reminder */}
+          {/* Date Controller inside Overdue Reminder */}
           <div
             style={{
               padding: '12px 16px',
@@ -76,7 +76,7 @@ export default function OverdueReminderModal({ isOpen, onClose }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Clock size={16} color="var(--danger)" />
               <span style={{ fontSize: '12px', color: 'var(--text-primary)' }}>
-                <strong>Controllable Demo Date:</strong> Today is set to <strong>{demoDate}</strong>.
+                <strong>Evaluation Date:</strong> Reference date is set to <strong>{demoDate}</strong>.
               </span>
             </div>
 

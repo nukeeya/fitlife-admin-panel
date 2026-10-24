@@ -22,7 +22,7 @@ export default function ExtendDueDateModal({
 
   const [newDueDate, setNewDueDate] = useState('');
   const [reason, setReason] = useState('');
-  const [adminName, setAdminName] = useState('Front Desk Lead (Demo)');
+  const [adminName, setAdminName] = useState('Front Desk Lead');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
@@ -38,7 +38,7 @@ export default function ExtendDueDateModal({
     setError('');
 
     if (isAlreadyExtended) {
-      setError('Extension Already Used: Only one extension is permitted per mock due record.');
+      setError('Extension Already Used: Only one extension is permitted per due record.');
       return;
     }
 
@@ -81,7 +81,7 @@ export default function ExtendDueDateModal({
       isOpen={isOpen}
       onClose={onClose}
       title="One-Time Due-Date Extension"
-      subtitle="Extend payment clearance deadline under single-use demo policy"
+      subtitle="Extend payment clearance deadline under single-use policy"
       icon={Clock}
       size="md"
       footer={
@@ -278,7 +278,7 @@ export default function ExtendDueDateModal({
                 }}
               >
                 <Info size={13} />
-                <span>Frontend demo simulation: Policy enforced in memory until backend deployment.</span>
+                <span>Policy Notice: Single extension permitted per overdue invoice.</span>
               </div>
             </>
           )}

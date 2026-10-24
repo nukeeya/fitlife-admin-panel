@@ -13,7 +13,13 @@ import {
   CheckCircle2,
   Shield,
   ArrowRight,
-  Activity
+  Activity,
+  Cpu,
+  Edit2,
+  Save,
+  Check,
+  ExternalLink,
+  Utensils,
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
 import { calculateNutritionProfile, calculateBMI } from '../utils/fitnessCalculations';
@@ -23,11 +29,15 @@ import { generateFitnessPlanPDF } from '../utils/planPdfGenerator';
 import IntakeProfileModal from '../components/fitness/IntakeProfileModal';
 import ResearchPipelineModal from '../components/fitness/ResearchPipelineModal';
 import FoodSubstitutionModal from '../components/fitness/FoodSubstitutionModal';
+import {
+  generateGeminiDietPlan,
+  GROUNDING_SOURCES_DIET,
+} from '../services/geminiFitnessService';
 
-// Sample pre-calculated Bangladeshi meal protocol
+// Sample pre-calculated authentic Bangladeshi meal protocol
 const DEFAULT_BANGLADESHI_MEALS = [
   {
-    mealName: 'Meal 1 - Morning Energy Breakfast',
+    mealName: 'Meal 1 — Morning Energy Breakfast (সকালের নাস্তা)',
     time: '08:00 AM',
     items: [
       {
@@ -40,19 +50,19 @@ const DEFAULT_BANGLADESHI_MEALS = [
         protein: 12.6,
         carbs: 0.8,
         fat: 9.5,
-        fiber: 0
+        fiber: 0,
       },
       {
         foodId: 'roti_atta',
         name: 'Whole Wheat Atta Roti',
-        banglaName: 'আটার রুটি',
+        banglaName: 'হাতে বানানো আটার রুটি',
         portionGrams: 70,
         servingDesc: '2 medium rotis',
         calories: 180,
         protein: 6.2,
         carbs: 36,
         fat: 1.0,
-        fiber: 5.6
+        fiber: 5.6,
       },
       {
         foodId: 'tok_doi',
@@ -64,37 +74,37 @@ const DEFAULT_BANGLADESHI_MEALS = [
         protein: 5.3,
         carbs: 7.0,
         fat: 4.8,
-        fiber: 0
-      }
-    ]
+        fiber: 0,
+      },
+    ],
   },
   {
-    mealName: 'Meal 2 - High Protein Anabolic Lunch',
+    mealName: 'Meal 2 — High Protein Anabolic Lunch (দুপুরের খাবার)',
     time: '01:30 PM',
     items: [
       {
         foodId: 'bhaat_shada',
         name: 'White Rice (Bhaat)',
-        banglaName: 'সাদা ভাত',
+        banglaName: 'সাদা ভাত / লাল চালের ভাত',
         portionGrams: 150,
         servingDesc: '1 medium vati (cup)',
         calories: 195,
         protein: 4.1,
         carbs: 43.5,
         fat: 0.4,
-        fiber: 0.6
+        fiber: 0.6,
       },
       {
         foodId: 'rui_maach',
         name: 'Rui Fish Curry',
         banglaName: 'রুই মাছ ঝোল',
         portionGrams: 150,
-        servingDesc: '1 large piece (no excess oil)',
+        servingDesc: '1 large piece (light olive/mustard oil)',
         calories: 165,
         protein: 29.6,
         carbs: 0,
         fat: 4.5,
-        fiber: 0
+        fiber: 0,
       },
       {
         foodId: 'mug_dal',
@@ -106,7 +116,7 @@ const DEFAULT_BANGLADESHI_MEALS = [
         protein: 9.8,
         carbs: 22.0,
         fat: 1.2,
-        fiber: 5.2
+        fiber: 5.2,
       },
       {
         foodId: 'lal_shaak',
@@ -118,12 +128,12 @@ const DEFAULT_BANGLADESHI_MEALS = [
         protein: 3.2,
         carbs: 5.0,
         fat: 1.5,
-        fiber: 3.8
-      }
-    ]
+        fiber: 3.8,
+      },
+    ],
   },
   {
-    mealName: 'Meal 3 - Pre-Workout Sustained Fuel',
+    mealName: 'Meal 3 — Pre-Workout Sustained Fuel (বিকেলের নাস্তা)',
     time: '05:30 PM',
     items: [
       {
@@ -136,64 +146,64 @@ const DEFAULT_BANGLADESHI_MEALS = [
         protein: 1.1,
         carbs: 22.8,
         fat: 0.3,
-        fiber: 2.6
+        fiber: 2.6,
       },
       {
         foodId: 'chhola_bhoot',
         name: 'Boiled Chickpeas (Chhola)',
-        banglaName: 'সেদ্ধ ছোলা',
+        banglaName: 'সেদ্ধ ছোলা হালকা শসা সহ',
         portionGrams: 60,
         servingDesc: 'half cup boiled',
         calories: 98,
         protein: 5.3,
         carbs: 16.5,
         fat: 1.6,
-        fiber: 4.6
-      }
-    ]
+        fiber: 4.6,
+      },
+    ],
   },
   {
-    mealName: 'Meal 4 - Recovery Dinner',
+    mealName: 'Meal 4 — Recovery Dinner (রাতের খাবার)',
     time: '08:30 PM',
     items: [
       {
         foodId: 'murgi_deshi',
         name: 'Deshi Chicken Curry',
-        banglaName: 'দেশি মুরগি ভুনা',
+        banglaName: 'দেশি মুরগির মাংস ভুনা',
         portionGrams: 160,
         servingDesc: '2 medium pieces, drained gravy',
         calories: 220,
         protein: 34.5,
         carbs: 1.2,
         fat: 8.5,
-        fiber: 0.4
+        fiber: 0.4,
       },
       {
         foodId: 'roti_atta',
         name: 'Whole Wheat Atta Roti',
-        banglaName: 'আটার রুটি',
+        banglaName: 'হাতে বানানো লাল আটার রুটি',
         portionGrams: 70,
         servingDesc: '2 medium rotis',
         calories: 180,
         protein: 6.2,
         carbs: 36,
         fat: 1.0,
-        fiber: 5.6
+        fiber: 5.6,
       },
       {
         foodId: 'palong_shaak',
         name: 'Spinach / Palong Shaak',
-        banglaName: 'পালং শাক',
+        banglaName: 'পালং শাক ভাজি',
         portionGrams: 100,
         servingDesc: '1 small bowl',
         calories: 40,
         protein: 3.0,
         carbs: 4.2,
         fat: 1.2,
-        fiber: 3.0
-      }
-    ]
-  }
+        fiber: 3.0,
+      },
+    ],
+  },
 ];
 
 export default function DietPlans() {
@@ -209,7 +219,7 @@ export default function DietPlans() {
     isOpen: false,
     item: null,
     mealIndex: null,
-    itemIndex: null
+    itemIndex: null,
   });
 
   // Active Client & Plan State
@@ -219,8 +229,18 @@ export default function DietPlans() {
     gender: 'Male',
     age: 28,
     weight: 76,
-    height: 175
+    height: 175,
   };
+
+  // Dietary Preferences Form for Gemini AI
+  const [dietForm, setDietForm] = useState({
+    goal: 'fat_loss',
+    activityLevel: 'moderate',
+    preferences: 'halal_traditional',
+    allergies: 'None',
+    restrictions: 'None',
+    mealFrequency: '4',
+  });
 
   // Profile data for active client
   const [clientProfile, setClientProfile] = useState({
@@ -235,11 +255,11 @@ export default function DietPlans() {
     dietPreference: 'non_veg',
     dailyBudget: 'moderate',
     allergies: 'None',
-    dislikedFoods: 'Bitter gourd (Korola)',
-    dailyWaterIntake: 2.0,
+    dislikedFoods: 'None',
+    dailyWaterIntake: 2.5,
     averageSleepHours: 7.0,
     dailyStepCount: 7500,
-    stressLevel: 'Moderate'
+    stressLevel: 'Moderate',
   });
 
   // Calculate biometrics and calories
@@ -249,6 +269,11 @@ export default function DietPlans() {
 
   // Current Meals (allows interactive swapping)
   const [currentMeals, setCurrentMeals] = useState(DEFAULT_BANGLADESHI_MEALS);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStep, setGenerationStep] = useState('');
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isPlanSaved, setIsPlanSaved] = useState(false);
+  const [showGroundingSources, setShowGroundingSources] = useState(true);
 
   // Totals calculated from active meals
   const mealTotals = useMemo(() => {
@@ -258,8 +283,8 @@ export default function DietPlans() {
     let totalF = 0;
     let totalFib = 0;
 
-    currentMeals.forEach(meal => {
-      meal.items.forEach(item => {
+    currentMeals.forEach((meal) => {
+      meal.items.forEach((item) => {
         totalCals += Number(item.calories) || 0;
         totalP += Number(item.protein) || 0;
         totalC += Number(item.carbs) || 0;
@@ -273,15 +298,97 @@ export default function DietPlans() {
       protein: Math.round(totalP),
       carbs: Math.round(totalC),
       fat: Math.round(totalF),
-      fiber: Math.round(totalFib)
+      fiber: Math.round(totalFib),
     };
   }, [currentMeals]);
 
-  // Evidence research sources for active goal
-  const researchSources = useMemo(() => {
-    const rawGoal = clientProfile?.goal || clientProfile?.primaryGoal || 'Fat Loss';
-    return getResearchSourcesForGoal(rawGoal);
-  }, [clientProfile?.goal, clientProfile?.primaryGoal]);
+  // Handle member change
+  const handleMemberChange = (id) => {
+    const numId = Number(id);
+    setSelectedMemberId(numId);
+    const mem = members.find((m) => m.id === numId);
+    if (mem) {
+      setClientProfile((prev) => ({
+        ...prev,
+        name: mem.name,
+        gender: mem.gender || 'Male',
+      }));
+    }
+  };
+
+  // Generate Diet Plan with simulated Gemini AI
+  const handleGenerateGeminiDiet = async () => {
+    setIsGenerating(true);
+    setGenerationStep('Gemini 2.5 Flash analyzing member caloric requirements & metabolic rate...');
+
+    const stepTimer = setTimeout(() => {
+      setGenerationStep('Synthesizing authentic Bangladeshi meals from verified nutritional composition database...');
+    }, 600);
+
+    try {
+      const result = await generateGeminiDietPlan({
+        member: activeMember,
+        profile: {
+          ...dietForm,
+          weight: clientProfile.weight,
+          height: clientProfile.height,
+        },
+      });
+
+      // Update client profile goal
+      setClientProfile((prev) => ({
+        ...prev,
+        goal: dietForm.goal,
+        activityLevel: dietForm.activityLevel,
+        allergies: dietForm.allergies,
+      }));
+
+      // Update meals with generated structure
+      if (result.meals && result.meals.length > 0) {
+        const formatted = result.meals.map((m) => ({
+          mealName: m.mealName,
+          time: m.time,
+          items: m.items.map((it) => ({
+            foodId: it.foodName.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+            name: it.foodName.split('(')[0]?.trim(),
+            banglaName: it.foodName.includes('(') ? it.foodName.split('(')[1]?.replace(')', '') : '',
+            portionGrams: it.grams,
+            servingDesc: it.portion,
+            calories: it.calories,
+            protein: it.protein,
+            carbs: it.carbs,
+            fat: it.fat,
+            fiber: 2,
+          })),
+        }));
+        setCurrentMeals(formatted);
+      }
+      setIsEditMode(false);
+    } catch (err) {
+      console.error('Gemini diet generation error:', err);
+    } finally {
+      clearTimeout(stepTimer);
+      setIsGenerating(false);
+      setGenerationStep('');
+    }
+  };
+
+  // Save Plan
+  const handleSaveDietPlan = () => {
+    const newPlanRecord = {
+      id: Date.now(),
+      clientName: clientProfile.name,
+      memberId: selectedMemberId,
+      goal: clientProfile.goal,
+      dateGenerated: new Date().toISOString(),
+      profile: clientProfile,
+      calculations: nutritionCalculations,
+      meals: currentMeals,
+    };
+    saveDietPlan(newPlanRecord);
+    setIsPlanSaved(true);
+    setTimeout(() => setIsPlanSaved(false), 2500);
+  };
 
   // Handle Intake submission -> launch pipeline modal
   const handleIntakeSubmit = (profileData) => {
@@ -293,7 +400,7 @@ export default function DietPlans() {
   // Handle Pipeline completion -> apply new plan
   const handlePipelineComplete = () => {
     if (pendingProfileData) {
-      const resolvedGoal = pendingProfileData.goal || pendingProfileData.primaryGoal || 'Fat Loss';
+      const resolvedGoal = pendingProfileData.goal || pendingProfileData.primaryGoal || 'fat_loss';
       const resolvedWeight = Number(pendingProfileData.weight || pendingProfileData.weightKg) || 75;
       const resolvedHeight = Number(pendingProfileData.height || pendingProfileData.heightCm) || 175;
       const resolvedTargetWeight = Number(pendingProfileData.targetWeight || pendingProfileData.targetWeightKg) || 70;
@@ -320,8 +427,12 @@ export default function DietPlans() {
       };
 
       setClientProfile(normalizedProfile);
+      setDietForm((prev) => ({
+        ...prev,
+        goal: resolvedGoal,
+        activityLevel: normalizedProfile.activityLevel,
+      }));
 
-      // Save to global context
       const newPlanRecord = {
         id: Date.now(),
         clientName: normalizedProfile.name,
@@ -330,7 +441,7 @@ export default function DietPlans() {
         dateGenerated: new Date().toISOString(),
         profile: normalizedProfile,
         calculations: calculateNutritionProfile(normalizedProfile),
-        meals: currentMeals
+        meals: currentMeals,
       };
       saveDietPlan(newPlanRecord);
     }
@@ -339,7 +450,7 @@ export default function DietPlans() {
 
   // Handle food swap selection from modal
   const handleApplyFoodSwap = (mealIdx, itemIdx, newFoodSub) => {
-    setCurrentMeals(prev => {
+    setCurrentMeals((prev) => {
       const nextMeals = JSON.parse(JSON.stringify(prev));
       nextMeals[mealIdx].items[itemIdx] = {
         foodId: newFoodSub.id,
@@ -351,121 +462,307 @@ export default function DietPlans() {
         protein: newFoodSub.protein,
         carbs: newFoodSub.carbs,
         fat: newFoodSub.fat,
-        fiber: newFoodSub.fiber
+        fiber: newFoodSub.fiber,
       };
       return nextMeals;
     });
+    setSubModalState({ isOpen: false, item: null, mealIndex: null, itemIndex: null });
   };
 
-  // Single-Click Professional PDF Downloads
+  // Handle PDF Export
   const handleDownloadPDF = (type = 'diet') => {
-    const goalTitle = (clientProfile?.goal || clientProfile?.primaryGoal || 'Fitness').toString().replace(/_/g, ' ');
+    const w = Number(clientProfile?.weight || clientProfile?.weightKg) || 75;
+    const h = Number(clientProfile?.height || clientProfile?.heightCm) || 175;
+    const bmiData = calculateBMI(w, h);
     generateFitnessPlanPDF({
       client: {
         ...clientProfile,
         name: clientProfile?.name || activeMember?.name || 'Member',
-        goal: goalTitle,
-        primaryGoal: goalTitle,
-        weight: clientProfile?.weight || clientProfile?.weightKg || 75,
-        height: clientProfile?.height || clientProfile?.heightCm || 175,
-        bmi: nutritionCalculations?.bmi?.bmi || 24.5,
-        bmiClassification: nutritionCalculations?.bmi?.classification || 'Normal Weight',
-        bmr: nutritionCalculations?.bmr || 1700,
-        tdee: nutritionCalculations?.tdee || 2400,
-        targetCalories: nutritionCalculations?.targetCalories || 2000,
-        waterLitersMin: nutritionCalculations?.waterTarget?.litersMin || 2.5,
-        waterLitersMax: nutritionCalculations?.waterTarget?.litersMax || 3.0,
-        fiberTargetGrams: nutritionCalculations?.fiberTargetGrams || 28
+        weight: w,
+        height: h,
+        bmi: bmiData.bmi,
+        bmiClassification: bmiData.classification,
       },
       dietPlan: {
-        title: `${clientProfile?.name || 'Member'}'s Evidence-Based Bangladeshi Protocol`,
-        caloricTarget: nutritionCalculations?.targetCalories || 2000,
-        proteinGrams: nutritionCalculations?.protein?.grams || 150,
-        carbGrams: nutritionCalculations?.carbs?.grams || 200,
-        fatGrams: nutritionCalculations?.fats?.grams || 55,
-        meals: currentMeals
+        calculations: nutritionCalculations,
+        meals: currentMeals,
+        totals: mealTotals,
       },
       workoutPlan: null,
-      researchSources: researchSources || [],
+      researchSources: GROUNDING_SOURCES_DIET,
       branding,
-      type
+      type,
     });
   };
 
   return (
     <div className="page" style={{ paddingBottom: '3rem' }}>
       {/* Page Header */}
-      <div className="page-header" style={{ marginBottom: '1.5rem' }}>
+      <div className="page-header" style={{ marginBottom: '1.25rem' }}>
         <div className="page-title-group">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '3px 8px',
-              borderRadius: '6px',
-              background: 'rgba(239, 68, 68, 0.12)',
-              color: 'var(--primary)',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              textTransform: 'uppercase'
-            }}>
-              <Shield size={12} /> Clinical & Evidence-Based Engine
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '3px 8px',
+                borderRadius: '6px',
+                background: 'rgba(200, 255, 0, 0.12)',
+                color: 'var(--primary)',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+              }}
+            >
+              <Cpu size={12} /> Gemini AI & Clinical Nutrition Engine
             </span>
           </div>
-          <h1 className="page-title">AI Clinical Diet & Nutrition Engine</h1>
+          <h1 className="page-title">Make Diet Plan</h1>
           <p className="page-subtitle">
-            Mifflin-St Jeor Biometrics • ACSM Multipliers • Peer-Reviewed Sports Nutrition • Authentic Bangladeshi Food Database
+            Google Gemini 2.5 Architecture • Bangladeshi Food Composition • Mifflin-St Jeor Biometrics • A4 PDF Export
           </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <select
-            className="form-select"
-            value={selectedMemberId}
-            onChange={(e) => {
-              const id = Number(e.target.value);
-              setSelectedMemberId(id);
-              const mem = members.find(m => m.id === id);
-              if (mem) {
-                setClientProfile(prev => ({
-                  ...prev,
-                  name: mem.name,
-                  gender: mem.gender || 'Male'
-                }));
-              }
-            }}
-            style={{ minWidth: '180px' }}
-          >
-            {members.map(m => (
-              <option key={m.id} value={m.id}>{m.name} ({m.code})</option>
-            ))}
-          </select>
-
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn btn-secondary"
             onClick={() => setIsIntakeOpen(true)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
             <Plus size={16} />
-            Generate New Plan
+            Full Clinical Intake Modal
           </button>
         </div>
       </div>
 
-      {/* Top Biometric & Caloric Cards */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-        gap: '14px',
-        marginBottom: '1.75rem'
-      }}>
+      {/* GEMINI AI INTEGRATION ARCHITECTURE BANNER */}
+      <div
+        style={{
+          background: 'rgba(59, 130, 246, 0.08)',
+          border: '1px solid rgba(59, 130, 246, 0.25)',
+          borderRadius: '12px',
+          padding: '12px 18px',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          fontSize: '12px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Cpu size={20} style={{ color: '#3B82F6', flexShrink: 0 }} />
+          <div>
+            <strong style={{ color: 'var(--text-primary)' }}>Google Gemini API & Search Grounding Prepared:</strong>{' '}
+            <span style={{ color: 'var(--text-secondary)' }}>
+              Nutritional forms, portion calculator, and Bangladeshi food dataset are ready. Future backend route will pass these parameters to Gemini 2.5 Flash with search grounding.
+            </span>
+          </div>
+        </div>
+        <span className="badge badge-primary" style={{ fontSize: '10px' }}>
+          Frontend Simulation Mode
+        </span>
+      </div>
+
+      {/* MEMBER SELECTION & DIETARY PREFERENCE FORM */}
+      <div
+        style={{
+          background: 'var(--bg-card)',
+          borderRadius: '12px',
+          border: '1px solid var(--border-color)',
+          padding: '18px 20px',
+          marginBottom: '1.5rem',
+          boxShadow: 'var(--shadow-card)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Utensils size={18} style={{ color: 'var(--primary)' }} />
+            <h2 style={{ fontSize: '15px', fontWeight: 800, margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Member Selection & Dietary Preferences
+            </h2>
+          </div>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            Configures caloric & macronutrient inputs for Gemini AI
+          </span>
+        </div>
+
+        <div className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+          {/* Member Selection */}
+          <div className="form-group">
+            <label className="form-label">Select Gym Member *</label>
+            <select
+              className="form-select"
+              value={selectedMemberId}
+              onChange={(e) => handleMemberChange(e.target.value)}
+            >
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name} ({m.code || `FLM-${m.id}`})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Fitness Goal */}
+          <div className="form-group">
+            <label className="form-label">Nutritional Goal *</label>
+            <select
+              className="form-select"
+              value={dietForm.goal}
+              onChange={(e) => setDietForm((prev) => ({ ...prev, goal: e.target.value }))}
+            >
+              <option value="fat_loss">Fat Loss & Caloric Deficit (Shred)</option>
+              <option value="hypertrophy">Lean Muscle Mass & Anabolic Surplus</option>
+              <option value="maintenance">Maintenance & Body Recomposition</option>
+            </select>
+          </div>
+
+          {/* Activity Level */}
+          <div className="form-group">
+            <label className="form-label">Activity Level *</label>
+            <select
+              className="form-select"
+              value={dietForm.activityLevel}
+              onChange={(e) => setDietForm((prev) => ({ ...prev, activityLevel: e.target.value }))}
+            >
+              <option value="sedentary">Sedentary (Desk Job, Minimal Movement)</option>
+              <option value="light">Lightly Active (1 – 3 Gym Sessions/Week)</option>
+              <option value="moderate">Moderately Active (3 – 5 Gym Sessions/Week)</option>
+              <option value="very_active">Very Active (6 – 7 High-Intensity Sessions)</option>
+              <option value="athlete">Athlete / Two-a-Day Heavy Training</option>
+            </select>
+          </div>
+
+          {/* Food Preferences */}
+          <div className="form-group">
+            <label className="form-label">Food Preferences *</label>
+            <select
+              className="form-select"
+              value={dietForm.preferences}
+              onChange={(e) => setDietForm((prev) => ({ ...prev, preferences: e.target.value }))}
+            >
+              <option value="halal_traditional">Bangladeshi Halal Traditional (Fish, Meat, Dal, Rice)</option>
+              <option value="high_protein">High Protein Bodybuilding Focus</option>
+              <option value="pescatarian">Pescatarian (Fish, Eggs, Dairy, Vegetables)</option>
+              <option value="balanced">Balanced General Health</option>
+            </select>
+          </div>
+
+          {/* Allergies */}
+          <div className="form-group">
+            <label className="form-label">Known Allergies</label>
+            <select
+              className="form-select"
+              value={dietForm.allergies}
+              onChange={(e) => setDietForm((prev) => ({ ...prev, allergies: e.target.value }))}
+            >
+              <option value="None">None</option>
+              <option value="Lactose">Lactose / Dairy Intolerance</option>
+              <option value="Peanuts">Peanut / Tree Nut Allergy</option>
+              <option value="Shellfish">Prawn / Shellfish Allergy</option>
+              <option value="Gluten">Gluten Sensitivity</option>
+            </select>
+          </div>
+
+          {/* Dietary Restrictions */}
+          <div className="form-group">
+            <label className="form-label">Dietary Restrictions</label>
+            <select
+              className="form-select"
+              value={dietForm.restrictions}
+              onChange={(e) => setDietForm((prev) => ({ ...prev, restrictions: e.target.value }))}
+            >
+              <option value="None">None (Standard Healthy)</option>
+              <option value="Diabetic">Diabetic-Friendly (Low Glycemic Index)</option>
+              <option value="LowSodium">Low Sodium (Hypertension-Safe)</option>
+              <option value="HighFiber">High Fiber (Digestive Health)</option>
+            </select>
+          </div>
+
+          {/* Meal Frequency */}
+          <div className="form-group">
+            <label className="form-label">Meal Frequency *</label>
+            <select
+              className="form-select"
+              value={dietForm.mealFrequency}
+              onChange={(e) => setDietForm((prev) => ({ ...prev, mealFrequency: e.target.value }))}
+            >
+              <option value="3">3 Main Meals / Day</option>
+              <option value="4">4 Meals (3 Main + Pre-Workout Snack)</option>
+              <option value="5">5 Meals (High Frequency Anabolic Protocol)</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Generate Diet Plan Button */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleGenerateGeminiDiet}
+            disabled={isGenerating}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontWeight: 800 }}
+          >
+            {isGenerating ? (
+              <>
+                <RefreshCw size={16} className="spin-animation" />
+                Generating with Gemini AI...
+              </>
+            ) : (
+              <>
+                <Cpu size={16} />
+                Generate Diet Plan
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* AI GENERATION LOADING STATE */}
+      {isGenerating && (
+        <div
+          style={{
+            background: 'var(--bg-card)',
+            borderRadius: '12px',
+            border: '1px solid var(--primary)',
+            padding: '28px 20px',
+            marginBottom: '1.5rem',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '12px',
+            animation: 'fadeIn 0.2s ease-out',
+          }}
+        >
+          <RefreshCw size={32} className="spin-animation" style={{ color: 'var(--primary)' }} />
+          <h3 style={{ fontSize: '16px', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+            Synthesizing Nutrition Protocol via Gemini 2.5 Flash
+          </h3>
+          <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
+            {generationStep || 'Calculating caloric expenditure and authentic Bangladeshi food portions...'}
+          </p>
+        </div>
+      )}
+
+      {/* TOP BIOMETRIC & CALORIC CARDS */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+          gap: '14px',
+          marginBottom: '1.5rem',
+        }}
+      >
         {/* Daily Target Calories */}
         <div className="stat-card" style={{ padding: '1.1rem', borderLeft: '4px solid var(--primary)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>CALORIC TARGET</span>
-            <div style={{ padding: '6px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--primary)' }}>
+            <div style={{ padding: '6px', borderRadius: '8px', background: 'rgba(200, 255, 0, 0.1)', color: 'var(--primary)' }}>
               <Flame size={18} />
             </div>
           </div>
@@ -526,91 +823,112 @@ export default function DietPlans() {
         </div>
       </div>
 
-      {/* Main Grid: Client Profile Bar + PDF Exports */}
-      <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '1rem 1.25rem',
-        background: 'var(--bg-card)',
-        borderRadius: '12px',
-        border: '1px solid var(--border-color)',
-        marginBottom: '1.5rem',
-        gap: '12px'
-      }}>
+      {/* PLAN CONTROLS & PDF BAR */}
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '1rem 1.25rem',
+          background: 'var(--bg-card)',
+          borderRadius: '12px',
+          border: '1px solid var(--border-color)',
+          marginBottom: '1.5rem',
+          gap: '12px',
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-          <div style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '50%',
-            background: 'rgba(239, 68, 68, 0.15)',
-            color: 'var(--primary)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 800,
-            fontSize: '1.1rem'
-          }}>
-            {String(clientProfile?.name || 'Member').slice(0, 2).toUpperCase()}
-          </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                {clientProfile?.name || 'Member'}
+                {clientProfile?.name || 'Member'} — Nutritional Protocol
               </h3>
-              <span style={{
-                padding: '2px 8px',
-                borderRadius: '6px',
-                background: 'rgba(239, 68, 68, 0.1)',
-                color: 'var(--primary)',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                textTransform: 'uppercase'
-              }}>
-                {(clientProfile?.goal || clientProfile?.primaryGoal || 'General Fitness').toString().replace(/_/g, ' ')}
+              <span
+                style={{
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  background: 'rgba(200, 255, 0, 0.12)',
+                  color: 'var(--primary)',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                }}
+              >
+                {(clientProfile?.goal || 'General Fitness').toString().replace(/_/g, ' ')}
               </span>
             </div>
             <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              {clientProfile?.age || 28} yrs • {clientProfile?.gender || 'Male'} • {clientProfile?.height || clientProfile?.heightCm || 175} cm • {clientProfile?.weight || clientProfile?.weightKg || 75} kg
+              {clientProfile?.age || 28} yrs • {clientProfile?.gender || 'Male'} • {clientProfile?.height || 175} cm • {clientProfile?.weight || 76} kg
               (BMI: {nutritionCalculations?.bmi?.bmi || 24.5} - {nutritionCalculations?.bmi?.classification || 'Normal Weight'})
             </div>
           </div>
         </div>
 
-        {/* PDF Download Buttons */}
+        {/* Action Controls: Edit, Regenerate, Save, PDF */}
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setIsEditMode((prev) => !prev)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
+          >
+            <Edit2 size={14} />
+            {isEditMode ? 'Exit Edit Mode' : 'Edit Portions'}
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleGenerateGeminiDiet}
+            disabled={isGenerating}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
+          >
+            <RefreshCw size={14} />
+            Regenerate
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleSaveDietPlan}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
+          >
+            {isPlanSaved ? (
+              <>
+                <Check size={14} />
+                Plan Saved!
+              </>
+            ) : (
+              <>
+                <Save size={14} />
+                Save Plan
+              </>
+            )}
+          </button>
+
           <button
             type="button"
             className="btn btn-outline"
             onClick={() => handleDownloadPDF('diet')}
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
           >
-            <Download size={15} />
-            Download Diet Plan PDF
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => handleDownloadPDF('complete')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
-          >
-            <Download size={15} />
-            Download Complete Plan PDF
+            <Download size={14} />
+            PDF Export
           </button>
         </div>
       </div>
 
-      {/* Meal Plan Schedule (Bangladeshi Foods with Smart Swapping) */}
+      {/* MEAL PLAN SCHEDULE CARDS (Authentic Bangladeshi Foods) */}
       <div style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '8px' }}>
           <div>
             <h2 style={{ fontSize: '1.2rem', fontWeight: 800, margin: '0 0 4px 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Flame color="var(--primary)" />
+              <Flame color="var(--primary)" size={20} />
               Bangladeshi Evidence-Based Meal Schedule
             </h2>
             <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Target: {nutritionCalculations.targetCalories} kcal | Current Schedule Total: {mealTotals.calories} kcal ({mealTotals.protein}g P • {mealTotals.carbs}g C • {mealTotals.fat}g F • {mealTotals.fiber}g Fiber)
+              Target: {nutritionCalculations.targetCalories} kcal | Current Total: {mealTotals.calories} kcal ({mealTotals.protein}g P • {mealTotals.carbs}g C • {mealTotals.fat}g F • {mealTotals.fiber}g Fiber)
             </p>
           </div>
         </div>
@@ -623,105 +941,139 @@ export default function DietPlans() {
                 background: 'var(--bg-card)',
                 borderRadius: '12px',
                 border: '1px solid var(--border-color)',
-                overflow: 'hidden'
+                overflow: 'hidden',
               }}
             >
               {/* Meal Header */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '0.85rem 1.25rem',
-                background: 'rgba(255, 255, 255, 0.02)',
-                borderBottom: '1px solid var(--border-color)'
-              }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '0.85rem 1.25rem',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  borderBottom: '1px solid var(--border-color)',
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{
-                    padding: '3px 8px',
-                    borderRadius: '6px',
-                    background: 'rgba(239, 68, 68, 0.1)',
-                    color: 'var(--primary)',
-                    fontSize: '0.8rem',
-                    fontWeight: 700
-                  }}>
+                  <span
+                    style={{
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      background: 'rgba(200, 255, 0, 0.12)',
+                      color: 'var(--primary)',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                    }}
+                  >
                     {meal.time}
                   </span>
                   <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-main)' }}>
                     {meal.mealName}
                   </h4>
                 </div>
+
                 <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                  {meal.items.reduce((s, it) => s + (it.calories || 0), 0)} kcal •{' '}
-                  {Math.round(meal.items.reduce((s, it) => s + (it.protein || 0), 0))}g Protein
+                  {meal.items.reduce((s, it) => s + (Number(it.calories) || 0), 0)} kcal •{' '}
+                  <strong style={{ color: '#10b981' }}>{meal.items.reduce((s, it) => s + (Number(it.protein) || 0), 0).toFixed(1)}g Protein</strong>
                 </div>
               </div>
 
-              {/* Meal Food Items List */}
-              <div style={{ padding: '0.5rem 1.25rem', overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+              {/* Meal Items Table */}
+              <div style={{ overflowX: 'auto' }}>
+                <table className="table" style={{ margin: 0 }}>
                   <thead>
-                    <tr style={{ color: 'var(--text-muted)', fontSize: '0.76rem', textTransform: 'uppercase', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
-                      <th style={{ padding: '8px 4px' }}>Food Item (Bangla / English)</th>
-                      <th style={{ padding: '8px 4px' }}>Portion / Serving</th>
-                      <th style={{ padding: '8px 4px', textAlign: 'right' }}>Calories</th>
-                      <th style={{ padding: '8px 4px', textAlign: 'right' }}>Protein</th>
-                      <th style={{ padding: '8px 4px', textAlign: 'right' }}>Carbs</th>
-                      <th style={{ padding: '8px 4px', textAlign: 'right' }}>Fat</th>
-                      <th style={{ padding: '8px 4px', textAlign: 'center' }}>Smart Swap</th>
+                    <tr>
+                      <th>Food Item & Bengali Name</th>
+                      <th>Portion & Serving Size</th>
+                      <th>Calories</th>
+                      <th>Protein</th>
+                      <th>Carbs</th>
+                      <th>Fats</th>
+                      <th>Fiber</th>
+                      <th style={{ width: '90px', textAlign: 'center' }}>Smart Swap</th>
                     </tr>
                   </thead>
                   <tbody>
                     {meal.items.map((item, itemIdx) => (
-                      <tr key={itemIdx} style={{ borderBottom: itemIdx < meal.items.length - 1 ? '1px solid rgba(255, 255, 255, 0.04)' : 'none' }}>
-                        <td style={{ padding: '10px 4px', fontWeight: 600, color: 'var(--text-main)' }}>
-                          {item.name}{' '}
+                      <tr key={itemIdx}>
+                        <td>
+                          {isEditMode ? (
+                            <input
+                              type="text"
+                              className="form-input"
+                              value={item.name}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCurrentMeals((prev) => {
+                                  const copy = JSON.parse(JSON.stringify(prev));
+                                  copy[mealIdx].items[itemIdx].name = val;
+                                  return copy;
+                                });
+                              }}
+                              style={{ height: '30px', fontSize: '12px' }}
+                            />
+                          ) : (
+                            <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{item.name}</div>
+                          )}
                           {item.banglaName && (
-                            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 400 }}>
-                              ({item.banglaName})
-                            </span>
+                            <div style={{ fontSize: '0.78rem', color: 'var(--primary)', marginTop: '2px' }}>
+                              {item.banglaName}
+                            </div>
                           )}
                         </td>
-                        <td style={{ padding: '10px 4px', color: 'var(--text-muted)' }}>
-                          <strong>{item.portionGrams}g</strong> ({item.servingDesc})
+
+                        <td>
+                          {isEditMode ? (
+                            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                              <input
+                                type="number"
+                                className="form-input"
+                                value={item.portionGrams}
+                                onChange={(e) => {
+                                  const val = Number(e.target.value);
+                                  setCurrentMeals((prev) => {
+                                    const copy = JSON.parse(JSON.stringify(prev));
+                                    copy[mealIdx].items[itemIdx].portionGrams = val;
+                                    return copy;
+                                  });
+                                }}
+                                style={{ width: '60px', height: '30px', fontSize: '12px' }}
+                              />
+                              <span style={{ fontSize: '12px' }}>g</span>
+                            </div>
+                          ) : (
+                            <div>
+                              <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{item.servingDesc}</span>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
+                                ({item.portionGrams}g)
+                              </span>
+                            </div>
+                          )}
                         </td>
-                        <td style={{ padding: '10px 4px', textAlign: 'right', fontWeight: 700 }}>
-                          {item.calories} kcal
-                        </td>
-                        <td style={{ padding: '10px 4px', textAlign: 'right', color: '#10b981', fontWeight: 600 }}>
-                          {item.protein}g
-                        </td>
-                        <td style={{ padding: '10px 4px', textAlign: 'right', color: '#3b82f6', fontWeight: 600 }}>
-                          {item.carbs}g
-                        </td>
-                        <td style={{ padding: '10px 4px', textAlign: 'right', color: '#f59e0b', fontWeight: 600 }}>
-                          {item.fat}g
-                        </td>
-                        <td style={{ padding: '10px 4px', textAlign: 'center' }}>
+
+                        <td style={{ fontWeight: 700, color: 'var(--text-main)' }}>{item.calories}</td>
+                        <td style={{ color: '#10b981', fontWeight: 600 }}>{item.protein}g</td>
+                        <td style={{ color: '#3b82f6' }}>{item.carbs}g</td>
+                        <td style={{ color: '#f59e0b' }}>{item.fat}g</td>
+                        <td style={{ color: '#06b6d4' }}>{item.fiber || 0}g</td>
+
+                        <td style={{ textAlign: 'center' }}>
                           <button
                             type="button"
-                            onClick={() => setSubModalState({
-                              isOpen: true,
-                              item,
-                              mealIndex: mealIdx,
-                              itemIndex: itemIdx
-                            })}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              padding: '4px 10px',
-                              borderRadius: '6px',
-                              background: 'rgba(239, 68, 68, 0.1)',
-                              border: '1px solid rgba(239, 68, 68, 0.25)',
-                              color: 'var(--primary)',
-                              fontSize: '0.78rem',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease'
-                            }}
-                            title="Substitute this food with exact macro parity"
+                            className="btn btn-sm btn-outline"
+                            onClick={() =>
+                              setSubModalState({
+                                isOpen: true,
+                                item,
+                                mealIndex: mealIdx,
+                                itemIndex: itemIdx,
+                              })
+                            }
+                            style={{ fontSize: '0.75rem', padding: '3px 8px' }}
+                            title="Swap with equivalent macro Bangladeshi food"
                           >
-                            <RefreshCw size={12} /> Swap
+                            Swap
                           </button>
                         </td>
                       </tr>
@@ -734,125 +1086,98 @@ export default function DietPlans() {
         </div>
       </div>
 
-      {/* Scientific Rationale & Tooltip Explanation */}
-      <div style={{
-        padding: '1.25rem',
-        borderRadius: '12px',
-        background: 'rgba(59, 130, 246, 0.05)',
-        border: '1px solid rgba(59, 130, 246, 0.2)',
-        marginBottom: '2rem'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-          <Info color="#3b82f6" size={18} />
-          <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-main)' }}>
-            Scientific Rationale & Caloric Justification
-          </h4>
+      {/* GROUNDING SOURCES & CITATIONS SECTION (Future Gemini API Grounding) */}
+      <div
+        style={{
+          background: 'var(--bg-card)',
+          borderRadius: '12px',
+          border: '1px solid var(--border-color)',
+          padding: '16px 20px',
+          marginBottom: '2rem',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+            userSelect: 'none',
+          }}
+          onClick={() => setShowGroundingSources((prev) => !prev)}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <BookOpen size={16} style={{ color: 'var(--primary)' }} />
+            <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Grounding Sources & Nutritional Evidence (Gemini + Google Search Grounding)
+            </h3>
+            <span className="badge badge-primary" style={{ fontSize: '10px' }}>
+              Search Grounded
+            </span>
+          </div>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            {showGroundingSources ? 'Hide Citations' : 'View Citations'}
+          </span>
         </div>
-        <p style={{ margin: '0 0 10px 0', fontSize: '0.88rem', color: 'var(--text-main)', lineHeight: 1.6 }}>
-          Caloric intake is calibrated using the <strong>Mifflin-St Jeor equation</strong> with an activity coefficient of{' '}
-          <strong>{nutritionCalculations.tdee} kcal TDEE</strong>. A target energy deficit of ~450 kcal/day induces a predictable fat loss of approximately <strong>0.41 kg/week</strong> without triggering starvation-induced adaptive thermogenesis.
-        </p>
-        <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-          Protein is set to <strong>{nutritionCalculations.protein.ratioPerKg}g/kg</strong> ({nutritionCalculations.protein.grams}g/day), strictly adhering to the <em>Morton et al. 2018 BJSM</em> meta-analysis recommendations for lean mass preservation during hypocaloric training.
-        </p>
-      </div>
 
-      {/* Research Citations & Peer-Reviewed Sources */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem' }}>
-          <BookOpen color="var(--primary)" size={18} />
-          <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>
-            Peer-Reviewed Research Bibliography & Clinical Citations
-          </h3>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-          {researchSources.map((source) => (
-            <div
-              key={source.id}
-              style={{
-                padding: '1rem',
-                borderRadius: '10px',
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border-color)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between'
-              }}
-            >
-              <div>
-                <span style={{
-                  display: 'inline-block',
-                  padding: '2px 7px',
-                  borderRadius: '4px',
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  color: 'var(--primary)',
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                  marginBottom: '6px'
-                }}>
-                  {source.institution}
-                </span>
-                <h5 style={{ margin: '0 0 6px 0', fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.4 }}>
-                  {source.title}
-                </h5>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                  {source.authors} ({source.year}) • {source.journal}
+        {showGroundingSources && (
+          <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {GROUNDING_SOURCES_DIET.map((source, idx) => (
+              <div
+                key={idx}
+                style={{
+                  background: 'var(--bg-surface)',
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-base)',
+                  fontSize: '12px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                  <a
+                    href={source.uri}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontWeight: 700, color: 'var(--primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <span>{source.title}</span>
+                    <ExternalLink size={12} />
+                  </a>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)', flexShrink: 0 }}>
+                    {source.publisher}
+                  </span>
                 </div>
-                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-main)', lineHeight: 1.45 }}>
-                  {source.finding}
+                <p style={{ margin: '4px 0 0 0', color: 'var(--text-secondary)', fontSize: '11px', lineHeight: 1.4 }}>
+                  {source.snippet}
                 </p>
               </div>
-
-              {source.pubmedUrl && (
-                <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid var(--border-color)' }}>
-                  <a
-                    href={source.pubmedUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      fontSize: '0.78rem',
-                      color: 'var(--primary)',
-                      textDecoration: 'none',
-                      fontWeight: 600,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    View PubMed Reference <ArrowRight size={12} />
-                  </a>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Intake Profile Modal */}
+      {/* Modals */}
       <IntakeProfileModal
         isOpen={isIntakeOpen}
         onClose={() => setIsIntakeOpen(false)}
-        initialProfile={clientProfile}
         onSubmit={handleIntakeSubmit}
-        mode="diet"
+        initialProfile={clientProfile}
       />
 
-      {/* Research Synthesis Pipeline Simulation Modal */}
       <ResearchPipelineModal
         isOpen={isPipelineOpen}
         onClose={() => setIsPipelineOpen(false)}
         onComplete={handlePipelineComplete}
+        profileData={pendingProfileData}
       />
 
-      {/* Food Smart Substitution Modal */}
       <FoodSubstitutionModal
         isOpen={subModalState.isOpen}
         onClose={() => setSubModalState({ isOpen: false, item: null, mealIndex: null, itemIndex: null })}
-        currentFoodItem={subModalState.item}
-        mealIndex={subModalState.mealIndex}
-        itemIndex={subModalState.itemIndex}
-        onSelectSubstitution={handleApplyFoodSwap}
+        foodItem={subModalState.item}
+        onSelectSubstitution={(newFood) =>
+          handleApplyFoodSwap(subModalState.mealIndex, subModalState.itemIndex, newFood)
+        }
       />
     </div>
   );

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
   HeartPulse,
-  Sparkles,
   ChevronRight,
   ChevronLeft,
   ShieldAlert,
@@ -197,7 +196,8 @@ export default function IntakeProfileModal({ isOpen, onClose, onComplete, onSubm
                 height: '24px',
                 borderRadius: '50%',
                 background: currentStep === s.num ? 'var(--primary)' : currentStep > s.num ? '#10B981' : 'var(--bg-surface)',
-                color: currentStep === s.num ? '#000' : '#fff',
+                color: currentStep === s.num ? 'var(--primary-text)' : currentStep > s.num ? '#FFFFFF' : 'var(--text-secondary)',
+                border: currentStep < s.num ? '1px solid var(--border-base)' : 'none',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -645,7 +645,7 @@ export default function IntakeProfileModal({ isOpen, onClose, onComplete, onSubm
             </button>
           ) : (
             <button type="submit" className="btn btn-primary" style={{ background: '#10B981', borderColor: '#10B981', color: '#fff' }}>
-              <Sparkles size={16} /> Synthesize Evidence & Generate Protocol
+              Synthesize Evidence & Generate Protocol
             </button>
           )}
         </div>

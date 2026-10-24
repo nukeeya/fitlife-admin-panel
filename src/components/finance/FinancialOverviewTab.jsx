@@ -291,11 +291,11 @@ export default function FinancialOverviewTab({ onNavigateTab }) {
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button className="btn btn-primary btn-sm" onClick={() => onNavigateTab?.('dues')}>
             <Receipt size={14} />
-            Member Dues Simulator
+            Member Dues Center
           </button>
           <button className="btn btn-secondary btn-sm" onClick={() => setShowSimulator(true)}>
             <Calculator size={14} />
-            Revenue Allocation Simulator
+            Revenue Allocation Calculator
           </button>
           <button className="btn btn-secondary btn-sm" onClick={() => onNavigateTab?.('reports')}>
             <FileSpreadsheet size={14} />
