@@ -34,7 +34,7 @@ const GymDataContext = createContext();
 export const DEFAULT_BRANDING = {
   gymName: 'FitLife',
   tagline: 'ENTERPRISE GYM',
-  logoUrl: '',
+  logoUrl: '/fitlife-logo.jpg',
   logoIcon: 'Flame',
   heroTagline: 'TRAIN HARD. LIVE STRONG.',
   heroSub: 'YOUR FITNESS. YOUR JOURNEY.',
@@ -82,7 +82,8 @@ export function GymDataProvider({ children }) {
     // Branding from app_settings
     const brandingRow = (data.appSettings || []).find((r) => r.key === 'branding');
     if (brandingRow?.value) {
-      setBranding((prev) => ({ ...prev, ...brandingRow.value }));
+      // An empty saved logoUrl falls back to the bundled gym logo.
+      setBranding((prev) => ({ ...prev, ...brandingRow.value, logoUrl: brandingRow.value.logoUrl || DEFAULT_BRANDING.logoUrl }));
     }
 
     // SMS balance from sms_settings

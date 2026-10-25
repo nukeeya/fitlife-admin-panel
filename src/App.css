@@ -2662,7 +2662,8 @@
 .login-left {
   flex: 1.2;
   position: relative;
-  background: linear-gradient(135deg, #101014 0%, #1e1b4b 60%, #0f172a 100%);
+  /* Royal blue sampled from the gym logo so the logo blends into the panel */
+  background: radial-gradient(ellipse at 50% 40%, #1a3cc0 0%, #12299a 45%, #0a1660 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2673,8 +2674,25 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 30% 50%, var(--primary-glow) 0%, transparent 60%);
+  background: radial-gradient(circle at 50% 30%, rgba(120, 160, 255, 0.18) 0%, transparent 55%);
   pointer-events: none;
+}
+
+/* Feather the logo's square edges into the panel background */
+.login-logo {
+  width: 260px;
+  max-width: 70%;
+  height: auto;
+  align-self: center;
+  margin-bottom: 8px;
+  -webkit-mask-image:
+    linear-gradient(to right, transparent 0%, #000 12%, #000 88%, transparent 100%),
+    linear-gradient(to bottom, transparent 0%, #000 12%, #000 88%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to right, transparent 0%, #000 12%, #000 88%, transparent 100%),
+    linear-gradient(to bottom, transparent 0%, #000 12%, #000 88%, transparent 100%);
+  mask-composite: intersect;
 }
 
 .login-overlay {
@@ -2687,6 +2705,8 @@
 .login-hero-text {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  text-align: center;
   gap: 16px;
 }
 

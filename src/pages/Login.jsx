@@ -60,7 +60,7 @@ export default function Login() {
         <img
           src={branding.logoUrl}
           alt={branding.gymName || 'Logo'}
-          style={{ width: '48px', height: '48px', objectFit: 'contain', marginBottom: '8px' }}
+          className="login-logo"
         />
       );
     }
