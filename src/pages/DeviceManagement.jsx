@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   ScanFace,
-  Radio,
   CheckCircle2,
   AlertCircle,
   RefreshCw,
@@ -10,17 +9,9 @@ import {
   Trash2,
   Activity,
   Server,
-  Shield,
   Wifi,
   WifiOff,
-  Cpu,
   Info,
-  Clock,
-  Terminal,
-  Settings,
-  X,
-  Play,
-  RotateCcw,
 } from 'lucide-react';
 import Modal from '../components/common/Modal';
 
@@ -58,7 +49,6 @@ export default function DeviceManagement() {
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [connectionLog, setConnectionLog] = useState('');
   const [feedbackMsg, setFeedbackMsg] = useState(null);
 
   // Form State for Setup / Edit
@@ -175,11 +165,6 @@ export default function DeviceManagement() {
     const isCurrentlyConnected = activeDevice.status === 'connected';
 
     setIsConnecting(true);
-    setConnectionLog(
-      isCurrentlyConnected
-        ? `Initiating safe disconnect handshake with terminal at ${activeDevice.ipAddress}:${activeDevice.port}...`
-        : `Connecting to biometric terminal at ${activeDevice.ipAddress}:${activeDevice.port}...`
-    );
 
     setTimeout(() => {
       setDevices((prev) =>
@@ -197,7 +182,6 @@ export default function DeviceManagement() {
         )
       );
       setIsConnecting(false);
-      setConnectionLog('');
       setFeedbackMsg({
         type: isCurrentlyConnected ? 'info' : 'success',
         text: isCurrentlyConnected
@@ -249,33 +233,60 @@ export default function DeviceManagement() {
     setTimeout(() => setFeedbackMsg(null), 2000);
   };
 
+  const statusMeta = {
+    connected: { label: 'Online', color: '#10B981' },
+    disconnected: { label: 'Offline', color: '#F59E0B' },
+    not_configured: { label: 'Not set up', color: '#94A3B8' },
+  };
+
+  const cardStyle = {
+    background: 'var(--bg-card)',
+    borderRadius: '12px',
+    border: '1px solid var(--border-color)',
+    padding: '20px',
+  };
+
+  const renderStatusPill = (status) => {
+    const meta = statusMeta[status] || statusMeta.not_configured;
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '3px 10px',
+          borderRadius: '999px',
+          fontSize: '12px',
+          fontWeight: 600,
+          color: meta.color,
+          background: `${meta.color}1F`,
+        }}
+      >
+        <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: meta.color }} />
+        {meta.label}
+      </span>
+    );
+  };
+
+  const sampleEvents = [
+    { time: '12:54 PM', name: 'Farhan Ahmed', code: 'FLM-1008', method: 'Face', granted: true },
+    { time: '12:51 PM', name: 'Tanvir Hossain', code: 'FLM-1022', method: 'Face', granted: true },
+    { time: '12:47 PM', name: 'Unknown face', code: null, method: 'Face', granted: false },
+    { time: '12:42 PM', name: 'Kabir Chowdhury', code: 'FLM-1001', method: 'Fingerprint', granted: true },
+  ];
+
   return (
     <div className="page" style={{ paddingBottom: '3rem' }}>
       {/* Page Header */}
       <div className="page-header" style={{ marginBottom: '1.25rem' }}>
         <div className="page-title-group">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '3px 8px',
-                borderRadius: '6px',
-                background: 'rgba(200, 255, 0, 0.12)',
-                color: 'var(--primary)',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-              }}
-            >
-              <ScanFace size={12} /> Access Control & Biometrics
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h1 className="page-title">Devices</h1>
+            <span className="badge badge-warning" style={{ fontSize: '10px' }} title="Not connected to real hardware yet">
+              Demo mode
             </span>
           </div>
-          <h1 className="page-title">Device Management</h1>
-          <p className="page-subtitle">
-            Entrance Face Recognition Terminals • Turnstile Access Controllers • Hardware Status Monitoring
-          </p>
+          <p className="page-subtitle">Entrance terminals and access controllers</p>
         </div>
 
         <button
@@ -285,265 +296,123 @@ export default function DeviceManagement() {
           style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
         >
           <Plus size={16} />
-          Configure New Device
+          Add Device
         </button>
       </div>
 
-      {/* FEEDBACK TOAST ALERT */}
+      {/* Feedback message */}
       {feedbackMsg && (
         <div
           style={{
-            padding: '10px 16px',
+            padding: '8px 14px',
             borderRadius: 'var(--radius-md)',
-            background:
-              feedbackMsg.type === 'success'
-                ? 'rgba(16, 185, 129, 0.12)'
-                : 'rgba(59, 130, 246, 0.12)',
-            border: `1px solid ${
-              feedbackMsg.type === 'success' ? '#10B981' : '#3B82F6'
-            }`,
+            background: feedbackMsg.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
             color: feedbackMsg.type === 'success' ? '#10B981' : '#3B82F6',
             fontSize: '13px',
-            marginBottom: '1.25rem',
+            marginBottom: '1rem',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
           }}
         >
-          {feedbackMsg.type === 'success' ? <CheckCircle2 size={16} /> : <Info size={16} />}
+          {feedbackMsg.type === 'success' ? <CheckCircle2 size={15} /> : <Info size={15} />}
           <span>{feedbackMsg.text}</span>
         </div>
       )}
 
-      {/* HARDWARE INTEGRATION PREPARATION NOTICE */}
-      <div
-        style={{
-          background: 'rgba(59, 130, 246, 0.08)',
-          border: '1px solid rgba(59, 130, 246, 0.25)',
-          borderRadius: '12px',
-          padding: '12px 18px',
-          marginBottom: '1.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
-          fontSize: '12px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Server size={20} style={{ color: '#3B82F6', flexShrink: 0 }} />
-          <div>
-            <strong style={{ color: 'var(--text-primary)' }}>Hardware Integration Architecture Prepared:</strong>{' '}
-            <span style={{ color: 'var(--text-secondary)' }}>
-              This interface is ready for your backend developer to connect real Hikvision, ZKTeco, or Suprema biometric access control SDKs/APIs. The connection states, ping diagnostics, and configuration forms run as a frontend demonstration without requiring physical hardware credentials.
-            </span>
-          </div>
-        </div>
-        <span className="badge badge-primary" style={{ fontSize: '10px' }}>
-          Frontend Demo Mode
-        </span>
-      </div>
-
-      {/* EMPTY STATE (When no devices configured) */}
       {devices.length === 0 ? (
-        <div
-          style={{
-            background: 'var(--bg-card)',
-            borderRadius: '12px',
-            border: '1px solid var(--border-color)',
-            padding: '50px 20px',
-            textAlign: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '14px',
-          }}
-        >
-          <div
-            style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '50%',
-              background: 'rgba(255, 255, 255, 0.04)',
-              border: '1px solid var(--border-base)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--text-muted)',
-            }}
-          >
-            <Radio size={32} />
-          </div>
+        /* Empty state */
+        <div style={{ ...cardStyle, padding: '48px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+          <ScanFace size={36} style={{ color: 'var(--text-muted)' }} />
           <div>
-            <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 6px 0', color: 'var(--text-primary)' }}>
-              No Access Control Device Configured
+            <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 4px 0', color: 'var(--text-primary)' }}>
+              No devices yet
             </h3>
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '420px' }}>
-              Connect your entrance face recognition terminal or turnstile gate controller to monitor attendance events and manage real-time access.
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '380px' }}>
+              Add your entrance terminal to track check-ins and control access.
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
             <button type="button" className="btn btn-secondary" onClick={handleAddSampleDevice}>
-              Add Sample Entrance Device
+              Add Sample Device
             </button>
-            <button type="button" className="btn btn-primary" onClick={handleOpenAdd}>
-              <Plus size={16} /> Configure Custom Device
+            <button type="button" className="btn btn-primary" onClick={handleOpenAdd} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <Plus size={16} /> Add Device
             </button>
           </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* DEVICE SELECTOR TABS (If multiple devices configured) */}
-          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
-            {devices.map((dev) => {
-              const isSelected = dev.id === activeDevice?.id;
-              const isConnected = dev.status === 'connected';
-
-              return (
-                <button
-                  key={dev.id}
-                  type="button"
-                  onClick={() => {
-                    setActiveDeviceId(dev.id);
-                    setTestResult(null);
-                  }}
-                  style={{
-                    padding: '8px 14px',
-                    borderRadius: '8px',
-                    border: `1.5px solid ${isSelected ? 'var(--primary)' : 'var(--border-base)'}`,
-                    background: isSelected ? 'rgba(200, 255, 0, 0.08)' : 'var(--bg-card)',
-                    color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    fontWeight: 700,
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    whiteSpace: 'nowrap',
-                    transition: 'var(--transition-smooth)',
-                  }}
-                >
-                  <span
-                    style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      background: isConnected ? '#10B981' : dev.status === 'disconnected' ? '#F59E0B' : '#94A3B8',
-                      boxShadow: isConnected ? '0 0 8px #10B981' : 'none',
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Device switcher (only needed with more than one device) */}
+          {devices.length > 1 && (
+            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
+              {devices.map((dev) => {
+                const isSelected = dev.id === activeDevice?.id;
+                return (
+                  <button
+                    key={dev.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveDeviceId(dev.id);
+                      setTestResult(null);
                     }}
-                  />
-                  <span>{dev.name}</span>
-                </button>
-              );
-            })}
-          </div>
+                    style={{
+                      padding: '7px 12px',
+                      borderRadius: '8px',
+                      border: `1px solid ${isSelected ? 'var(--primary)' : 'var(--border-base)'}`,
+                      background: 'var(--bg-card)',
+                      color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      fontWeight: 600,
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: (statusMeta[dev.status] || statusMeta.not_configured).color }} />
+                    {dev.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
-          {/* ACTIVE DEVICE OVERVIEW CARD */}
+          {/* Selected device */}
           {activeDevice && (
-            <div
-              style={{
-                background: 'var(--bg-card)',
-                borderRadius: '12px',
-                border: '1px solid var(--border-color)',
-                padding: '20px',
-                boxShadow: 'var(--shadow-card)',
-              }}
-            >
-              {/* Card Header: Device Name, Type, Location, Status Badge */}
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  flexWrap: 'wrap',
-                  gap: '14px',
-                  paddingBottom: '16px',
-                  borderBottom: '1px solid var(--border-base)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={cardStyle}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                   <div
                     style={{
-                      width: '48px',
-                      height: '48px',
+                      width: '42px',
+                      height: '42px',
                       borderRadius: 'var(--radius-md)',
-                      background:
-                        activeDevice.status === 'connected'
-                          ? 'rgba(16, 185, 129, 0.12)'
-                          : 'rgba(245, 158, 11, 0.12)',
-                      color: activeDevice.status === 'connected' ? '#10B981' : '#F59E0B',
+                      background: 'var(--bg-surface)',
+                      color: 'var(--text-secondary)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
                     }}
                   >
-                    <ScanFace size={26} />
+                    <ScanFace size={22} />
                   </div>
-
-                  <div>
+                  <div style={{ minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                      <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                      <h2 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
                         {activeDevice.name}
                       </h2>
-
-                      {/* Connection Status Badge */}
-                      {activeDevice.status === 'connected' && (
-                        <span
-                          className="badge badge-success"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            fontSize: '11px',
-                            padding: '3px 8px',
-                          }}
-                        >
-                          <span
-                            style={{
-                              width: '6px',
-                              height: '6px',
-                              borderRadius: '50%',
-                              background: '#10B981',
-                              boxShadow: '0 0 6px #10B981',
-                            }}
-                          />
-                          Connected
-                        </span>
-                      )}
-
-                      {activeDevice.status === 'disconnected' && (
-                        <span
-                          className="badge badge-warning"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            fontSize: '11px',
-                            padding: '3px 8px',
-                          }}
-                        >
-                          <WifiOff size={11} />
-                          Disconnected
-                        </span>
-                      )}
-
-                      {activeDevice.status === 'not_configured' && (
-                        <span className="badge badge-secondary" style={{ fontSize: '11px', padding: '3px 8px' }}>
-                          Not Configured
-                        </span>
-                      )}
+                      {renderStatusPill(activeDevice.status)}
                     </div>
-
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                      <strong>{activeDevice.type}</strong> • Location: <span style={{ color: 'var(--text-primary)' }}>{activeDevice.location}</span>
+                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                      {activeDevice.location}
                     </div>
                   </div>
                 </div>
 
-                {/* Primary Action Controls: Connect / Disconnect, Refresh, Test, Edit */}
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
                     className={`btn ${activeDevice.status === 'connected' ? 'btn-secondary' : 'btn-primary'}`}
@@ -552,276 +421,121 @@ export default function DeviceManagement() {
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
                   >
                     {isConnecting ? (
-                      <>
-                        <RefreshCw size={14} className="spin-animation" />
-                        Handshaking...
-                      </>
+                      <><RefreshCw size={14} className="spin-animation" /> {activeDevice.status === 'connected' ? 'Disconnecting...' : 'Connecting...'}</>
                     ) : activeDevice.status === 'connected' ? (
-                      <>
-                        <WifiOff size={14} />
-                        Disconnect Device
-                      </>
+                      <><WifiOff size={14} /> Disconnect</>
                     ) : (
-                      <>
-                        <Wifi size={14} />
-                        Connect Device
-                      </>
+                      <><Wifi size={14} /> Connect</>
                     )}
                   </button>
-
                   <button
                     type="button"
                     className="btn btn-secondary"
                     onClick={handleTestConnection}
                     disabled={isTesting}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
-                    title="Send ping packets to test network responsiveness"
                   >
-                    {isTesting ? (
-                      <>
-                        <RefreshCw size={14} className="spin-animation" />
-                        Testing...
-                      </>
-                    ) : (
-                      <>
-                        <Activity size={14} />
-                        Test Connection
-                      </>
-                    )}
+                    {isTesting ? <RefreshCw size={14} className="spin-animation" /> : <Activity size={14} />}
+                    {isTesting ? 'Testing...' : 'Test'}
                   </button>
-
+                  <button type="button" className="btn-icon" onClick={handleRefreshStatus} title="Refresh status" aria-label="Refresh status">
+                    <RefreshCw size={16} />
+                  </button>
+                  <button type="button" className="btn-icon" onClick={() => handleOpenEdit(activeDevice)} title="Edit device" aria-label="Edit device">
+                    <Edit2 size={16} />
+                  </button>
                   <button
                     type="button"
-                    className="btn btn-secondary"
-                    onClick={handleRefreshStatus}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
-                    title="Poll device status"
-                  >
-                    <RefreshCw size={14} />
-                    Refresh Status
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => handleOpenEdit(activeDevice)}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
-                  >
-                    <Edit2 size={14} />
-                    Edit
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn btn-danger btn-sm"
+                    className="btn-icon"
                     onClick={() => handleDeleteDevice(activeDevice.id)}
                     title="Remove device"
-                    style={{ padding: '0 8px' }}
+                    aria-label="Remove device"
+                    style={{ color: '#EF4444' }}
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={16} />
                   </button>
                 </div>
               </div>
 
-              {/* Connecting State Log Message */}
-              {isConnecting && connectionLog && (
+              {/* Connection test result */}
+              {testResult && (
                 <div
                   style={{
-                    margin: '14px 0',
-                    padding: '10px 14px',
+                    marginTop: '14px',
+                    padding: '8px 12px',
                     borderRadius: 'var(--radius-sm)',
-                    background: 'rgba(200, 255, 0, 0.08)',
-                    border: '1px solid rgba(200, 255, 0, 0.25)',
-                    fontSize: '12px',
-                    color: 'var(--primary)',
+                    background: testResult.success ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                    color: testResult.success ? '#10B981' : '#EF4444',
+                    fontSize: '13px',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
                   }}
                 >
-                  <RefreshCw size={14} className="spin-animation" />
-                  <span>{connectionLog}</span>
+                  {testResult.success ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
+                  {testResult.success
+                    ? `Device responded in ${testResult.latencyMs} ms`
+                    : `No response from ${activeDevice.ipAddress}:${activeDevice.port}`}
                 </div>
               )}
 
-              {/* Ping Test Diagnostic Result */}
-              {testResult && (
-                <div
-                  style={{
-                    margin: '14px 0',
-                    padding: '12px 16px',
-                    borderRadius: 'var(--radius-sm)',
-                    background: testResult.success ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-                    border: `1px solid ${testResult.success ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '6px',
-                    fontSize: '12px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {testResult.success ? (
-                        <CheckCircle2 size={16} color="#10B981" />
-                      ) : (
-                        <AlertCircle size={16} color="#EF4444" />
-                      )}
-                      <strong style={{ color: testResult.success ? '#10B981' : '#EF4444' }}>
-                        {testResult.success ? 'Network Ping Test Passed' : 'Network Ping Test Failed'}
-                      </strong>
-                    </div>
-                    {testResult.latencyMs && (
-                      <span className="badge badge-success" style={{ fontSize: '10px' }}>
-                        Latency: {testResult.latencyMs}ms
-                      </span>
-                    )}
+              {/* Details */}
+              <dl
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+                  gap: '16px 24px',
+                  margin: '18px 0 0 0',
+                  paddingTop: '16px',
+                  borderTop: '1px solid var(--border-base)',
+                }}
+              >
+                {[
+                  ['Address', <code key="addr">{activeDevice.ipAddress}:{activeDevice.port}</code>],
+                  ['Model', activeDevice.model || '—'],
+                  ['Serial number', activeDevice.serialNumber ? <code key="sn">{activeDevice.serialNumber}</code> : '—'],
+                  ['Last seen', activeDevice.lastSeen],
+                  ['Door unlock time', `${(Number(activeDevice.doorRelayMs) || 0) / 1000} s`],
+                  ['Anti-passback', activeDevice.antiPassback ? 'On' : 'Off'],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <dt style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '3px' }}>{label}</dt>
+                    <dd style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>{value}</dd>
                   </div>
-                  <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
-                    {testResult.message}
-                  </p>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                    Diagnostics: {testResult.packetsSent} packets transmitted, {testResult.packetsReceived} received, {testResult.packetLossPercent}% packet loss.
-                  </div>
-                </div>
-              )}
-
-              {/* DEVICE DETAILS & CONFIGURATION GRID */}
-              <div style={{ marginTop: '16px' }}>
-                <h3 style={{ fontSize: '13px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px', color: 'var(--text-primary)' }}>
-                  Device Configuration & Operational Parameters
-                </h3>
-
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: '12px',
-                  }}
-                >
-                  <div style={{ background: 'var(--bg-surface)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-base)' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>IP Address / Host</span>
-                    <div style={{ fontWeight: 700, fontSize: '13px', marginTop: '2px', color: 'var(--text-primary)' }}>
-                      <code>{activeDevice.ipAddress}</code>
-                    </div>
-                  </div>
-
-                  <div style={{ background: 'var(--bg-surface)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-base)' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Port</span>
-                    <div style={{ fontWeight: 700, fontSize: '13px', marginTop: '2px', color: 'var(--text-primary)' }}>
-                      <code>{activeDevice.port}</code>
-                    </div>
-                  </div>
-
-                  <div style={{ background: 'var(--bg-surface)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-base)' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Protocol</span>
-                    <div style={{ fontWeight: 700, fontSize: '13px', marginTop: '2px', color: 'var(--text-primary)' }}>
-                      {activeDevice.protocol}
-                    </div>
-                  </div>
-
-                  <div style={{ background: 'var(--bg-surface)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-base)' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Last Seen / Heartbeat</span>
-                    <div style={{ fontWeight: 700, fontSize: '13px', marginTop: '2px', color: activeDevice.status === 'connected' ? '#10B981' : 'var(--text-muted)' }}>
-                      {activeDevice.lastSeen}
-                    </div>
-                  </div>
-
-                  <div style={{ background: 'var(--bg-surface)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-base)' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>MAC Address</span>
-                    <div style={{ fontWeight: 700, fontSize: '13px', marginTop: '2px', color: 'var(--text-primary)' }}>
-                      <code>{activeDevice.macAddress}</code>
-                    </div>
-                  </div>
-
-                  <div style={{ background: 'var(--bg-surface)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-base)' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Serial Number</span>
-                    <div style={{ fontWeight: 700, fontSize: '13px', marginTop: '2px', color: 'var(--text-primary)' }}>
-                      <code>{activeDevice.serialNumber || 'SN-FR2026-99412'}</code>
-                    </div>
-                  </div>
-
-                  <div style={{ background: 'var(--bg-surface)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-base)' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Door Relay Open Pulse</span>
-                    <div style={{ fontWeight: 700, fontSize: '13px', marginTop: '2px', color: 'var(--text-primary)' }}>
-                      {activeDevice.doorRelayMs} ms (Turnstile Unlock)
-                    </div>
-                  </div>
-
-                  <div style={{ background: 'var(--bg-surface)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-base)' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Anti-Passback Rule</span>
-                    <div style={{ fontWeight: 700, fontSize: '13px', marginTop: '2px', color: activeDevice.antiPassback ? '#10B981' : 'var(--text-muted)' }}>
-                      {activeDevice.antiPassback ? 'Enabled (Prevents re-entry sharing)' : 'Disabled'}
-                    </div>
-                  </div>
-                </div>
-              </div>
+                ))}
+              </dl>
             </div>
           )}
 
-          {/* ACCESS LOG DEMONSTRATION BUFFER */}
-          <div
-            style={{
-              background: 'var(--bg-card)',
-              borderRadius: '12px',
-              border: '1px solid var(--border-color)',
-              padding: '18px 20px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Activity size={18} style={{ color: 'var(--primary)' }} />
-                <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Live Terminal Access Event Stream (Simulated Hardware Feed)
-                </h3>
-              </div>
-              <span className="badge badge-primary" style={{ fontSize: '10px' }}>
-                WebSocket Sync Buffer
-              </span>
+          {/* Recent access events (sample data until hardware is connected) */}
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', gap: '8px' }}>
+              <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>Recent access events</h3>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Sample data</span>
             </div>
 
             <div style={{ overflowX: 'auto' }}>
               <table className="table" style={{ margin: 0 }}>
                 <thead>
                   <tr>
-                    <th>Timestamp</th>
-                    <th>Member / Visitor</th>
-                    <th>ID / Code</th>
+                    <th>Time</th>
+                    <th>Member</th>
                     <th>Method</th>
-                    <th>Device & Door</th>
-                    <th>Status</th>
+                    <th>Result</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { time: '12:54:12 PM', name: 'Farhan Ahmed', code: 'FLM-1008', method: 'Face Recognition', door: 'Turnstile #1 (Entrance)', result: 'ACCESS GRANTED' },
-                    { time: '12:51:05 PM', name: 'Tanvir Hossain', code: 'FLM-1022', method: 'Face Recognition', door: 'Turnstile #1 (Entrance)', result: 'ACCESS GRANTED' },
-                    { time: '12:47:30 PM', name: 'Unknown Face', code: 'N/A', method: 'Face Recognition', door: 'Turnstile #1 (Entrance)', result: 'ACCESS DENIED (Unenrolled)' },
-                    { time: '12:42:18 PM', name: 'Shakib Al Hasan', code: 'FLM-1001', method: 'Fingerprint (R Index)', door: 'Turnstile #1 (Entrance)', result: 'ACCESS GRANTED' },
-                  ].map((row, i) => (
+                  {sampleEvents.map((row, i) => (
                     <tr key={i}>
-                      <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                        <code>{row.time}</code>
-                      </td>
-                      <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                        {row.name}
-                      </td>
-                      <td style={{ fontSize: '12px' }}>
-                        <code>{row.code}</code>
-                      </td>
+                      <td style={{ fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{row.time}</td>
                       <td>
-                        <span className="badge badge-secondary" style={{ fontSize: '11px' }}>
-                          {row.method}
-                        </span>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{row.name}</div>
+                        {row.code && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{row.code}</div>}
                       </td>
-                      <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                        {row.door}
-                      </td>
+                      <td style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{row.method}</td>
                       <td>
-                        <span
-                          className={`badge ${row.result.includes('GRANTED') ? 'badge-success' : 'badge-danger'}`}
-                          style={{ fontSize: '11px' }}
-                        >
-                          {row.result}
+                        <span className={`badge ${row.granted ? 'badge-success' : 'badge-danger'}`} style={{ fontSize: '11px' }}>
+                          {row.granted ? 'Granted' : 'Denied'}
                         </span>
                       </td>
                     </tr>
@@ -837,8 +551,8 @@ export default function DeviceManagement() {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingDevice ? `Edit Device: ${editingDevice.name}` : 'Configure New Access Control Device'}
-        subtitle="Specify device identity, network IP, communication protocol, and turnstile parameters"
+        title={editingDevice ? 'Edit Device' : 'Add Device'}
+        subtitle="Name, location and network details"
         icon={Server}
         size="md"
       >
@@ -949,7 +663,7 @@ export default function DeviceManagement() {
 
           <div className="form-grid">
             <div className="form-group">
-              <label className="form-label">Door Relay Open Pulse (ms)</label>
+              <label className="form-label">Door Unlock Time (ms)</label>
               <input
                 type="number"
                 min="500"
@@ -967,7 +681,7 @@ export default function DeviceManagement() {
                   checked={formData.antiPassback}
                   onChange={(e) => setFormData((prev) => ({ ...prev, antiPassback: e.target.checked }))}
                 />
-                <span>Enable Anti-Passback Protection</span>
+                <span>Anti-passback (block re-entry sharing)</span>
               </label>
             </div>
           </div>
@@ -977,7 +691,7 @@ export default function DeviceManagement() {
               Cancel
             </button>
             <button type="submit" className="btn btn-primary">
-              {editingDevice ? 'Update Configuration' : 'Save & Register Device'}
+              {editingDevice ? 'Save Changes' : 'Add Device'}
             </button>
           </div>
         </form>
