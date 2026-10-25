@@ -13,7 +13,7 @@
   - [x] Migration `013` (membership start date) run and verified (26 Oct 2026)
   - [ ] Confirm migrations `001`–`012` have all been run on the Supabase project
   - [ ] Turn on Supabase backups, or take one export
-  - [ ] Merge branch `portal-updates` into `main` (only after 013 is run)
+  - [x] Merge branch `portal-updates` into `main` and deploy (26 Oct 2026)
 
 ---
 
@@ -41,6 +41,9 @@
 - [ ] Decide: keep or remove the Revenue Simulator
 - [ ] Fix the lint warnings
 
+### Keep within Supabase Pro limits
+- [ ] **Compress photos before upload**: resize to about 400×400 px / 100–200 KB in the browser, in both the admin portal and the admission form (currently up to 15 MB, stored as-is)
+
 ### Testing
 - [ ] Empty database test: no fake names anywhere
 - [ ] Full flow: admission form → approve → payment → check-in → locker; reload and confirm everything is saved
@@ -50,6 +53,7 @@
 ### Deploy & handover
 - [ ] Vercel environment variables for the admin portal and the admission form
 - [ ] Supabase Auth redirect URLs set to the live domain
+- [ ] **Custom email sending (SMTP)** for password-reset emails, e.g. a free Resend account; Supabase's built-in sender only allows a few emails per hour
 - [ ] Create the client's Super Admin account; enter the real gym name, plans, prices and payment methods
 - [ ] Clear out test data
 - [ ] Give the client logins, live URLs and a short guide
