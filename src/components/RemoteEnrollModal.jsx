@@ -128,29 +128,68 @@ export default function RemoteEnrollModal({ isOpen, onClose, member }) {
     const isLeft = handSide === 'left';
     const isScanning = enrollStatus === 'in_progress';
 
-    // Finger configurations for SVG rendering
-    // Left hand: Little (leftmost), Ring, Middle, Index, Thumb (rightmost)
-    // Right hand: Thumb (leftmost), Index, Middle, Ring, Little (rightmost)
-    const fingerDefs = isLeft
-      ? [
-          { id: 'left_pinky', name: 'Little (Pinky)', short: 'LP', path: 'M 26 140 L 26 82 C 26 70 40 70 40 82 L 40 142 Z', tipX: 33, tipY: 82, radius: 10 },
-          { id: 'left_ring', name: 'Ring Finger', short: 'LR', path: 'M 48 135 L 48 52 C 48 40 64 40 64 52 L 64 135 Z', tipX: 56, tipY: 52, radius: 11 },
-          { id: 'left_middle', name: 'Middle Finger', short: 'LM', path: 'M 72 130 L 72 34 C 72 20 90 20 90 34 L 90 130 Z', tipX: 81, tipY: 34, radius: 12 },
-          { id: 'left_index', name: 'Index Finger', short: 'LI', path: 'M 98 135 L 98 50 C 98 38 114 38 114 50 L 114 138 Z', tipX: 106, tipY: 50, radius: 11 },
-          { id: 'left_thumb', name: 'Thumb', short: 'LT', path: 'M 124 162 L 152 110 C 160 96 174 106 166 120 L 138 178 Z', tipX: 160, tipY: 112, radius: 12 },
-        ]
-      : [
-          { id: 'right_thumb', name: 'Thumb', short: 'RT', path: 'M 76 162 L 48 110 C 40 96 26 106 34 120 L 62 178 Z', tipX: 40, tipY: 112, radius: 12 },
-          { id: 'right_index', name: 'Index Finger', short: 'RI', path: 'M 86 138 L 86 50 C 86 38 102 38 102 50 L 102 135 Z', tipX: 94, tipY: 50, radius: 11 },
-          { id: 'right_middle', name: 'Middle Finger', short: 'RM', path: 'M 110 130 L 110 34 C 110 20 128 20 128 34 L 128 130 Z', tipX: 119, tipY: 34, radius: 12 },
-          { id: 'right_ring', name: 'Ring Finger', short: 'RR', path: 'M 136 135 L 136 52 C 136 40 152 40 152 52 L 152 135 Z', tipX: 144, tipY: 52, radius: 11 },
-          { id: 'right_pinky', name: 'Little (Pinky)', short: 'RP', path: 'M 160 142 L 160 82 C 160 70 174 70 174 82 L 174 140 Z', tipX: 167, tipY: 82, radius: 10 },
-        ];
+    // Hand geometry is defined once for the right palm (thumb on the left) and
+    // mirrored across the 200-wide viewBox for the left hand.
+    const mx = (x) => (isLeft ? 200 - x : x);
+    const side = isLeft ? 'left' : 'right';
+    const prefix = isLeft ? 'L' : 'R';
 
-    // Palm base path
-    const palmPath = isLeft
-      ? 'M 30 140 Q 20 170 34 205 Q 45 228 72 228 L 126 228 Q 146 228 142 195 L 128 162 Q 80 142 30 140 Z'
-      : 'M 170 140 Q 180 170 166 205 Q 155 228 128 228 L 74 228 Q 54 228 58 195 L 72 162 Q 120 142 170 140 Z';
+    // Each finger: base point (buried inside the palm), length, base/tip width,
+    // and lean angle in degrees (negative leans toward the thumb side).
+    const fingerSpecs = [
+      { key: 'thumb', name: 'Thumb', short: 'T', bx: 82, by: 182, len: 64, wb: 32, wt: 22, angle: -48, creases: [0.68] },
+      { key: 'index', name: 'Index Finger', short: 'I', bx: 81, by: 130, len: 84, wb: 24, wt: 20, angle: -8, creases: [0.58, 0.8] },
+      { key: 'middle', name: 'Middle Finger', short: 'M', bx: 105, by: 124, len: 94, wb: 25, wt: 21, angle: -1, creases: [0.58, 0.8] },
+      { key: 'ring', name: 'Ring Finger', short: 'R', bx: 128, by: 126, len: 86, wb: 23, wt: 19, angle: 6, creases: [0.58, 0.8] },
+      { key: 'pinky', name: 'Little (Pinky)', short: 'P', bx: 148, by: 136, len: 68, wb: 20, wt: 17, angle: 14, creases: [0.6, 0.81] },
+    ];
+
+    const fingerDefs = fingerSpecs.map((s) => {
+      const a = ((isLeft ? -s.angle : s.angle) * Math.PI) / 180;
+      const dir = { x: Math.sin(a), y: -Math.cos(a) }; // base -> tip
+      const nrm = { x: Math.cos(a), y: Math.sin(a) }; // across the finger
+      const bx = mx(s.bx);
+      const by = s.by;
+      const tx = bx + dir.x * s.len;
+      const ty = by + dir.y * s.len;
+      const pt = (cx, cy, w, sign) => `${(cx + sign * nrm.x * w / 2).toFixed(1)} ${(cy + sign * nrm.y * w / 2).toFixed(1)}`;
+      const r = s.wt / 2;
+      // Tapered sides with a gentle knuckle bulge, capped by a rounded tip
+      const midX = bx + dir.x * s.len * 0.45;
+      const midY = by + dir.y * s.len * 0.45;
+      const midW = (s.wb + s.wt) / 2 + 2;
+      const outline = `M ${pt(bx, by, s.wb, -1)} Q ${pt(midX, midY, midW, -1)} ${pt(tx, ty, s.wt, -1)} A ${r} ${r} 0 0 1 ${pt(tx, ty, s.wt, 1)} Q ${pt(midX, midY, midW, 1)} ${pt(bx, by, s.wb, 1)}`;
+      const padOffset = r * 0.25;
+      const creaseLines = s.creases.map((f) => {
+        const cx = bx + dir.x * s.len * f;
+        const cy = by + dir.y * s.len * f;
+        const w = (s.wb + (s.wt - s.wb) * f) * 0.7;
+        return `M ${pt(cx, cy, w, -1)} L ${pt(cx, cy, w, 1)}`;
+      });
+      return {
+        id: `${side}_${s.key}`,
+        name: s.name,
+        short: `${prefix}${s.short}`,
+        path: `${outline} Z`,
+        outline,
+        creaseLines,
+        tipX: tx - dir.x * padOffset,
+        tipY: ty - dir.y * padOffset,
+        radius: r - 1.5,
+        angleDeg: isLeft ? -s.angle : s.angle,
+      };
+    });
+
+    // Palm with a fleshy thumb heel and a narrowing wrist
+    const palmPath = `M ${mx(86)} 236 C ${mx(82)} 222 ${mx(66)} 214 ${mx(62)} 192 C ${mx(58)} 170 ${mx(60)} 142 ${mx(68)} 120 Q ${mx(110)} 100 ${mx(158)} 124 C ${mx(166)} 152 ${mx(165)} 182 ${mx(152)} 208 C ${mx(147)} 218 ${mx(143)} 227 ${mx(141)} 236 Z`;
+
+    // Heart, head and life lines
+    const palmLines = [
+      `M ${mx(158)} 146 C ${mx(140)} 140 ${mx(118)} 138 ${mx(96)} 132`,
+      `M ${mx(70)} 152 C ${mx(96)} 156 ${mx(126)} 160 ${mx(152)} 172`,
+      `M ${mx(72)} 150 C ${mx(92)} 168 ${mx(98)} 196 ${mx(96)} 222`,
+    ];
+    const handShapes = [palmPath, ...fingerDefs.map((f) => f.path)];
 
     return (
       <div
@@ -197,29 +236,36 @@ export default function RemoteEnrollModal({ isOpen, onClose, member }) {
               <stop offset="50%" stopColor="var(--primary)" stopOpacity="1" />
               <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
             </linearGradient>
+
+            {/* Hides the part of a finger buried in the palm, so the
+                selection highlight starts at the knuckle line */}
+            <mask id={`palmMask-${handSide}`} maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="236">
+              <rect x="0" y="0" width="200" height="236" fill="white" />
+              <path d={palmPath} fill="black" />
+            </mask>
           </defs>
 
-          {/* Palm base outline */}
-          <path
-            d={palmPath}
-            fill="rgba(255, 255, 255, 0.03)"
-            stroke="var(--border-light)"
-            strokeWidth="1.8"
-            strokeLinejoin="round"
-          />
+          {/* Hand silhouette: stroke every shape, then cover the inner seams so
+              only the outer outline of the merged hand remains */}
+          {handShapes.map((d, i) => (
+            <path key={`edge-${i}`} d={d} fill="var(--bg-surface)" stroke="var(--border-light)" strokeWidth="3.6" strokeLinejoin="round" />
+          ))}
+          {handShapes.map((d, i) => (
+            <path key={`fill-${i}`} d={d} fill="var(--bg-surface)" />
+          ))}
+          <g opacity="0.06">
+            {handShapes.map((d, i) => (
+              <path key={`tint-${i}`} d={d} fill="var(--text-primary)" />
+            ))}
+          </g>
 
-          {/* Palm creases for realistic hand detail */}
-          {isLeft ? (
-            <>
-              <path d="M 44 175 Q 75 185 110 168" stroke="var(--border-base)" strokeWidth="1.2" fill="none" strokeDasharray="2,2" />
-              <path d="M 50 195 Q 85 198 120 182" stroke="var(--border-base)" strokeWidth="1.2" fill="none" strokeDasharray="2,2" />
-            </>
-          ) : (
-            <>
-              <path d="M 156 175 Q 125 185 90 168" stroke="var(--border-base)" strokeWidth="1.2" fill="none" strokeDasharray="2,2" />
-              <path d="M 150 195 Q 115 198 80 182" stroke="var(--border-base)" strokeWidth="1.2" fill="none" strokeDasharray="2,2" />
-            </>
-          )}
+          {/* Palm lines and knuckle creases */}
+          {palmLines.map((d, i) => (
+            <path key={`line-${i}`} d={d} stroke="var(--border-light)" strokeWidth="1.1" fill="none" strokeLinecap="round" opacity="0.7" />
+          ))}
+          {fingerDefs.flatMap((f) => f.creaseLines.map((d, i) => (
+            <path key={`${f.id}-crease-${i}`} d={d} stroke="var(--border-light)" strokeWidth="1" fill="none" strokeLinecap="round" opacity="0.6" />
+          )))}
 
           {/* Interactive Fingers */}
           {fingerDefs.map((f) => {
@@ -239,19 +285,30 @@ export default function RemoteEnrollModal({ isOpen, onClose, member }) {
                 tabIndex={0}
                 aria-label={`${f.name} (${f.short})`}
               >
-                {/* Finger silhouette */}
+                {/* Finger hit area / selection highlight, masked to stop at the palm */}
                 <path
                   d={f.path}
-                  fill={isSelected ? 'rgba(200, 255, 0, 0.22)' : 'rgba(255, 255, 255, 0.05)'}
-                  stroke={isSelected ? 'var(--primary)' : 'var(--border-light)'}
-                  strokeWidth={isSelected ? '2.5' : '1.5'}
-                  strokeLinejoin="round"
-                  filter={isSelected ? `url(#glow-${handSide})` : undefined}
+                  fill={isSelected ? 'rgba(200, 255, 0, 0.22)' : 'transparent'}
+                  mask={isSelected ? `url(#palmMask-${handSide})` : undefined}
                   style={{ transition: 'all 0.25s ease' }}
                 />
+                {isSelected && (
+                  <path
+                    mask={`url(#palmMask-${handSide})`}
+                    d={f.outline}
+                    fill="none"
+                    stroke="var(--primary)"
+                    strokeWidth="2.5"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                    filter={`url(#glow-${handSide})`}
+                  />
+                )}
 
-                {/* Animated scan beam on selected finger during capture */}
+                {/* Animated scan beam on selected finger during capture,
+                    rotated to run along the finger */}
                 {isTargetScanning && (
+                  <g transform={`rotate(${f.angleDeg} ${f.tipX} ${f.tipY})`}>
                   <rect
                     x={f.tipX - f.radius - 2}
                     y={f.tipY - 6}
@@ -274,6 +331,7 @@ export default function RemoteEnrollModal({ isOpen, onClose, member }) {
                       repeatCount="indefinite"
                     />
                   </rect>
+                  </g>
                 )}
 
                 {/* Fingertip target pad / touch sensor node */}
@@ -293,7 +351,7 @@ export default function RemoteEnrollModal({ isOpen, onClose, member }) {
                   y={f.tipY + 3.5}
                   textAnchor="middle"
                   fill={isSelected ? '#000' : 'var(--text-secondary)'}
-                  fontSize="8.5"
+                  fontSize="7.5"
                   fontWeight="800"
                   fontFamily="system-ui, sans-serif"
                   style={{ pointerEvents: 'none', userSelect: 'none' }}
@@ -360,73 +418,37 @@ export default function RemoteEnrollModal({ isOpen, onClose, member }) {
           />
         )}
 
-        {/* Anatomical Face Outline SVG Graphic */}
+        {/* Simple face outline guide */}
         <svg
           viewBox="0 0 180 180"
           style={{ width: '130px', height: '130px', display: 'block', position: 'relative', zIndex: 2 }}
           role="img"
-          aria-label="Facial Biometric Landmark Frame"
+          aria-label="Face alignment outline"
         >
-          {/* Outer facial contour: jawline and forehead */}
           <path
-            d="M 50 50 C 40 85 45 125 90 148 C 135 125 140 85 130 50 C 120 30 60 30 50 50 Z"
-            fill="none"
+            d="M 90 22 C 124 22 140 50 140 84 C 140 124 116 158 90 158 C 64 158 40 124 40 84 C 40 50 56 22 90 22 Z"
+            fill={accentColor}
+            fillOpacity="0.06"
             stroke={accentColor}
-            strokeWidth="1.8"
-            strokeDasharray={isScanning ? '4,2' : undefined}
+            strokeWidth="2"
+            strokeDasharray={isScanning ? '6,4' : undefined}
+            strokeLinecap="round"
           />
-
-          {/* Subtle ears */}
-          <path d="M 46 72 Q 38 85 46 98" fill="none" stroke="var(--border-light)" strokeWidth="1.5" />
-          <path d="M 134 72 Q 142 85 134 98" fill="none" stroke="var(--border-light)" strokeWidth="1.5" />
-
-          {/* Eyebrows */}
-          <path d="M 60 68 Q 72 64 82 68" fill="none" stroke={accentColor} strokeWidth="1.6" />
-          <path d="M 98 68 Q 108 64 120 68" fill="none" stroke={accentColor} strokeWidth="1.6" />
-
-          {/* Eye Reticles */}
-          <circle cx="72" cy="78" r="7" fill="none" stroke={accentColor} strokeWidth="1.4" />
-          <circle cx="72" cy="78" r="2.5" fill={accentColor} />
-
-          <circle cx="108" cy="78" r="7" fill="none" stroke={accentColor} strokeWidth="1.4" />
-          <circle cx="108" cy="78" r="2.5" fill={accentColor} />
-
-          {/* Nose bridge and tip */}
-          <path d="M 90 75 L 87 96 L 93 96 Z" fill="none" stroke={accentColor} strokeWidth="1.4" />
-
-          {/* Mouth line */}
-          <path d="M 75 116 Q 90 122 105 116" fill="none" stroke={accentColor} strokeWidth="1.6" />
-
-          {/* Biometric landmark nodes */}
-          <circle cx="90" cy="52" r="2" fill={accentColor} />
-          <circle cx="60" cy="98" r="2" fill={accentColor} />
-          <circle cx="120" cy="98" r="2" fill={accentColor} />
-          <circle cx="90" cy="136" r="2" fill={accentColor} />
-
-          {/* Connecting triangulation lines */}
-          {isScanning && (
-            <>
-              <line x1="72" y1="78" x2="90" y2="96" stroke={accentColor} strokeWidth="0.8" strokeOpacity="0.6" strokeDasharray="2,2" />
-              <line x1="108" y1="78" x2="90" y2="96" stroke={accentColor} strokeWidth="0.8" strokeOpacity="0.6" strokeDasharray="2,2" />
-              <line x1="90" y1="96" x2="90" y2="116" stroke={accentColor} strokeWidth="0.8" strokeOpacity="0.6" strokeDasharray="2,2" />
-              <line x1="72" y1="78" x2="108" y2="78" stroke={accentColor} strokeWidth="0.8" strokeOpacity="0.6" strokeDasharray="2,2" />
-            </>
-          )}
         </svg>
 
         {/* Viewfinder Status Banner */}
         <div style={{ marginTop: '8px', textAlign: 'center', zIndex: 2 }}>
           <span style={{ fontSize: '12px', fontWeight: 700, color: accentColor, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             {isSuccess
-              ? 'Biometric Face Geometry Verified'
+              ? 'Face Enrolled'
               : isFailed
-              ? 'Facial Landmark Capture Failed'
+              ? 'Face Capture Failed'
               : isScanning
-              ? 'Scanning 128 Biometric Vector Points...'
-              : 'Face Alignment Viewfinder Ready'}
+              ? 'Scanning Face...'
+              : 'Ready to Scan'}
           </span>
           <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--text-muted)' }}>
-            AI Optical Sensor Handshake • 3D Depth Biometric Mesh
+            Keep your face inside the outline and look straight ahead
           </p>
         </div>
       </div>
