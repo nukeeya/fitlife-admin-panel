@@ -11,7 +11,8 @@ import {
   Clock,
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
-import { formatBDT } from '../utils/financeCalculators';
+import { formatBDT, formatDatePretty } from '../utils/financeCalculators';
+import { todayStr, addDays } from '../lib/supabaseData';
 import Modal from './common/Modal';
 import Avatar from './common/Avatar';
 
@@ -32,6 +33,7 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
   const [paymentOption, setPaymentOption] = useState('partial'); // 'full' | 'partial'
   const [initialPayment, setInitialPayment] = useState('10000');
   const [dueDate, setDueDate] = useState('2026-10-25');
+  const [startDate, setStartDate] = useState(todayStr());
   const [paymentMethod, setPaymentMethod] = useState('bKash');
   const [notes, setNotes] = useState('First installment paid on approval. Balance due by 25 Oct 2026.');
   const [validationError, setValidationError] = useState('');
@@ -73,6 +75,7 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
       setPaymentOption('partial');
       setInitialPayment('10000');
       setDueDate('2026-10-25');
+      setStartDate(todayStr());
       setPaymentMethod('bKash');
       setNotes('First installment paid on approval. Balance due on 25 Oct 2026.');
       setValidationError('');
@@ -93,6 +96,9 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
   const outstandingDue = useMemo(() => {
     return Math.max(0, pricing.netPayable - calculatedInitialPay);
   }, [pricing.netPayable, calculatedInitialPay]);
+
+  // Same rule as the database: expiry = start + plan duration (default 30 days)
+  const endDate = startDate ? addDays(startDate, selectedPlan?.durationDays || 30) : '';
 
   if (!application) return null;
 
@@ -123,6 +129,14 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
       setValidationError(`Initial payment cannot exceed the net payable amount (${formatBDT(pricing.netPayable)}).`);
       return;
     }
+    if (!startDate) {
+      setValidationError('Choose the membership start date.');
+      return;
+    }
+    if (startDate < addDays(todayStr(), -30) || startDate > addDays(todayStr(), 90)) {
+      setValidationError('Start date must be within 30 days before or 90 days after today.');
+      return;
+    }
     if (outstandingDue > 0 && !dueDate) {
       setValidationError('Due clearance date is mandatory when an outstanding balance remains.');
       return;
@@ -140,6 +154,7 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
         paidAmount: payNum,
         dueDate: outstandingDue > 0 ? dueDate : null,
         notes,
+        startDate,
       });
 
       if (!res?.ok) {
@@ -158,6 +173,8 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
         initialPayment: payNum,
         outstandingDue,
         dueDate: outstandingDue > 0 ? dueDate : 'Paid in Full',
+        startDate,
+        endDate,
       });
 
       setIsSuccess(true);
@@ -225,6 +242,10 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>Assigned Package:</span>
               <strong>{successDetails.planName}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Membership Period:</span>
+              <strong>{formatDatePretty(successDetails.startDate)} → {formatDatePretty(successDetails.endDate)}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>Final Payable Amount:</span>
@@ -360,6 +381,37 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
                 <option value="Rocket">Rocket (DBBL)</option>
                 <option value="Bank Card">Visa / Mastercard POS</option>
               </select>
+            </div>
+          </div>
+
+          {/* Membership start date: expiry is counted from here, not from the approval day */}
+          <div className="form-grid">
+            <div className="form-group">
+              <label className="form-label">Membership Start Date *</label>
+              <input
+                type="date"
+                className="form-input"
+                value={startDate}
+                min={addDays(todayStr(), -30)}
+                max={addDays(todayStr(), 90)}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  setValidationError('');
+                }}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Membership Ends</label>
+              <div
+                className="form-input"
+                style={{ display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', background: 'var(--bg-surface)' }}
+              >
+                {endDate ? formatDatePretty(endDate) : '—'}
+                <span style={{ marginLeft: '6px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                  ({selectedPlan?.durationDays || 30} days)
+                </span>
+              </div>
             </div>
           </div>
 

@@ -492,6 +492,7 @@ export function GymDataProvider({ children }) {
     submissionId = null,
     dueDate = null,
     notes = null,
+    startDate = null,
   }) => {
     const selectedPlan = activePlans.find((p) => p.id === Number(planId)) || activePlans[0];
     if (!selectedPlan || !raw) return { error: new Error('Select an active membership plan.') };
@@ -520,6 +521,7 @@ export function GymDataProvider({ children }) {
         submissionId,
         dueDate,
         notes,
+        startDate,
       }),
       reloadAll: true,
     });
@@ -560,6 +562,7 @@ export function GymDataProvider({ children }) {
     paidAmount,
     dueDate,
     notes,
+    startDate,
   }) => {
     const app = applications.find((a) => a.id === appId);
     if (!app) return { ok: false, message: 'Application not found (it may already be reviewed).' };
@@ -578,6 +581,7 @@ export function GymDataProvider({ children }) {
       submissionId: appId,
       dueDate,
       notes,
+      startDate,
     });
 
     if (error) return { ok: false, message: error.message };

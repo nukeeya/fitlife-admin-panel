@@ -587,7 +587,7 @@ export const db = {
   // and discount limits are enforced by the database, not trusted from here.
   createMemberWithInvoice({
     planId, name, phone, email, gender, discountType, discountValue, discountReason,
-    paidAmount, paymentMethod, trainerId, lockerId, avatar, submissionId, dueDate, notes,
+    paidAmount, paymentMethod, trainerId, lockerId, avatar, submissionId, dueDate, notes, startDate,
   }) {
     return supabase.rpc('create_member_with_invoice', {
       p_plan_id: Number(planId),
@@ -606,6 +606,9 @@ export const db = {
       p_submission_id: submissionId || null,
       p_due_date: dueDate || null,
       p_notes: notes || null,
+      // Only sent when chosen, so callers without it keep working on
+      // databases that haven't run migration 013 yet.
+      ...(startDate ? { p_start_date: startDate } : {}),
     });
   },
 
