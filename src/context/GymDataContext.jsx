@@ -675,6 +675,18 @@ export function GymDataProvider({ children }) {
     });
   };
 
+  // Returns { error } on failure so the form can show the message.
+  const updateMemberProfile = async (memberId, fields) => {
+    const member = members.find((item) => item.id === Number(memberId));
+    if (!member || member.id < 0 || !raw?.members) {
+      return { error: new Error('Profile could not be saved because the member record is unavailable.') };
+    }
+    return commit({
+      persist: () => db.updateMemberProfile(member.id, fields),
+      reloadAll: true,
+    });
+  };
+
   const updateMemberAssignments = async (memberId, assignments) => {
     const member = members.find((item) => item.id === Number(memberId));
     if (!member || member.id < 0 || !raw?.members) {
@@ -1380,6 +1392,7 @@ export function GymDataProvider({ children }) {
         rejectApplication,
         checkInMember,
         checkOutMember,
+        updateMemberProfile,
         updateMemberAssignments,
         bulkCheckIn,
         collectPayment,

@@ -312,6 +312,12 @@ export function mapMemberBase(row) {
     email: row.email || '',
     phone: row.phone,
     gender: row.gender || 'Male',
+    dob: row.dob || null,
+    address: row.address || '',
+    bloodGroup: row.blood_group || '',
+    height: row.height ?? null,
+    weight: row.weight ?? null,
+    emergencyContact: { name: row.emergency_name || '', phone: row.emergency_phone || '' },
     plan: row.plan || 'Basic',
     joined: row.joined,
     expiry: row.expiry,
@@ -575,6 +581,23 @@ export const db = {
 
   updateMember(id, patch) {
     return supabase.from('members').update(patch).eq('id', id).select('*').single();
+  },
+
+  // Personal details from the Member Details "Edit profile" form.
+  updateMemberProfile(id, { name, phone, email, address, height, weight, emergencyName, emergencyPhone }) {
+    const parts = String(name || '').trim().split(/\s+/);
+    const num = (v) => (v === '' || v === null || v === undefined ? null : Number(v));
+    return this.updateMember(id, {
+      first_name: parts[0],
+      last_name: parts.slice(1).join(' '), // '' for one-word names, so it isn't repeated
+      phone: String(phone || '').trim(),
+      email: String(email || '').trim() || null,
+      address: String(address || '').trim() || null,
+      height: num(height),
+      weight: num(weight),
+      emergency_name: String(emergencyName || '').trim() || null,
+      emergency_phone: String(emergencyPhone || '').trim() || null,
+    });
   },
 
   // Applications ---------------------------------------------------------------

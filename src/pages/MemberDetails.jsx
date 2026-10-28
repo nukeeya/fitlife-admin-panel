@@ -31,20 +31,14 @@ import { useFinance } from '../context/FinanceContext';
 import Avatar from '../components/common/Avatar';
 import Modal from '../components/common/Modal';
 import { formatBDT, formatDatePretty, calculateDaysOverdue } from '../utils/financeCalculators';
-import {
-  MOCK_MEMBERS,
-  MOCK_SUBSCRIPTION_HISTORY,
-  MOCK_ATTENDANCE_LOGS,
-  MOCK_WORKOUT_ROUTINES,
-  MOCK_DIET_PLANS,
-} from '../data/mockProfiles';
+import { addDays, toDbTime } from '../lib/supabaseData';
 import RecordPaymentModal from '../components/finance/modals/RecordPaymentModal';
 import ExtendDueDateModal from '../components/finance/modals/ExtendDueDateModal';
 import InvoiceViewModal from '../components/finance/modals/InvoiceViewModal';
 
 export default function MemberDetails() {
   const { id } = useParams();
-  const { members, checkInMember } = useGymData();
+  const { members, plans, attendance, workoutPlans, dietPlans, checkInMember, updateMemberProfile, loading } = useGymData();
   const { invoices, today: demoDate } = useFinance();
 
   // Active Tab state
@@ -57,95 +51,23 @@ export default function MemberDetails() {
   const [isExtendModalOpen, setIsExtendModalOpen] = useState(false);
   const [selectedInvoiceForView, setSelectedInvoiceForView] = useState(null);
 
-  // Local optimistic state for profile updates
-  const [localProfile, setLocalProfile] = useState(null);
   const [checkInNotice, setCheckInNotice] = useState('');
-  const [localAttendance, setLocalAttendance] = useState(null);
   const [localSubscriptions, setLocalSubscriptions] = useState(null);
 
-  // 1. Resolve Member Profile
+  // 1. Resolve Member Profile (database members only; null = not found)
   const member = useMemo(() => {
-    // Try to match by numeric ID or member code (FLM-1008, etc.)
-    const foundFromContext = (members || []).find(
-      (m) =>
-        String(m.id) === String(id) ||
-        String(m.code || '').toLowerCase() === String(id || '').toLowerCase() ||
-        String(m.memberCode || '').toLowerCase() === String(id || '').toLowerCase()
+    // Match by numeric ID or member code (FLM-000123, etc.)
+    const key = String(id || '').toLowerCase();
+    const found = (members || []).find(
+      (m) => String(m.id) === String(id) || String(m.code || '').toLowerCase() === key
     );
+    return found || null;
+  }, [members, id]);
 
-    const foundFromMock = MOCK_MEMBERS.find(
-      (m) =>
-        String(m.id) === String(id) ||
-        String(m.code || '').toLowerCase() === String(id || '').toLowerCase() ||
-        String(m.memberCode || '').toLowerCase() === String(id || '').toLowerCase()
-    );
-
-    const base = foundFromContext || foundFromMock || MOCK_MEMBERS.find((m) => m.code === 'FLM-1008') || MOCK_MEMBERS[0];
-    const mockEnriched = MOCK_MEMBERS.find((m) => m.code === base.code || m.id === base.id) || {};
-
-    return {
-      ...mockEnriched,
-      ...base,
-      ...(localProfile || {}),
-    };
-  }, [members, id, localProfile]);
-
-  // 2. Resolve Member Invoices from FinanceContext (single source of truth for balances)
+  // 2. Member Invoices from the database (newest first; payments are attached per invoice)
   const memberInvoices = useMemo(() => {
     if (!member) return [];
-    const directMatches = (invoices || []).filter(
-      (inv) =>
-        (inv.memberCode && inv.memberCode === member.code) ||
-        (inv.memberName && inv.memberName.toLowerCase() === member.name.toLowerCase()) ||
-        inv.memberId === member.id
-    );
-
-    if (directMatches.length > 0) {
-      return directMatches;
-    }
-
-    // Default fallback invoice if member has none in FinanceContext
-    const net = member.plan === '1 Year' ? 50000 : member.plan === '6 Months' ? 28000 : member.plan === '3 Months' ? 15000 : 7000;
-    const paid = net;
-    return [
-      {
-        id: `inv-gen-${member.id}`,
-        number: `INV-2026-00${member.id < 10 ? '0' + member.id : member.id}`,
-        memberId: member.id,
-        memberCode: member.code,
-        memberName: member.name,
-        memberPhone: member.phone,
-        memberAvatar: member.avatar,
-        packageName: member.plan || '3 Months Standard',
-        packageDuration: '90 Days',
-        startDate: member.joined || '2026-10-01',
-        endDate: member.expiry || '2026-12-31',
-        date: member.joined || '2026-10-01',
-        dueDate: '2026-10-25',
-        baseAmount: net,
-        discountAmount: 0,
-        discountReason: 'None',
-        taxAmount: 0,
-        netPayable: net,
-        paidAmount: paid,
-        dueAmount: 0,
-        status: 'Paid',
-        isExtended: false,
-        extensionHistory: [],
-        payments: [
-          {
-            id: `pay-gen-${member.id}`,
-            receiptNumber: `REC-2026-00${member.id}`,
-            amount: paid,
-            method: 'bKash',
-            reference: 'TRX-DEFAULT-REG',
-            date: member.joined || '2026-10-01',
-            notes: 'Membership admission fee',
-            collectedBy: 'Receptionist Desk (Demo)',
-          },
-        ],
-      },
-    ];
+    return (invoices || []).filter((inv) => inv.memberId === member.id);
   }, [invoices, member]);
 
   // Aggregate Member Financial Stats
@@ -193,7 +115,7 @@ export default function MemberDetails() {
           list.push({
             ...p,
             invoiceNumber: inv.number,
-            packageName: inv.packageName,
+            packageName: inv.planName,
           });
         });
       }
@@ -204,243 +126,170 @@ export default function MemberDetails() {
   // Subscriptions data
   const subscriptions = useMemo(() => {
     if (localSubscriptions) return localSubscriptions;
-    if (MOCK_SUBSCRIPTION_HISTORY[member.code]) {
-      return MOCK_SUBSCRIPTION_HISTORY[member.code];
-    }
-    return [
-      {
-        id: `sub-${member.id}`,
-        packageName: `${member.plan || 'Standard Membership'} Package`,
-        category: 'General Fitness',
-        duration: '90 Days',
-        startDate: member.joined || '2026-10-01',
-        expiryDate: member.expiry || '2026-12-31',
-        price: totalInvoiced || 15000,
-        paidAmount: totalPaid || 13000,
-        dueAmount: totalDue,
-        dueDate: activeDueInvoice?.dueDate || '2026-10-25',
-        status: member.status || 'Active',
-        includedFeatures: [
-          'Full Gym Floor & Cardio Suite Access',
-          'Free Dedicated Zone B Locker',
-          'Bi-weekly Trainer Review',
-          'Monthly InBody Body Composition Scan',
-          'Steam & Sauna Privileges',
-        ],
-        installments: [
-          { number: 1, amount: 10000, dueDate: member.joined || '2026-10-01', paidDate: member.joined || '2026-10-01', status: 'Paid', method: 'bKash' },
-          { number: 2, amount: 3000, dueDate: '2026-10-10', paidDate: '2026-10-10', status: 'Paid', method: 'Cash' },
-          { number: 3, amount: totalDue > 0 ? totalDue : 2000, dueDate: activeDueInvoice?.dueDate || '2026-10-25', paidDate: totalDue === 0 ? '2026-10-22' : null, status: totalDue === 0 ? 'Paid' : 'Due', method: totalDue === 0 ? 'bKash' : 'Pending' },
-        ],
-      },
-    ];
-  }, [localSubscriptions, member, totalInvoiced, totalPaid, totalDue, activeDueInvoice]);
+    if (!member) return [];
+    // One subscription per invoice (admission or renewal), newest first.
+    // The newest one uses the member's own expiry, which approval sets from the
+    // chosen start date; older ones use the invoice's dates.
+    return memberInvoices.map((inv, idx) => {
+      const plan = (plans || []).find((p) => p.id === inv.planId);
+      const days = Number(plan?.durationDays) || inv.durationMonths * 30;
+      const isCurrent = idx === 0;
+      return {
+        id: inv.id,
+        packageName: inv.planName,
+        duration: `${days} Days`,
+        startDate: isCurrent && member.expiry ? addDays(member.expiry, -days) : inv.startDate,
+        expiryDate: isCurrent && member.expiry ? member.expiry : inv.endDate,
+        price: inv.netPayable,
+        paidAmount: inv.paidAmount,
+        dueAmount: inv.dueAmount,
+        dueDate: inv.dueDate,
+        status: isCurrent ? member.status : 'Completed',
+        includedFeatures: plan?.features || [],
+      };
+    });
+  }, [localSubscriptions, member, memberInvoices, plans]);
 
-  // Attendance data
+  // Attendance from the database (newest first). Duration in minutes is
+  // null while the member is still in the gym.
   const attendanceLogs = useMemo(() => {
-    if (localAttendance) return localAttendance;
-    if (MOCK_ATTENDANCE_LOGS[member.code]) {
-      return MOCK_ATTENDANCE_LOGS[member.code];
-    }
-    return [
-      { date: demoDate, checkIn: '06:45 AM', checkOut: '08:10 AM', duration: '1h 25m', status: 'Completed', method: 'RFID Card' },
-      { date: '2026-10-20', checkIn: '06:40 AM', checkOut: '08:05 AM', duration: '1h 25m', status: 'Completed', method: 'RFID Card' },
-      { date: '2026-10-18', checkIn: '06:50 AM', checkOut: '08:15 AM', duration: '1h 25m', status: 'Completed', method: 'Face ID' },
-      { date: '2026-10-15', checkIn: '07:05 AM', checkOut: '08:20 AM', duration: '1h 15m', status: 'Completed', method: 'RFID Card' },
-      { date: '2026-10-12', checkIn: '06:30 AM', checkOut: '07:55 AM', duration: '1h 25m', status: 'Completed', method: 'Manual Check-in' },
-    ];
-  }, [localAttendance, member, demoDate]);
+    if (!member) return [];
+    const toMinutes = (display) => {
+      const t = toDbTime(display);
+      return t ? Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5)) : null;
+    };
+    return (attendance || [])
+      .filter((a) => a.memberId === member.id)
+      .map((a) => {
+        const inMin = toMinutes(a.checkIn);
+        const outMin = toMinutes(a.checkOut);
+        const minutes = inMin !== null && outMin !== null && outMin >= inMin ? outMin - inMin : null;
+        return { ...a, minutes };
+      })
+      .sort((a, b) => (a.date === b.date ? b.id - a.id : a.date < b.date ? 1 : -1));
+  }, [attendance, member]);
 
-  // Workout Routine
+  const attendanceStats = useMemo(() => {
+    // Streak: consecutive days with a visit, counting back from today
+    // (or from yesterday if they haven't come in yet today).
+    const days = new Set(attendanceLogs.map((a) => a.date));
+    let cursor = days.has(demoDate) ? demoDate : addDays(demoDate, -1);
+    let streak = 0;
+    while (days.has(cursor)) {
+      streak += 1;
+      cursor = addDays(cursor, -1);
+    }
+    const timed = attendanceLogs.filter((a) => a.minutes !== null);
+    const avgMinutes = timed.length
+      ? Math.round(timed.reduce((s, a) => s + a.minutes, 0) / timed.length)
+      : null;
+    const inGymNow = attendanceLogs.some((a) => a.date === demoDate && a.status === 'In');
+    return { streak, avgMinutes, inGymNow };
+  }, [attendanceLogs, demoDate]);
+
+  const formatMinutes = (m) => (m === null ? '—' : `${Math.floor(m / 60)}h ${m % 60}m`);
+
+  // Workout Routine: the member's newest saved plan from the AI Workout page
   const workoutPlan = useMemo(() => {
-    if (MOCK_WORKOUT_ROUTINES[member.code]) {
-      return MOCK_WORKOUT_ROUTINES[member.code];
-    }
+    if (!member) return null;
+    const saved = (workoutPlans || []).find((p) => p.memberId === member.id);
+    if (!saved) return null;
+    const program = saved.program || {};
+    const splits = program.splits || [];
+    const asSets = (v) => (typeof v === 'number' ? `${v} Sets` : v || '—');
     return {
-      title: '4-Day Hypertrophy & Strength Split',
-      trainer: member.trainer || 'Tanvir Rahman',
-      goal: 'Muscle Mass & Functional Conditioning',
-      experience: 'Intermediate',
-      daysPerWeek: 4,
-      notes: 'Focus on progressive overload on compound lifts. Rest 90-120s between heavy working sets.',
-      schedule: [
-        {
-          day: 'Monday - Chest & Triceps',
-          exercises: [
-            { name: 'Barbell Flat Bench Press', sets: 4, reps: '8-10', weight: '75 kg' },
-            { name: 'Incline Dumbbell Press', sets: 3, reps: '10-12', weight: '26 kg' },
-            { name: 'Cable Chest Flyes', sets: 3, reps: '12-15', weight: '15 kg' },
-            { name: 'Dips / Weighted Dips', sets: 3, reps: '10-12', weight: 'Bodyweight' },
-            { name: 'Overhead Rope Tricep Extension', sets: 3, reps: '12-15', weight: '22 kg' },
-          ],
-        },
-        {
-          day: 'Tuesday - Back & Biceps',
-          exercises: [
-            { name: 'Conventional Deadlift', sets: 4, reps: '6-8', weight: '120 kg' },
-            { name: 'Lat Pulldown (Wide Grip)', sets: 3, reps: '10-12', weight: '65 kg' },
-            { name: 'Seated Cable Row', sets: 3, reps: '10-12', weight: '60 kg' },
-            { name: 'Barbell Bicep Curl', sets: 3, reps: '10-12', weight: '30 kg' },
-            { name: 'Incline Dumbbell Hammer Curls', sets: 3, reps: '12-15', weight: '14 kg' },
-          ],
-        },
-        {
-          day: 'Thursday - Shoulders & Abs',
-          exercises: [
-            { name: 'Standing Overhead Barbell Press', sets: 4, reps: '8-10', weight: '45 kg' },
-            { name: 'Dumbbell Lateral Raises', sets: 4, reps: '12-15', weight: '12 kg' },
-            { name: 'Face Pulls (Rear Delts)', sets: 3, reps: '15', weight: '25 kg' },
-            { name: 'Hanging Leg Raises', sets: 3, reps: '15-20', weight: 'Bodyweight' },
-            { name: 'Cable Woodchoppers', sets: 3, reps: '12 each side', weight: '20 kg' },
-          ],
-        },
-        {
-          day: 'Friday - Legs & Calves',
-          exercises: [
-            { name: 'Barbell Back Squat', sets: 4, reps: '8-10', weight: '100 kg' },
-            { name: 'Romanian Deadlift (RDL)', sets: 3, reps: '10-12', weight: '80 kg' },
-            { name: 'Leg Press 45°', sets: 3, reps: '12-15', weight: '180 kg' },
-            { name: 'Lying Leg Curls', sets: 3, reps: '12-15', weight: '45 kg' },
-            { name: 'Standing Calf Raises', sets: 4, reps: '15-20', weight: '60 kg' },
-          ],
-        },
-      ],
+      title: program.title || 'Workout Plan',
+      goal: program.goal || '—',
+      experience: program.experience || '—',
+      daysPerWeek: program.trainingDaysPerWeek || splits.length,
+      createdAt: saved.dateGenerated,
+      notes: program.progressionRule || '',
+      schedule: splits.map((s) => ({
+        day: s.day,
+        exercises: (s.exercises || []).map((ex) => ({
+          name: ex.name,
+          sets: asSets(ex.sets),
+          reps: ex.reps || '—',
+          weight: ex.targetWeight || '—',
+        })),
+      })),
     };
-  }, [member]);
+  }, [member, workoutPlans]);
 
-  // Diet Plan
+  // Diet Plan: the member's newest saved plan from the Diet Plans page
   const dietPlan = useMemo(() => {
-    if (MOCK_DIET_PLANS[member.code]) {
-      return MOCK_DIET_PLANS[member.code];
-    }
+    if (!member) return null;
+    const saved = (dietPlans || []).find((p) => p.memberId === member.id);
+    if (!saved) return null;
+    const calc = saved.calculations || {};
+    const water = calc.waterTarget;
+    const round = (v) => Math.round(Number(v) || 0);
     return {
-      title: 'High Protein Lean Bulk (Bangladeshi Diet)',
-      nutritionist: 'Fatima Khan (Lead Sports Dietitian)',
-      dailyCalories: 2650,
+      title: saved.goal ? `${saved.goal} Diet Plan` : 'Diet Plan',
+      createdAt: saved.dateGenerated,
+      preference: saved.profile?.dietPreference || '—',
+      waterIntake: water ? `${water.litersMin} - ${water.litersMax} L daily` : '—',
+      dailyCalories: round(calc.targetCalories ?? calc.tdee ?? calc.calories),
       macros: {
-        proteinGrams: 165,
-        carbsGrams: 310,
-        fatsGrams: 75,
+        proteinGrams: round(calc.proteinGrams ?? calc.protein?.grams),
+        carbsGrams: round(calc.carbGrams ?? calc.carbs?.grams),
+        fatsGrams: round(calc.fatGrams ?? calc.fat?.grams),
       },
-      preference: 'Non-Veg (Halal)',
-      waterIntake: '3.5 Litres Daily',
-      meals: [
-        {
-          mealName: 'Breakfast (7:30 AM)',
-          items: [
-            '3 Whole boiled eggs + 2 egg whites',
-            '2 Brown atta rotis with light ghee',
-            '1 bowl mixed vegetable sabzi (papaya, carrots, potol)',
-            '1 glass low-fat milk with banana',
-          ],
-          calories: 620,
-          protein: 38,
-        },
-        {
-          mealName: 'Mid-Morning Snack (11:00 AM)',
-          items: ['Handful of almonds & walnuts (30g)', '1 cup fresh green tea with lime', '1 seasonal apple or guava'],
-          calories: 230,
-          protein: 6,
-        },
-        {
-          mealName: 'Lunch (1:30 PM)',
-          items: [
-            '1.5 cups steamed brown rice / Basmati',
-            '180g Deshi Chicken breast curry or Rui fish jhol',
-            '1 bowl thick Masoor dal',
-            'Fresh green cucumber, tomato & onion salad',
-          ],
-          calories: 780,
-          protein: 52,
-        },
-        {
-          mealName: 'Pre-Workout Snack (4:45 PM)',
-          items: ['2 slices whole wheat brown bread with 1 tbsp peanut butter', '1 banana + 1 cup black coffee (no sugar)'],
-          calories: 310,
-          protein: 10,
-        },
-        {
-          mealName: 'Dinner (8:30 PM)',
-          items: [
-            '2 Multigrain rotis',
-            '150g Grilled Bhetki fish or Chicken tikka',
-            '1 small bowl Palak (spinach) or mixed stir-fry greens',
-            'Cucumber raita with low-fat curd',
-          ],
-          calories: 710,
-          protein: 48,
-        },
-      ],
+      meals: (saved.meals || []).map((m) => {
+        const items = m.items || [];
+        return {
+          mealName: m.time ? `${m.mealName} (${m.time})` : m.mealName,
+          items: items.map((it) => (it.servingDesc ? `${it.name} (${it.servingDesc})` : it.name)),
+          calories: round(items.reduce((s, it) => s + (Number(it.calories) || 0), 0)),
+          protein: round(items.reduce((s, it) => s + (Number(it.protein) || 0), 0)),
+        };
+      }),
     };
-  }, [member]);
+  }, [member, dietPlans]);
 
   // Check-In Handler
-  const handleCheckInToday = () => {
-    checkInMember?.(member.id);
-    const newEntry = {
-      date: demoDate,
-      checkIn: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      checkOut: 'In Gym',
-      duration: 'Ongoing',
-      status: 'In Gym',
-      method: 'Manual Check-in (Admin)',
-    };
-    setLocalAttendance([newEntry, ...attendanceLogs]);
-    setCheckInNotice(`Success: ${member.name} checked in successfully for today (${demoDate}).`);
+  // Saves an attendance row; the list above updates from GymDataContext.
+  const handleCheckInToday = async () => {
+    if (attendanceStats.inGymNow) return;
+    await checkInMember(member.id);
+    setCheckInNotice(`${member.name} checked in for today (${formatDatePretty(demoDate)}).`);
     setTimeout(() => setCheckInNotice(''), 4500);
   };
 
-  // Profile Edit Form State
-  const [editForm, setEditForm] = useState({
-    name: member?.name || '',
-    phone: member?.phone || '',
-    email: member?.email || '',
-    address: member?.address || '',
-    height: member?.height || '',
-    weight: member?.weight || '',
-    rfidCard: member?.rfidCard || '',
-    notes: member?.notes || '',
-    emergencyName: member?.emergencyContact?.name || '',
-    emergencyPhone: member?.emergencyContact?.phone || '',
-    emergencyRelation: member?.emergencyContact?.relation || '',
+  // Profile Edit Form State (only fields that have a column in `members`)
+  const profileFormFrom = (m) => ({
+    name: m?.name || '',
+    phone: m?.phone || '',
+    email: m?.email || '',
+    address: m?.address || '',
+    height: m?.height ?? '',
+    weight: m?.weight ?? '',
+    emergencyName: m?.emergencyContact?.name || '',
+    emergencyPhone: m?.emergencyContact?.phone || '',
   });
+  const [editForm, setEditForm] = useState(() => profileFormFrom(member));
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState('');
 
   const handleOpenEdit = () => {
-    setEditForm({
-      name: member.name || '',
-      phone: member.phone || '',
-      email: member.email || '',
-      address: member.address || '',
-      height: member.height || '',
-      weight: member.weight || '',
-      rfidCard: member.rfidCard || '',
-      notes: member.notes || '',
-      emergencyName: member.emergencyContact?.name || '',
-      emergencyPhone: member.emergencyContact?.phone || '',
-      emergencyRelation: member.emergencyContact?.relation || '',
-    });
+    setEditForm(profileFormFrom(member));
+    setProfileError('');
     setIsEditProfileOpen(true);
   };
 
-  const handleSaveProfile = (e) => {
+  // Saves to the database; the page re-renders from GymDataContext after reload.
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
-    setLocalProfile({
-      name: editForm.name,
-      phone: editForm.phone,
-      email: editForm.email,
-      address: editForm.address,
-      height: editForm.height,
-      weight: editForm.weight,
-      rfidCard: editForm.rfidCard,
-      notes: editForm.notes,
-      emergencyContact: {
-        name: editForm.emergencyName,
-        phone: editForm.emergencyPhone,
-        relation: editForm.emergencyRelation,
-      },
-    });
+    setIsSavingProfile(true);
+    setProfileError('');
+    const result = await updateMemberProfile(member.id, editForm);
+    setIsSavingProfile(false);
+    if (result?.error) {
+      setProfileError(result.error.message || 'Could not save the profile. Please try again.');
+      return;
+    }
     setIsEditProfileOpen(false);
-    setCheckInNotice('Member profile details updated successfully.');
+    setCheckInNotice('Member profile saved.');
     setTimeout(() => setCheckInNotice(''), 4000);
   };
 
@@ -517,10 +366,14 @@ export default function MemberDetails() {
         <Link to="/members" className="btn btn-secondary">
           <ArrowLeft size={16} /> Back to Members
         </Link>
-        <p style={{ marginTop: '20px' }}>Member profile not found.</p>
+        <p style={{ marginTop: '20px' }}>{loading ? 'Loading member…' : 'Member not found.'}</p>
       </div>
     );
   }
+
+  const age = member.dob
+    ? Math.floor((new Date(demoDate) - new Date(member.dob)) / (365.25 * 24 * 60 * 60 * 1000))
+    : null;
 
   // Determine extension state for active invoice
   const isInvoiceExtended = Boolean(activeDueInvoice?.isExtended);
@@ -691,7 +544,7 @@ export default function MemberDetails() {
                   >
                     {isOverdue ? <ShieldAlert size={16} /> : <AlertCircle size={16} />}
                     <span>
-                      {formatBDT(totalDue)} Due — Due Date: {formatDatePretty(activeDueInvoice?.dueDate || '2026-10-25')}
+                      {formatBDT(totalDue)} Due — Due Date: {formatDatePretty(activeDueInvoice?.dueDate)}
                       {isOverdue && ` (${daysOverdue} days overdue)`}
                     </span>
                     {isInvoiceExtended && (
@@ -794,10 +647,11 @@ export default function MemberDetails() {
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={handleCheckInToday}
+              disabled={attendanceStats.inGymNow}
               style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10B981', borderColor: 'rgba(16, 185, 129, 0.3)' }}
               title="Log check-in for today"
             >
-              <CheckCircle2 size={14} /> Check In Today
+              <CheckCircle2 size={14} /> {attendanceStats.inGymNow ? 'In Gym Now' : 'Check In Today'}
             </button>
           </div>
         </div>
@@ -903,7 +757,7 @@ export default function MemberDetails() {
               </div>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Custom / Branch ID</span>
-                <span style={{ fontSize: '14px', fontWeight: 600 }}>{member.customId || 'FIT-GLS-008'}</span>
+                <span style={{ fontSize: '14px', fontWeight: 600 }}>{member.customId || '—'}</span>
               </div>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Full Name</span>
@@ -915,15 +769,15 @@ export default function MemberDetails() {
               </div>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Email Address</span>
-                <span style={{ fontSize: '14px', fontWeight: 600 }}>{member.email}</span>
+                <span style={{ fontSize: '14px', fontWeight: 600 }}>{member.email || '—'}</span>
               </div>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Gender</span>
-                <span style={{ fontSize: '14px', fontWeight: 600 }}>{member.gender || 'Male'}</span>
+                <span style={{ fontSize: '14px', fontWeight: 600 }}>{member.gender || '—'}</span>
               </div>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Date of Birth</span>
-                <span style={{ fontSize: '14px', fontWeight: 600 }}>{formatDatePretty(member.dob || '1990-09-18')} (Age: 36)</span>
+                <span style={{ fontSize: '14px', fontWeight: 600 }}>{member.dob ? `${formatDatePretty(member.dob)} (Age: ${age})` : '—'}</span>
               </div>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Registration Date</span>
@@ -931,28 +785,28 @@ export default function MemberDetails() {
               </div>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Height & Weight</span>
-                <span style={{ fontSize: '14px', fontWeight: 600 }}>{member.height || '180 cm (5\'11")'} · {member.weight || '82 kg'}</span>
+                <span style={{ fontSize: '14px', fontWeight: 600 }}>{member.height ? `${member.height} cm` : '—'} · {member.weight ? `${member.weight} kg` : '—'}</span>
               </div>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>RFID Access Card</span>
-                <span style={{ fontSize: '14px', fontWeight: 600, color: '#10B981' }}>{member.rfidCard || 'RFID-100899'}</span>
+                <span style={{ fontSize: '14px', fontWeight: 600, color: '#10B981' }}>{member.rfidCard || '—'}</span>
               </div>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Assigned Coach</span>
-                <span style={{ fontSize: '14px', fontWeight: 600 }}>{member.trainer || 'Tanvir Rahman'}</span>
+                <span style={{ fontSize: '14px', fontWeight: 600 }}>{member.trainer || 'None'}</span>
               </div>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Assigned Locker</span>
-                <span style={{ fontSize: '14px', fontWeight: 600 }}>{member.lockerNumber || 'B-003'}</span>
+                <span style={{ fontSize: '14px', fontWeight: 600 }}>{member.lockerNumber || 'None'}</span>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Residential Address</span>
-                <span style={{ fontSize: '14px', fontWeight: 500 }}>{member.address || 'House 32, Road 18, Block J, Baridhara, Dhaka'}</span>
+                <span style={{ fontSize: '14px', fontWeight: 500 }}>{member.address || '—'}</span>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Medical & Health Background</span>
                 <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                  {member.medical || member.notes || 'No pre-existing cardiovascular conditions. Cleared for high-intensity strength training.'}
+                  {member.medical || member.notes || '—'}
                 </p>
               </div>
             </div>
@@ -974,19 +828,19 @@ export default function MemberDetails() {
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Contact Person</span>
                 <span style={{ fontSize: '14px', fontWeight: 700 }}>
-                  {member.emergencyContact?.name || 'Nadia Ahmed'}
+                  {member.emergencyContact?.name || '—'}
                 </span>
               </div>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Relationship</span>
                 <span style={{ fontSize: '14px', fontWeight: 600 }}>
-                  {member.emergencyContact?.relation || 'Spouse'}
+                  {member.emergencyContact?.relation || '—'}
                 </span>
               </div>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Emergency Phone</span>
                 <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--primary)' }}>
-                  {member.emergencyContact?.phone || '+880 1711-224466'}
+                  {member.emergencyContact?.phone || '—'}
                 </span>
               </div>
             </div>
@@ -1012,13 +866,17 @@ export default function MemberDetails() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>
-                    {subscriptions[0]?.packageName || 'Quarterly Transformation (3 Months)'}
+                    {subscriptions[0]?.packageName || 'No subscription yet'}
                   </h3>
-                  <span className="badge badge-success">Active Package</span>
+                  {subscriptions[0] && (
+                    <span className={`badge ${subscriptions[0].status === 'Active' ? 'badge-success' : 'badge-warning'}`}>{subscriptions[0].status}</span>
+                  )}
                 </div>
-                <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
-                  Valid from <strong>{formatDatePretty(subscriptions[0]?.startDate)}</strong> to <strong>{formatDatePretty(subscriptions[0]?.expiryDate)}</strong> ({subscriptions[0]?.duration})
-                </p>
+                {subscriptions[0] && (
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
+                    Valid from <strong>{formatDatePretty(subscriptions[0].startDate)}</strong> to <strong>{formatDatePretty(subscriptions[0].expiryDate)}</strong> ({subscriptions[0].duration})
+                  </p>
+                )}
               </div>
 
               <button
@@ -1044,22 +902,22 @@ export default function MemberDetails() {
             >
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Package Price</span>
-                <div style={{ fontSize: '18px', fontWeight: 800 }}>{formatBDT(subscriptions[0]?.price || 15000)}</div>
+                <div style={{ fontSize: '18px', fontWeight: 800 }}>{formatBDT(subscriptions[0]?.price || 0)}</div>
               </div>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Total Paid</span>
-                <div style={{ fontSize: '18px', fontWeight: 800, color: '#10B981' }}>{formatBDT(subscriptions[0]?.paidAmount || 13000)}</div>
+                <div style={{ fontSize: '18px', fontWeight: 800, color: '#10B981' }}>{formatBDT(subscriptions[0]?.paidAmount || 0)}</div>
               </div>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Outstanding Due</span>
-                <div style={{ fontSize: '18px', fontWeight: 800, color: totalDue > 0 ? 'var(--danger)' : '#10B981' }}>
-                  {formatBDT(subscriptions[0]?.dueAmount !== undefined ? subscriptions[0].dueAmount : totalDue)}
+                <div style={{ fontSize: '18px', fontWeight: 800, color: subscriptions[0]?.dueAmount > 0 ? 'var(--danger)' : '#10B981' }}>
+                  {formatBDT(subscriptions[0]?.dueAmount || 0)}
                 </div>
               </div>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Due Clearance Deadline</span>
                 <div style={{ fontSize: '14px', fontWeight: 700, marginTop: '3px' }}>
-                  {formatDatePretty(subscriptions[0]?.dueDate || '2026-10-25')}
+                  {formatDatePretty(subscriptions[0]?.dueDate)}
                 </div>
               </div>
             </div>
@@ -1070,13 +928,10 @@ export default function MemberDetails() {
                 Included Features & Perks:
               </span>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
-                {(subscriptions[0]?.includedFeatures || [
-                  'Full Gym Floor & Cardio Suite Access',
-                  'Dedicated Zone B Locker',
-                  'Bi-weekly Trainer Review',
-                  'Monthly InBody Body Composition Scan',
-                  'Steam & Sauna Privileges',
-                ]).map((feat, idx) => (
+                {(subscriptions[0]?.includedFeatures || []).length === 0 && (
+                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No features listed for this plan.</span>
+                )}
+                {(subscriptions[0]?.includedFeatures || []).map((feat, idx) => (
                   <span
                     key={idx}
                     style={{
@@ -1113,6 +968,13 @@ export default function MemberDetails() {
                   </tr>
                 </thead>
                 <tbody>
+                  {subscriptions.length === 0 && (
+                    <tr>
+                      <td colSpan="8" style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
+                        No subscriptions for this member yet.
+                      </td>
+                    </tr>
+                  )}
                   {subscriptions.map((sub, idx) => (
                     <tr key={sub.id || idx}>
                       <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{sub.packageName}</td>
@@ -1161,7 +1023,7 @@ export default function MemberDetails() {
                 {formatBDT(totalDue)}
               </div>
               <div className="stat-widget-sub">
-                {totalDue > 0 ? `Due: ${formatDatePretty(activeDueInvoice?.dueDate || '2026-10-25')}` : 'All accounts settled'}
+                {totalDue > 0 ? `Due: ${formatDatePretty(activeDueInvoice?.dueDate)}` : 'All accounts settled'}
               </div>
             </div>
           </div>
@@ -1240,7 +1102,7 @@ export default function MemberDetails() {
                           </span>
                         </td>
                         <td style={{ fontFamily: 'monospace', fontSize: '12px' }}>{p.reference}</td>
-                        <td style={{ fontSize: '13px' }}>{p.collectedBy}</td>
+                        <td style={{ fontSize: '13px' }}>{p.collectedBy || '—'}</td>
                         <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{p.notes || '—'}</td>
                       </tr>
                     ))
@@ -1299,7 +1161,7 @@ export default function MemberDetails() {
                     <tr key={inv.id}>
                       <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{inv.number}</td>
                       <td>{formatDatePretty(inv.date || inv.startDate)}</td>
-                      <td>{inv.packageName || inv.planName}</td>
+                      <td>{inv.planName}</td>
                       <td>{formatBDT(inv.baseAmount)}</td>
                       <td>
                         {inv.discountAmount > 0 ? (
@@ -1387,7 +1249,7 @@ export default function MemberDetails() {
                   )}
                 </div>
                 <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
-                  Total Package: <strong>{formatBDT(totalInvoiced || 15000)}</strong> · Paid: <strong>{formatBDT(totalPaid || 13000)}</strong> · Remaining: <strong style={{ color: totalDue > 0 ? 'var(--danger)' : '#10B981' }}>{formatBDT(totalDue)}</strong>
+                  Total Package: <strong>{formatBDT(totalInvoiced)}</strong> · Paid: <strong>{formatBDT(totalPaid)}</strong> · Remaining: <strong style={{ color: totalDue > 0 ? 'var(--danger)' : '#10B981' }}>{formatBDT(totalDue)}</strong>
                 </p>
               </div>
 
@@ -1433,7 +1295,7 @@ export default function MemberDetails() {
                 <Lock size={16} style={{ color: '#3B82F6', flexShrink: 0 }} />
                 <div>
                   <strong>One-Time Extension Policy Active:</strong> Due date was extended to{' '}
-                  <strong>{formatDatePretty(activeDueInvoice?.dueDate)}</strong>. Only 1 extension is permitted per mock record; further extensions are permanently locked.
+                  <strong>{formatDatePretty(activeDueInvoice?.dueDate)}</strong>. Only 1 extension is permitted per invoice; further extensions are locked.
                 </div>
               </div>
             )}
@@ -1447,53 +1309,38 @@ export default function MemberDetails() {
               gap: '16px',
             }}
           >
-            {/* Installment 1 */}
-            <div
-              className="activity-card"
-              style={{
-                padding: '20px',
-                borderRadius: '12px',
-                borderTop: '3px solid #10B981',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 700 }}>Installment 1 (Admission)</span>
-                <span className="badge badge-success">Paid</span>
+            {/* Paid installments = real payments on the current invoice (oldest first) */}
+            {(activeDueInvoice?.payments || []).map((p, idx) => (
+              <div
+                key={p.id}
+                className="activity-card"
+                style={{
+                  padding: '20px',
+                  borderRadius: '12px',
+                  borderTop: '3px solid #10B981',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700 }}>Installment {idx + 1}{idx === 0 ? ' (Admission)' : ''}</span>
+                  <span className="badge badge-success">Paid</span>
+                </div>
+                <div style={{ fontSize: '22px', fontWeight: 800, color: '#10B981', marginBottom: '8px' }}>
+                  {formatBDT(p.amount)}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.6' }}>
+                  <div>Paid Date: <strong>{formatDatePretty(p.date)}</strong></div>
+                  <div>Payment Method: <strong>{p.method}</strong></div>
+                  <div>Receipt: <strong>{p.receiptNumber}</strong></div>
+                </div>
               </div>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: '#10B981', marginBottom: '8px' }}>
-                ৳10,000
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.6' }}>
-                <div>Due Date: <strong>{formatDatePretty(member.joined || '2026-10-01')}</strong></div>
-                <div>Paid Date: <strong>{formatDatePretty(member.joined || '2026-10-01')}</strong></div>
-                <div>Payment Method: <strong>bKash Digital Trx</strong></div>
-              </div>
-            </div>
+            ))}
 
-            {/* Installment 2 */}
-            <div
-              className="activity-card"
-              style={{
-                padding: '20px',
-                borderRadius: '12px',
-                borderTop: '3px solid #10B981',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 700 }}>Installment 2</span>
-                <span className="badge badge-success">Paid</span>
-              </div>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: '#10B981', marginBottom: '8px' }}>
-                ৳3,000
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.6' }}>
-                <div>Due Date: <strong>10 Oct 2026</strong></div>
-                <div>Paid Date: <strong>10 Oct 2026</strong></div>
-                <div>Payment Method: <strong>Cash at Reception</strong></div>
-              </div>
-            </div>
+            {!activeDueInvoice && (
+              <p style={{ margin: 0, color: 'var(--text-muted)' }}>No invoices for this member yet.</p>
+            )}
 
-            {/* Installment 3 (Final Outstanding Installment) */}
+            {/* Remaining due on the current invoice */}
+            {totalDue > 0 && (
             <div
               className="activity-card"
               style={{
@@ -1504,14 +1351,10 @@ export default function MemberDetails() {
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 700 }}>Installment 3 (Final Due)</span>
-                {totalDue > 0 ? (
-                  <span className={`badge ${isOverdue ? 'badge-danger' : 'badge-warning'}`}>
-                    {isOverdue ? `${daysOverdue}d Overdue` : 'Due'}
-                  </span>
-                ) : (
-                  <span className="badge badge-success">Paid</span>
-                )}
+                <span style={{ fontSize: '13px', fontWeight: 700 }}>Remaining Due</span>
+                <span className={`badge ${isOverdue ? 'badge-danger' : 'badge-warning'}`}>
+                  {isOverdue ? `${daysOverdue}d Overdue` : 'Due'}
+                </span>
               </div>
               <div
                 style={{
@@ -1521,13 +1364,13 @@ export default function MemberDetails() {
                   marginBottom: '8px',
                 }}
               >
-                {formatBDT(totalDue > 0 ? totalDue : 2000)}
+                {formatBDT(activeDueInvoice.dueAmount)}
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.6' }}>
                 <div>
                   Due Clearance Deadline:{' '}
                   <strong style={{ color: totalDue > 0 ? 'var(--text-main)' : undefined }}>
-                    {formatDatePretty(activeDueInvoice?.dueDate || '2026-10-25')}
+                    {formatDatePretty(activeDueInvoice?.dueDate)}
                   </strong>
                 </div>
                 <div>Status: <strong>{totalDue > 0 ? (isOverdue ? 'Overdue - Notice Sent' : 'Upcoming Milestone') : 'Cleared & Settled'}</strong></div>
@@ -1545,7 +1388,7 @@ export default function MemberDetails() {
                     style={{ flex: 1 }}
                     onClick={() => setIsPaymentModalOpen(true)}
                   >
-                    Pay ৳{totalDue.toLocaleString()} Now
+                    Pay {formatBDT(activeDueInvoice.dueAmount)} Now
                   </button>
                   {!isInvoiceExtended && (
                     <button
@@ -1559,6 +1402,7 @@ export default function MemberDetails() {
                 </div>
               )}
             </div>
+            )}
           </div>
         </div>
       )}
@@ -1575,26 +1419,26 @@ export default function MemberDetails() {
               <div className="stat-widget-value" style={{ color: '#10B981' }}>
                 {attendanceLogs.length} Sessions
               </div>
-              <div className="stat-widget-sub">Biometric verification telemetry</div>
+              <div className="stat-widget-sub">All recorded check-ins</div>
             </div>
             <div className="stat-widget">
               <span className="stat-widget-title">Check-in Streak</span>
               <div className="stat-widget-value" style={{ color: 'var(--primary)' }}>
-                4 Days 🔥
+                {attendanceStats.streak} {attendanceStats.streak === 1 ? 'Day' : 'Days'}
               </div>
-              <div className="stat-widget-sub">Consistent morning routine</div>
+              <div className="stat-widget-sub">Consecutive days with a visit</div>
             </div>
             <div className="stat-widget">
               <span className="stat-widget-title">Average Session Duration</span>
-              <div className="stat-widget-value">1h 24m</div>
-              <div className="stat-widget-sub">Cardio + Resistance split</div>
+              <div className="stat-widget-value">{formatMinutes(attendanceStats.avgMinutes)}</div>
+              <div className="stat-widget-sub">Visits with a check-out time</div>
             </div>
             <div className="stat-widget">
               <span className="stat-widget-title">Latest Check-in</span>
               <div className="stat-widget-value" style={{ fontSize: '16px', marginTop: '6px' }}>
-                {attendanceLogs[0]?.checkIn || '06:45 AM'}
+                {attendanceLogs[0]?.checkIn || '—'}
               </div>
-              <div className="stat-widget-sub">{formatDatePretty(attendanceLogs[0]?.date || demoDate)}</div>
+              <div className="stat-widget-sub">{formatDatePretty(attendanceLogs[0]?.date)}</div>
             </div>
           </div>
 
@@ -1602,9 +1446,9 @@ export default function MemberDetails() {
           <div className="activity-card" style={{ padding: '24px', borderRadius: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>Biometric Attendance History</h3>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>Attendance History</h3>
                 <p style={{ margin: '3px 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
-                  Detailed timestamped telemetry from turnstile scanner, RFID, and reception.
+                  Every check-in and check-out recorded for this member.
                 </p>
               </div>
 
@@ -1612,8 +1456,9 @@ export default function MemberDetails() {
                 type="button"
                 className="btn btn-primary btn-sm"
                 onClick={handleCheckInToday}
+                disabled={attendanceStats.inGymNow}
               >
-                <CheckCircle2 size={14} /> Check In Today
+                <CheckCircle2 size={14} /> {attendanceStats.inGymNow ? 'In Gym Now' : 'Check In Today'}
               </button>
             </div>
 
@@ -1630,12 +1475,19 @@ export default function MemberDetails() {
                   </tr>
                 </thead>
                 <tbody>
-                  {attendanceLogs.map((log, idx) => (
-                    <tr key={idx}>
+                  {attendanceLogs.length === 0 && (
+                    <tr>
+                      <td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
+                        No visits recorded yet.
+                      </td>
+                    </tr>
+                  )}
+                  {attendanceLogs.map((log) => (
+                    <tr key={log.id}>
                       <td style={{ fontWeight: 600 }}>{formatDatePretty(log.date)}</td>
                       <td style={{ color: '#10B981', fontWeight: 700 }}>{log.checkIn}</td>
-                      <td>{log.checkOut}</td>
-                      <td style={{ fontWeight: 600 }}>{log.duration}</td>
+                      <td>{log.checkOut || (log.status === 'In' ? 'In gym' : '—')}</td>
+                      <td style={{ fontWeight: 600 }}>{formatMinutes(log.minutes)}</td>
                       <td>
                         <span
                           style={{
@@ -1650,8 +1502,8 @@ export default function MemberDetails() {
                         </span>
                       </td>
                       <td>
-                        <span className={`badge ${log.status === 'Completed' ? 'badge-success' : 'badge-warning'}`}>
-                          {log.status}
+                        <span className={`badge ${log.status === 'Out' ? 'badge-success' : 'badge-warning'}`}>
+                          {log.status === 'Out' ? 'Completed' : 'In Gym'}
                         </span>
                       </td>
                     </tr>
@@ -1687,9 +1539,9 @@ export default function MemberDetails() {
             >
               {[
                 { title: 'Gym Floor & Cardio Suite Access', desc: 'Unlimited peak and off-peak entry to all strength, barbell, and cardio zones.', badge: 'Unlimited', icon: Dumbbell },
-                { title: 'Dedicated Executive Locker', desc: `Assigned locker ${member.lockerNumber || 'B-003'} in Zone B executive wing with RFID lock.`, badge: 'Active', icon: Lock },
+                { title: 'Dedicated Executive Locker', desc: `Assigned locker ${member.lockerNumber || 'None'} in Zone B executive wing with RFID lock.`, badge: 'Active', icon: Lock },
                 { title: 'Steam & Sauna Privileges', desc: 'Complimentary weekend hydrotherapy, infrared sauna, and eucalyptus steam room access.', badge: 'Included', icon: Droplets },
-                { title: 'Trainer Review & Bi-weekly Check-in', desc: `Assigned coach: ${member.trainer || 'Tanvir Rahman'}. Includes form check and weight adjustments.`, badge: 'Bi-Weekly', icon: User },
+                { title: 'Trainer Review & Bi-weekly Check-in', desc: `Assigned coach: ${member.trainer || 'None'}. Includes form check and weight adjustments.`, badge: 'Bi-Weekly', icon: User },
                 { title: 'InBody 770 Body Composition Scans', desc: 'Monthly medical-grade impedance body fat, visceral fat, and muscle mass report.', badge: '1x / Month', icon: Activity },
                 { title: 'Combat & Functional Turf Zone', desc: 'Heavy bag suite, sled pushes, battle ropes, and kettlebell conditioning zone access.', badge: 'All Batches', icon: Flame },
                 { title: 'Juice Bar & Supplement Discounts', desc: '10% discount on all pre-workouts, whey isolates, and fresh protein shakes at reception.', badge: '10% Off', icon: Utensils },
@@ -1762,7 +1614,7 @@ export default function MemberDetails() {
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
-                  onClick={() => alert(`Locker ${member.lockerNumber || 'B-003'} released to available pool.`)}
+                  onClick={() => alert(`Locker ${member.lockerNumber || 'None'} released to available pool.`)}
                 >
                   Release Locker
                 </button>
@@ -1789,7 +1641,7 @@ export default function MemberDetails() {
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Assigned Locker Number</span>
                 <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--primary)', marginTop: '4px' }}>
-                  {member.lockerNumber || 'B-003'}
+                  {member.lockerNumber || 'None'}
                 </div>
               </div>
 
@@ -1806,7 +1658,7 @@ export default function MemberDetails() {
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>RFID Tag Assigned</span>
                 <div style={{ fontSize: '15px', fontWeight: 700, color: '#10B981', marginTop: '6px' }}>
-                  {member.rfidCard || 'RFID-100899'}
+                  {member.rfidCard || '—'}
                 </div>
               </div>
 
@@ -1829,7 +1681,14 @@ export default function MemberDetails() {
       {/* ========================================================================= */}
       {/* TAB 9: WORKOUT PLAN */}
       {/* ========================================================================= */}
-      {activeTab === 'workout' && (
+      {activeTab === 'workout' && !workoutPlan && (
+          <div className="activity-card" style={{ padding: '40px 24px', borderRadius: '12px', textAlign: 'center' }}>
+            <p style={{ margin: '0 0 14px', color: 'var(--text-muted)' }}>No workout plan saved for this member yet.</p>
+            <Link to="/ai-workouts" className="btn btn-primary btn-sm">Create Workout Plan</Link>
+          </div>
+      )}
+
+      {activeTab === 'workout' && workoutPlan && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div className="activity-card" style={{ padding: '24px', borderRadius: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px', marginBottom: '20px' }}>
@@ -1839,17 +1698,13 @@ export default function MemberDetails() {
                   <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>{workoutPlan.title}</h3>
                 </div>
                 <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
-                  Assigned Coach: <strong>{workoutPlan.trainer}</strong> · Goal: <strong>{workoutPlan.goal}</strong> · Experience: <strong>{workoutPlan.experience}</strong> · <strong>{workoutPlan.daysPerWeek} Days / Week</strong>
+                  Created: <strong>{formatDatePretty(workoutPlan.createdAt)}</strong> · Coach: <strong>{member.trainer || 'None'}</strong> · Goal: <strong>{workoutPlan.goal}</strong> · Experience: <strong>{workoutPlan.experience}</strong> · <strong>{workoutPlan.daysPerWeek} Days / Week</strong>
                 </p>
               </div>
 
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => alert('Workout Routine editor opened.')}
-              >
-                <Pencil size={13} /> Edit Routine
-              </button>
+              <Link to="/ai-workouts" className="btn btn-secondary btn-sm">
+                <Pencil size={13} /> New Routine
+              </Link>
             </div>
 
             {workoutPlan.notes && (
@@ -1863,7 +1718,7 @@ export default function MemberDetails() {
                   marginBottom: '20px',
                 }}
               >
-                <strong>Trainer Instruction:</strong> {workoutPlan.notes}
+                <strong>Progression Rule:</strong> {workoutPlan.notes}
               </div>
             )}
 
@@ -1910,7 +1765,7 @@ export default function MemberDetails() {
                           <tr key={exIdx}>
                             <td style={{ color: 'var(--text-muted)', width: '40px' }}>{exIdx + 1}</td>
                             <td style={{ fontWeight: 700 }}>{ex.name}</td>
-                            <td>{ex.sets} Sets</td>
+                            <td>{ex.sets}</td>
                             <td>{ex.reps}</td>
                             <td style={{ color: 'var(--primary)', fontWeight: 700 }}>{ex.weight}</td>
                           </tr>
@@ -1928,7 +1783,14 @@ export default function MemberDetails() {
       {/* ========================================================================= */}
       {/* TAB 10: DIET PLAN */}
       {/* ========================================================================= */}
-      {activeTab === 'diet' && (
+      {activeTab === 'diet' && !dietPlan && (
+          <div className="activity-card" style={{ padding: '40px 24px', borderRadius: '12px', textAlign: 'center' }}>
+            <p style={{ margin: '0 0 14px', color: 'var(--text-muted)' }}>No diet plan saved for this member yet.</p>
+            <Link to="/diet-plans" className="btn btn-primary btn-sm">Create Diet Plan</Link>
+          </div>
+      )}
+
+      {activeTab === 'diet' && dietPlan && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div className="activity-card" style={{ padding: '24px', borderRadius: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px', marginBottom: '20px' }}>
@@ -1938,17 +1800,13 @@ export default function MemberDetails() {
                   <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>{dietPlan.title}</h3>
                 </div>
                 <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
-                  Dietitian: <strong>{dietPlan.nutritionist}</strong> · Water Intake: <strong>{dietPlan.waterIntake}</strong> · Preference: <strong>{dietPlan.preference}</strong>
+                  Created: <strong>{formatDatePretty(dietPlan.createdAt)}</strong> · Water Intake: <strong>{dietPlan.waterIntake}</strong> · Preference: <strong>{dietPlan.preference}</strong>
                 </p>
               </div>
 
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => alert('Diet plan adjustment dialog opened.')}
-              >
-                <Pencil size={13} /> Adjust Diet Plan
-              </button>
+              <Link to="/diet-plans" className="btn btn-secondary btn-sm">
+                <Pencil size={13} /> New Diet Plan
+              </Link>
             </div>
 
             {/* Macro Targets Banner */}
@@ -2040,13 +1898,18 @@ export default function MemberDetails() {
             >
               Cancel
             </button>
-            <button type="submit" form="edit-member-form" className="btn btn-primary">
-              Save Changes
+            <button type="submit" form="edit-member-form" className="btn btn-primary" disabled={isSavingProfile}>
+              {isSavingProfile ? 'Saving…' : 'Save Changes'}
             </button>
           </div>
         }
       >
         <form id="edit-member-form" onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {profileError && (
+            <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', fontSize: '13px' }}>
+              {profileError}
+            </div>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px' }}>
             <label className="form-group">
               <span className="form-label">Full Name *</span>
@@ -2076,25 +1939,25 @@ export default function MemberDetails() {
               />
             </label>
             <label className="form-group">
-              <span className="form-label">RFID Access Card</span>
+              <span className="form-label">Height (cm)</span>
               <input
                 className="form-input"
-                value={editForm.rfidCard}
-                onChange={(e) => setEditForm({ ...editForm, rfidCard: e.target.value })}
-              />
-            </label>
-            <label className="form-group">
-              <span className="form-label">Height</span>
-              <input
-                className="form-input"
+                type="number"
+                min="50"
+                max="250"
+                step="0.1"
                 value={editForm.height}
                 onChange={(e) => setEditForm({ ...editForm, height: e.target.value })}
               />
             </label>
             <label className="form-group">
-              <span className="form-label">Weight</span>
+              <span className="form-label">Weight (kg)</span>
               <input
                 className="form-input"
+                type="number"
+                min="20"
+                max="300"
+                step="0.1"
                 value={editForm.weight}
                 onChange={(e) => setEditForm({ ...editForm, weight: e.target.value })}
               />
@@ -2114,21 +1977,13 @@ export default function MemberDetails() {
             <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '10px' }}>
               Emergency Contact Information
             </span>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
               <label className="form-group">
                 <span className="form-label">Contact Name</span>
                 <input
                   className="form-input"
                   value={editForm.emergencyName}
                   onChange={(e) => setEditForm({ ...editForm, emergencyName: e.target.value })}
-                />
-              </label>
-              <label className="form-group">
-                <span className="form-label">Relationship</span>
-                <input
-                  className="form-input"
-                  value={editForm.emergencyRelation}
-                  onChange={(e) => setEditForm({ ...editForm, emergencyRelation: e.target.value })}
                 />
               </label>
               <label className="form-group">
@@ -2141,16 +1996,6 @@ export default function MemberDetails() {
               </label>
             </div>
           </div>
-
-          <label className="form-group">
-            <span className="form-label">Medical Notes & Health History</span>
-            <textarea
-              className="form-input"
-              rows={2}
-              value={editForm.notes}
-              onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-            />
-          </label>
         </form>
       </Modal>
 

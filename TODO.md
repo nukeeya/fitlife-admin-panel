@@ -11,7 +11,7 @@
 
 - [ ] **Check the database foundation**
   - [x] Migration `013` (membership start date) run and verified (26 Oct 2026)
-  - [ ] Confirm migrations `001`–`012` have all been run on the Supabase project
+  - [x] Confirm migrations `001`–`012` have all been run on the Supabase project (28 Oct 2026)
   - [ ] Turn on Supabase backups, or take one export
   - [x] Merge branch `portal-updates` into `main` and deploy (26 Oct 2026)
 
@@ -20,7 +20,11 @@
 ## Next (needed before delivery, in order)
 
 ### Stop fake data appearing on real screens
-- [ ] **Member Details**: load history from real invoices/payments, attendance and AI plans; show "Member not found" instead of a demo member
+- [x] **Member Details**: load history from real invoices/payments, attendance and AI plans; show "Member not found" instead of a demo member (28 Oct 2026)
+  - [ ] Features & Perks tab: use the plan's real features (`plan_features`), not the hardcoded list
+  - [ ] Renew Subscription: save through a database function (invoice + payment + new expiry); currently screen-only
+  - [ ] Decide: add columns for RFID card, emergency relationship and medical notes, or remove them from the Profile tab
+  - [ ] "Collected By" on payments: show the staff name (`payments.collected_by` → `users.name`)
 - [ ] **Empty tables** (Members, Trainers, Employees, Lockers): show an empty list with "Add your first…", not demo records
 - [ ] **Failed loads**: show an error with a Retry button instead of demo data
 - [ ] **Dashboard**: calculate the male/female percentages (currently fixed at 72% / 28%)
