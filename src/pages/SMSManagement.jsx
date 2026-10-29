@@ -22,7 +22,6 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
-import { members as fallbackMembers } from '../data/gymData';
 import Avatar from '../components/common/Avatar';
 import Modal from '../components/common/Modal';
 
@@ -104,7 +103,7 @@ const INITIAL_MESSAGE_HISTORY = [
 
 export default function SMSManagement() {
   const { members: liveMembers, branding } = useGymData();
-  const allMembers = liveMembers && liveMembers.length > 0 ? liveMembers : fallbackMembers;
+  const allMembers = liveMembers || [];
   const gymName = branding?.gymName || 'FITLIFE GYM';
 
   // WhatsApp Connection UI State

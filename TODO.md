@@ -26,15 +26,22 @@
   - [ ] "Collected By" on payments: show the staff name (`payments.collected_by` → `users.name`)
 - [x] **Monthly revenue split**: paid amounts only, one equal part per membership month, VAT excluded; migration `014` (`invoices.service_start`) run and checked with test data (29 Oct 2026)
   - [ ] Payment dates: use Dhaka time, not UTC (a payment between 00:00 and 06:00 lands on the previous day, and on the 1st in the previous month)
-- [ ] **Empty tables** (Members, Trainers, Employees): show an empty list with "Add your first…", not demo records
-- [ ] **Failed loads**: show an error with a Retry button instead of demo data
+- [x] **Empty tables** (Members, Trainers, Employees): show an empty list with "Add your first…", not demo records (29 Oct 2026)
+- [x] **Failed loads**: show an error with a Retry button instead of demo data, on Members, Trainers and Employees (`DataState`, `loadErrors`) (29 Oct 2026)
+  - [ ] Use `DataState` on the other list pages too (Attendance, Finance, Applications, Diet/Workout plans…)
 - [ ] **Dashboard**: calculate the male/female percentages (currently fixed at 72% / 28%)
-- [ ] Remove the demo records from `FALLBACK_DATA` and delete `src/data/mockProfiles.js`
+- [x] Remove the demo records from `FALLBACK_DATA` and delete `src/data/mockProfiles.js` (also `src/data/gymData.js`) (29 Oct 2026)
 
 ### Connect the pages that have no database
 - [ ] **Visitor Entry**: new `visitors` table; dates default to today
 - [ ] **Job applicants**: use the existing `job_applications` table
-- [ ] **SMS**: history and balance from the database (check whether `sms_campaigns` fits first)
+- [ ] **WhatsApp Business messaging (replaces SMS)**: the client connects their WhatsApp Business account and sends promotions, info and reminders (expiry, dues)
+  - Official WhatsApp Business Platform (Cloud API) only; unofficial WhatsApp Web tools risk a number ban
+  - Client needs: Meta Business account (ideally verified), WhatsApp Business account, phone number on the API, payment method on Meta (charged per message; check the current Bangladesh rates first)
+  - Promotions and reminders use Meta-approved message templates; members must opt in (checkbox on the admission form, stored per member)
+  - Sending and delivery updates go through a Supabase Edge Function; the access token never reaches the browser
+  - Connect once together with the client and save the phone number ID and token in settings (one-click "Embedded Signup" only if this is sold to more gyms)
+  - Rebuild the SMS Management page as WhatsApp (templates, campaigns, message log); check whether `sms_campaigns` can be reused
 
 ### Real defaults in forms
 - [ ] **Approval form**: first payment, due date and notes based on the chosen plan, not demo values
@@ -71,7 +78,6 @@
 
 - [ ] **Rebuild locker management** (removed from the app on 29 Oct 2026 because it was faulty). The database still has `lockers`, `locker_assignments`, `members.locker_id` and the `p_locker_id` parameter of `create_member_with_invoice()`; the old screens are in git history before this commit. Include: assign at admission, extend on renewal, release on expiry
 - [ ] **ZKTeco biometric integration**: first get the device model from Menu → System Info; then connect the Devices page to a `devices` table
-- [ ] Real SMS sending (needs an SMS provider)
 - [ ] "Upcoming" status for members whose start date is in the future
 - [ ] Ask for confirmation before deleting a device
 - [ ] Split the large JavaScript bundle
