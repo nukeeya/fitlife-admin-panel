@@ -221,7 +221,12 @@ export function mapMemberBase(row) {
     bloodGroup: row.blood_group || '',
     height: row.height ?? null,
     weight: row.weight ?? null,
-    emergencyContact: { name: row.emergency_name || '', phone: row.emergency_phone || '' },
+    emergencyContact: {
+      name: row.emergency_name || '',
+      phone: row.emergency_phone || '',
+      relation: row.emergency_relation || '', // migration 016
+    },
+    medicalConditions: row.medical_conditions || '', // migration 016
     plan: row.plan || 'Basic',
     joined: row.joined,
     expiry: row.expiry,
@@ -486,7 +491,11 @@ export const db = {
   },
 
   // Personal details from the Member Details "Edit profile" form.
-  updateMemberProfile(id, { name, phone, email, address, height, weight, emergencyName, emergencyPhone }) {
+  // emergencyRelation / medicalConditions are only written when passed, so a
+  // caller that doesn't know them can't blank them out.
+  updateMemberProfile(id, {
+    name, phone, email, address, height, weight, emergencyName, emergencyPhone, emergencyRelation, medicalConditions,
+  }) {
     const parts = String(name || '').trim().split(/\s+/);
     const num = (v) => (v === '' || v === null || v === undefined ? null : Number(v));
     return this.updateMember(id, {
@@ -499,6 +508,8 @@ export const db = {
       weight: num(weight),
       emergency_name: String(emergencyName || '').trim() || null,
       emergency_phone: String(emergencyPhone || '').trim() || null,
+      ...(emergencyRelation !== undefined ? { emergency_relation: String(emergencyRelation || '').trim() || null } : {}),
+      ...(medicalConditions !== undefined ? { medical_conditions: String(medicalConditions || '').trim() || null } : {}),
     });
   },
 

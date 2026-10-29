@@ -22,7 +22,7 @@
 - [x] **Member Details**: load history from real invoices/payments, attendance and AI plans; show "Member not found" instead of a demo member (28 Oct 2026)
   - [x] Features & Perks tab: use the plan's real features (`plan_features`), not the hardcoded list (30 Oct 2026)
   - [x] Renew Subscription: saves through `renew_membership()` (migration `015`): invoice + payment + new expiry in one transaction (29 Oct 2026)
-  - [ ] Decide: add columns for RFID card, emergency relationship and medical notes, or remove them from the Profile tab
+  - [x] Emergency relationship and medical conditions: migration `016` adds them to members, approval copies them from the application, editable on the profile; RFID removed from the Profile tab (30 Oct 2026)
   - [x] "Collected By" on payments: show the staff name (`payments.collected_by` → `users.name`) (30 Oct 2026)
 - [x] **Monthly revenue split**: paid amounts only, one equal part per membership month, VAT excluded; migration `014` (`invoices.service_start`) run and checked with test data (29 Oct 2026)
   - [ ] Payment dates: use Dhaka time, not UTC (a payment between 00:00 and 06:00 lands on the previous day, and on the 1st in the previous month)
@@ -81,7 +81,7 @@
 ## Later (not needed for delivery)
 
 - [ ] **Rebuild locker management** (removed from the app on 29 Oct 2026 because it was faulty). The database still has `lockers`, `locker_assignments`, `members.locker_id` and the `p_locker_id` parameter of `create_member_with_invoice()`; the old screens are in git history before this commit. Include: assign at admission, extend on renewal, release on expiry
-- [ ] **ZKTeco biometric integration**: first get the device model from Menu → System Info; then connect the Devices page to a `devices` table
+- [ ] **ZKTeco biometric integration**: first get the device model from Menu → System Info; then connect the Devices page to a `devices` table. Decide then how a member links to the device (RFID card number, device user ID) and add that column to `members`
 - [ ] "Upcoming" status for members whose start date is in the future
 - [ ] Ask for confirmation before deleting a device
 - [ ] Split the large JavaScript bundle

@@ -34,6 +34,17 @@ import ExtendDueDateModal from '../components/finance/modals/ExtendDueDateModal'
 import InvoiceViewModal from '../components/finance/modals/InvoiceViewModal';
 import RenewMembershipModal from '../components/RenewMembershipModal';
 
+// Same values as the public admission form (admission-form/src/components/AdmissionForm.jsx),
+// so relationships from applications and from staff edits match.
+const RELATION_OPTIONS = [
+  { value: 'spouse', label: 'Spouse' },
+  { value: 'parent', label: 'Parent' },
+  { value: 'sibling', label: 'Sibling' },
+  { value: 'friend', label: 'Friend' },
+  { value: 'other', label: 'Other' },
+];
+const relationLabel = (value) => RELATION_OPTIONS.find((o) => o.value === value)?.label || value || '';
+
 export default function MemberDetails() {
   const { id } = useParams();
   const { members, plans, attendance, workoutPlans, dietPlans, checkInMember, updateMemberProfile, loading } = useGymData();
@@ -266,6 +277,8 @@ export default function MemberDetails() {
     weight: m?.weight ?? '',
     emergencyName: m?.emergencyContact?.name || '',
     emergencyPhone: m?.emergencyContact?.phone || '',
+    emergencyRelation: m?.emergencyContact?.relation || '',
+    medicalConditions: m?.medicalConditions || '',
   });
   const [editForm, setEditForm] = useState(() => profileFormFrom(member));
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -720,10 +733,6 @@ export default function MemberDetails() {
                 <span style={{ fontSize: '14px', fontWeight: 600 }}>{member.height ? `${member.height} cm` : '—'} · {member.weight ? `${member.weight} kg` : '—'}</span>
               </div>
               <div>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>RFID Access Card</span>
-                <span style={{ fontSize: '14px', fontWeight: 600, color: '#10B981' }}>{member.rfidCard || '—'}</span>
-              </div>
-              <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Assigned Coach</span>
                 <span style={{ fontSize: '14px', fontWeight: 600 }}>{member.trainer || 'None'}</span>
               </div>
@@ -732,10 +741,16 @@ export default function MemberDetails() {
                 <span style={{ fontSize: '14px', fontWeight: 500 }}>{member.address || '—'}</span>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Medical & Health Background</span>
-                <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                  {member.medical || member.notes || '—'}
-                </p>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Medical Conditions</span>
+                {member.medicalConditions ? (
+                  // Highlighted so trainers notice injuries or conditions.
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', fontWeight: 600, color: 'var(--warning)', display: 'flex', gap: '6px', alignItems: 'flex-start', whiteSpace: 'pre-line' }}>
+                    <AlertCircle size={14} style={{ flexShrink: 0, marginTop: '2px' }} />
+                    {member.medicalConditions}
+                  </p>
+                ) : (
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>None recorded</p>
+                )}
               </div>
             </div>
           </div>
@@ -762,7 +777,7 @@ export default function MemberDetails() {
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Relationship</span>
                 <span style={{ fontSize: '14px', fontWeight: 600 }}>
-                  {member.emergencyContact?.relation || '—'}
+                  {relationLabel(member.emergencyContact?.relation) || '—'}
                 </span>
               </div>
               <div>
@@ -1812,7 +1827,38 @@ export default function MemberDetails() {
                   onChange={(e) => setEditForm({ ...editForm, emergencyPhone: e.target.value })}
                 />
               </label>
+              <label className="form-group">
+                <span className="form-label">Relationship</span>
+                <select
+                  className="form-select"
+                  value={editForm.emergencyRelation}
+                  onChange={(e) => setEditForm({ ...editForm, emergencyRelation: e.target.value })}
+                >
+                  <option value="">Not set</option>
+                  {RELATION_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                  {/* Keep an older free-text value selectable instead of silently dropping it */}
+                  {editForm.emergencyRelation && !RELATION_OPTIONS.some((o) => o.value === editForm.emergencyRelation) && (
+                    <option value={editForm.emergencyRelation}>{editForm.emergencyRelation}</option>
+                  )}
+                </select>
+              </label>
             </div>
+          </div>
+
+          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '14px' }}>
+            <label className="form-group">
+              <span className="form-label">Medical Conditions</span>
+              <textarea
+                className="form-input"
+                rows={3}
+                value={editForm.medicalConditions}
+                onChange={(e) => setEditForm({ ...editForm, medicalConditions: e.target.value })}
+                placeholder="Injuries, chronic conditions, medication… Leave empty if none."
+                style={{ resize: 'vertical', minHeight: '70px' }}
+              />
+            </label>
           </div>
         </form>
       </Modal>
