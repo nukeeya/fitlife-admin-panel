@@ -319,6 +319,7 @@ export function GymDataProvider({ children }) {
         plan: planName,
         expiry: m.expiry ? m.expiry.split('-').slice(1).join('/') : '',
         checkIn: toDisplayTime(row.check_in_time),
+        checkInTime: String(row.check_in_time || '').slice(0, 8), // 'HH:MM:SS', for time comparisons
         checkOut: toDisplayTime(row.check_out_time),
         status: row.status,
         date: row.attendance_date,
@@ -1162,6 +1163,18 @@ export function GymDataProvider({ children }) {
     };
   }, [members, attendance, trainers, employees]);
 
+  // Yesterday's check-ins up to the current clock time, so a day in progress is
+  // compared fairly. Recalculated whenever the data reloads.
+  const checkinsByNowYesterday = (list, today) => {
+    const now = new Date();
+    const nowTime = [now.getHours(), now.getMinutes(), now.getSeconds()].map((n) => String(n).padStart(2, '0')).join(':');
+    const yesterday = addDays(today, -1);
+    return {
+      yesterdayCheckinsByNow: list.filter((a) => a.date === yesterday && a.checkInTime && a.checkInTime <= nowTime).length,
+      checkinsComparedAt: nowTime.slice(0, 5),
+    };
+  };
+
   const analytics = useMemo(() => {
     const today = todayStr();
     const month = today.slice(0, 7);
@@ -1172,15 +1185,44 @@ export function GymDataProvider({ children }) {
     const monthInvoices = invoices.filter((inv) => String(inv.date).slice(0, 7) === month);
     const todayInvoices = invoices.filter((inv) => inv.date === today);
     const sum = (list, key) => list.reduce((s, x) => s + (x[key] || 0), 0);
+    // Collected = money received on that day/month (payment date), whatever
+    // the invoice date: a due paid today counts today.
+    const payments = invoices.flatMap((inv) => inv.payments || []);
+
+    // Same days of last month (1st up to today's day number, capped at the
+    // month's length), so a month in progress is compared fairly.
+    const [y, m, d] = today.split('-').map(Number);
+    const lastMonthDays = new Date(y, m - 1, 0).getDate();
+    const lastMonthKey = `${m === 1 ? y - 1 : y}-${String(m === 1 ? 12 : m - 1).padStart(2, '0')}`;
+    const lastMonthUntil = `${lastMonthKey}-${String(Math.min(d, lastMonthDays)).padStart(2, '0')}`;
+    const sameDayLastMonth = lastMonthUntil;
+
+    // There is no history of members.status, so "active on a date" comes from
+    // invoices: a member counts if one of their invoices covers that day
+    // (service start up to and including the expiry day, as members.expiry).
+    const activeOn = (date) => new Set(
+      invoices
+        .filter((inv) => inv.startDate && inv.startDate <= date && date <= inv.endDate)
+        .map((inv) => inv.memberId)
+    ).size;
 
     return {
       activeMale,
       activeFemale,
       todayMaleCheckins: todayAttendance.filter((a) => a.gender === 'Male').length,
       todayFemaleCheckins: todayAttendance.filter((a) => a.gender === 'Female').length,
-      todayCollected: sum(todayInvoices, 'paidAmount'),
+      todayCollected: sum(payments.filter((p) => p.date === today), 'amount'),
       todayDue: sum(todayInvoices, 'dueAmount'),
-      monthlyCollected: sum(monthInvoices, 'paidAmount'),
+      monthlyCollected: sum(payments.filter((p) => String(p.date).slice(0, 7) === month), 'amount'),
+      lastMonthCollectedSameDays: sum(
+        payments.filter((p) => p.date >= `${lastMonthKey}-01` && p.date <= lastMonthUntil),
+        'amount'
+      ),
+      lastMonthUntil,
+      ...checkinsByNowYesterday(attendance, today),
+      activeByInvoicesToday: activeOn(today),
+      activeByInvoicesLastMonth: activeOn(sameDayLastMonth),
+      sameDayLastMonth,
       monthlyDue: sum(monthInvoices, 'dueAmount'),
       expiringTodayCount: members.filter((m) => m.expiry === today || m.status === 'Expiring').length,
     };

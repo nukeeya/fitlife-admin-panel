@@ -30,7 +30,8 @@
 - [x] **Failed loads**: show an error with a Retry button instead of demo data, on Members, Trainers and Employees (`DataState`, `loadErrors`) (29 Oct 2026)
   - [ ] Use `DataState` on the other list pages too (Attendance, Finance, Applications, Diet/Workout plans…)
 - [x] **Dashboard**: calculate the male/female percentages (currently fixed at 72% / 28%) (29 Oct 2026)
-  - [ ] Trend arrows: "↑ 8.4%", "↑ 12.6%", "↑ 18.2%" are fixed text
+  - [x] Trend arrows from real data; Today Collected / Monthly Revenue now count payments by payment date (29 Oct 2026)
+  - [ ] Member status is not updated automatically when a membership expires or starts (Dashboard counts rely on it)
   - [ ] Peak Hours chart: fixed bars; count check-ins per hour from `attendance`
 - [x] Remove the demo records from `FALLBACK_DATA` and delete `src/data/mockProfiles.js` (also `src/data/gymData.js`) (29 Oct 2026)
 

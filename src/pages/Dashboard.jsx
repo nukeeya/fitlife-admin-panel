@@ -31,7 +31,8 @@ import { useGymData } from '../context/GymDataContext';
 import { useFinance } from '../context/FinanceContext';
 import { Link } from 'react-router-dom';
 
-function StatCard({ title, value, change, changeLabel, icon: Icon, isLime, color }) {
+// change: text such as "↑ 12%"; changeTone 'up' | 'down' colours it green / red.
+function StatCard({ title, value, change, changeTone, changeLabel, icon: Icon, isLime, color }) {
   return (
     <div className={`stat-card ${isLime ? 'stat-card-lime' : ''}`}>
       <div className="stat-card-top">
@@ -43,7 +44,14 @@ function StatCard({ title, value, change, changeLabel, icon: Icon, isLime, color
       <div className="stat-card-value">{value}</div>
       {(change || changeLabel) && (
         <div className="stat-card-bottom">
-          {change && <span className="stat-card-change">{change}</span>}
+          {change && (
+            <span
+              className="stat-card-change"
+              style={changeTone === 'up' ? { color: '#10B981', fontWeight: 700 } : changeTone === 'down' ? { color: 'var(--danger)', fontWeight: 700 } : undefined}
+            >
+              {change}
+            </span>
+          )}
           {changeLabel && <span className="stat-card-label">{changeLabel}</span>}
         </div>
       )}
@@ -63,6 +71,27 @@ export default function Dashboard() {
     checkOutMember,
   } = useGymData();
   const { overdueCount, setShowOverduePopup } = useFinance();
+
+  // Percentage change vs an earlier figure. No earlier figure means nothing
+  // to compare against, so no arrow (never "↑ ∞%").
+  const percentTrend = (current, previous) => {
+    if (!previous) return { change: null, tone: null };
+    const pct = Math.round(((current - previous) / previous) * 100);
+    if (pct === 0) return { change: '— 0%', tone: null };
+    return { change: `${pct > 0 ? '↑' : '↓'} ${Math.abs(pct)}%`, tone: pct > 0 ? 'up' : 'down' };
+  };
+  // Total Active: a count change, because the card's own number comes from
+  // members.status while both sides of this comparison come from invoices.
+  const activeDiff = analytics.activeByInvoicesToday - analytics.activeByInvoicesLastMonth;
+  const activeTrend = activeDiff === 0
+    ? { change: '— 0', tone: null }
+    : { change: `${activeDiff > 0 ? '↑' : '↓'} ${Math.abs(activeDiff)}`, tone: activeDiff > 0 ? 'up' : 'down' };
+  const sameDayLastMonthLabel = new Date(`${analytics.sameDayLastMonth}T00:00:00`)
+    .toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const checkinTrend = percentTrend(stats.checkIns, analytics.yesterdayCheckinsByNow);
+  const revenueTrend = percentTrend(analytics.monthlyCollected, analytics.lastMonthCollectedSameDays);
+  const lastMonthUntilLabel = new Date(`${analytics.lastMonthUntil}T00:00:00`)
+    .toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
   // Share of the TOTAL ACTIVE card; members without a gender count in neither.
   const shareOfActive = (count) => (stats.activeMembers > 0
@@ -208,8 +237,9 @@ export default function Dashboard() {
         <StatCard
           title="TOTAL ACTIVE"
           value={stats.activeMembers.toLocaleString()}
-          change="↑ 8.4%"
-          changeLabel="vs last month"
+          change={activeTrend.change}
+          changeTone={activeTrend.tone}
+          changeLabel={`vs ${sameDayLastMonthLabel}`}
           icon={Users}
         />
 
@@ -242,8 +272,11 @@ export default function Dashboard() {
         <StatCard
           title="TODAY CHECK-INS"
           value={stats.checkIns}
-          change="↑ 12.6%"
-          changeLabel="Active attendance"
+          change={checkinTrend.change}
+          changeTone={checkinTrend.tone}
+          changeLabel={checkinTrend.change
+            ? `vs yesterday by ${analytics.checkinsComparedAt}`
+            : `No check-ins yesterday by ${analytics.checkinsComparedAt}`}
           icon={CalendarCheck}
         />
 
@@ -284,8 +317,9 @@ export default function Dashboard() {
         <StatCard
           title="MONTHLY REVENUE"
           value={`৳${analytics.monthlyCollected.toLocaleString()}`}
-          change="↑ 18.2%"
-          changeLabel="Current billing cycle"
+          change={revenueTrend.change}
+          changeTone={revenueTrend.tone}
+          changeLabel={revenueTrend.change ? `vs 1–${lastMonthUntilLabel}` : 'No payments last month to compare'}
           icon={DollarSign}
         />
 
