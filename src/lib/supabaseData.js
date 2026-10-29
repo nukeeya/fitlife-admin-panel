@@ -635,6 +635,26 @@ export const db = {
     });
   },
 
+  // Migration 015. Leaving startDate empty lets the server continue from the
+  // current expiry (or today if expired); leaving paidAmount empty means paid in full.
+  renewMembership({
+    memberId, planId, startDate, discountType, discountValue, discountReason,
+    paidAmount, paymentMethod, dueDate, notes,
+  }) {
+    return supabase.rpc('renew_membership', {
+      p_member_id: Number(memberId),
+      p_plan_id: Number(planId),
+      p_start_date: startDate || null,
+      p_discount_type: discountType || 'flat',
+      p_discount_value: Number(discountValue) || 0,
+      p_discount_reason: discountReason || null,
+      p_paid_amount: paidAmount === null || paidAmount === undefined ? null : Number(paidAmount),
+      p_payment_method: paymentMethod || 'CASH',
+      p_due_date: dueDate || null,
+      p_notes: notes || null,
+    });
+  },
+
   collectPayment({ invoiceId, amount, method, reference }) {
     return supabase.rpc('collect_payment', {
       p_invoice_id: Number(invoiceId),

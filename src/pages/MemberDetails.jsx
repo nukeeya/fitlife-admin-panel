@@ -35,6 +35,7 @@ import { addDays, toDbTime } from '../lib/supabaseData';
 import RecordPaymentModal from '../components/finance/modals/RecordPaymentModal';
 import ExtendDueDateModal from '../components/finance/modals/ExtendDueDateModal';
 import InvoiceViewModal from '../components/finance/modals/InvoiceViewModal';
+import RenewMembershipModal from '../components/RenewMembershipModal';
 
 export default function MemberDetails() {
   const { id } = useParams();
@@ -52,7 +53,6 @@ export default function MemberDetails() {
   const [selectedInvoiceForView, setSelectedInvoiceForView] = useState(null);
 
   const [checkInNotice, setCheckInNotice] = useState('');
-  const [localSubscriptions, setLocalSubscriptions] = useState(null);
 
   // 1. Resolve Member Profile (database members only; null = not found)
   const member = useMemo(() => {
@@ -125,7 +125,6 @@ export default function MemberDetails() {
 
   // Subscriptions data
   const subscriptions = useMemo(() => {
-    if (localSubscriptions) return localSubscriptions;
     if (!member) return [];
     // One subscription per invoice (admission or renewal), newest first.
     // The newest one uses the member's own expiry, which approval sets from the
@@ -148,7 +147,7 @@ export default function MemberDetails() {
         includedFeatures: plan?.features || [],
       };
     });
-  }, [localSubscriptions, member, memberInvoices, plans]);
+  }, [member, memberInvoices, plans]);
 
   // Attendance from the database (newest first). Duration in minutes is
   // null while the member is still in the gym.
@@ -291,73 +290,6 @@ export default function MemberDetails() {
     setIsEditProfileOpen(false);
     setCheckInNotice('Member profile saved.');
     setTimeout(() => setCheckInNotice(''), 4000);
-  };
-
-  // Subscription Renewal Form State
-  const [renewPlan, setRenewPlan] = useState('3 Months');
-  const [renewPrice, setRenewPrice] = useState(15000);
-  const [renewInitialPay, setRenewInitialPay] = useState(15000);
-  const [renewDueDate, setRenewDueDate] = useState('2026-11-25');
-
-  const handlePlanSelect = (e) => {
-    const val = e.target.value;
-    setRenewPlan(val);
-    const p = val === '1 Year' ? 50000 : val === '6 Months' ? 28000 : val === '3 Months' ? 15000 : 7000;
-    setRenewPrice(p);
-    setRenewInitialPay(p);
-  };
-
-  const handleConfirmRenewal = (e) => {
-    e.preventDefault();
-    const calculatedDue = Math.max(0, renewPrice - renewInitialPay);
-    // TODO: renewals need a server RPC (invoice + payment + expiry update);
-    // until then this only updates the on-screen subscription list.
-
-    const newSub = {
-      id: `sub-renew-${Date.now()}`,
-      packageName: `${renewPlan} Renewal Package`,
-      category: 'General Fitness',
-      duration: renewPlan === '1 Year' ? '365 Days' : renewPlan === '6 Months' ? '180 Days' : '90 Days',
-      startDate: demoDate,
-      expiryDate: '2027-01-22',
-      price: renewPrice,
-      paidAmount: renewInitialPay,
-      dueAmount: calculatedDue,
-      dueDate: renewDueDate,
-      status: 'Active',
-      includedFeatures: [
-        'Full Gym Floor & Cardio Suite Access',
-        'Locker Privileges',
-        'Quarterly InBody Body Composition Scan',
-      ],
-      installments: [
-        {
-          number: 1,
-          amount: renewInitialPay,
-          dueDate: demoDate,
-          paidDate: demoDate,
-          status: 'Paid',
-          method: 'bKash',
-        },
-        ...(calculatedDue > 0
-          ? [
-              {
-                number: 2,
-                amount: calculatedDue,
-                dueDate: renewDueDate,
-                paidDate: null,
-                status: 'Due',
-                method: 'Pending',
-              },
-            ]
-          : []),
-      ],
-    };
-
-    setLocalSubscriptions([newSub, ...subscriptions]);
-    setIsRenewModalOpen(false);
-    setCheckInNotice(`Renewal for ${renewPlan} shown on this screen only — it is not saved and no invoice was created.`);
-    setTimeout(() => setCheckInNotice(''), 4500);
   };
 
   if (!member) {
@@ -2002,94 +1934,19 @@ export default function MemberDetails() {
       {/* ========================================================================= */}
       {/* MODAL 2: ASSIGN / RENEW SUBSCRIPTION */}
       {/* ========================================================================= */}
-      <Modal
+      <RenewMembershipModal
+        member={member}
+        memberInvoices={memberInvoices}
         isOpen={isRenewModalOpen}
         onClose={() => setIsRenewModalOpen(false)}
-        title="Assign / Renew Membership Package"
-        subtitle={`Member: ${member.name} (${member.code})`}
-        icon={RefreshCw}
-        size="md"
-        footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setIsRenewModalOpen(false)}
-            >
-              Cancel
-            </button>
-            <button type="submit" form="renew-sub-form" className="btn btn-primary">
-              Confirm Renewal
-            </button>
-          </div>
-        }
-      >
-        <form id="renew-sub-form" onSubmit={handleConfirmRenewal} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <label className="form-group">
-            <span className="form-label">Select Package Plan *</span>
-            <select
-              className="form-select"
-              value={renewPlan}
-              onChange={handlePlanSelect}
-            >
-              <option value="1 Month">1 Month Standard — ৳7,000</option>
-              <option value="3 Months">3 Months Quarterly Transformation — ৳15,000</option>
-              <option value="6 Months">6 Months Half-Yearly Pro — ৳28,000</option>
-              <option value="1 Year">1 Year Annual VIP — ৳50,000</option>
-            </select>
-          </label>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-            <label className="form-group">
-              <span className="form-label">Total Package Price (BDT)</span>
-              <input
-                className="form-input"
-                type="number"
-                value={renewPrice}
-                onChange={(e) => setRenewPrice(Number(e.target.value))}
-              />
-            </label>
-            <label className="form-group">
-              <span className="form-label">Initial Paid Amount (BDT)</span>
-              <input
-                className="form-input"
-                type="number"
-                value={renewInitialPay}
-                onChange={(e) => setRenewInitialPay(Number(e.target.value))}
-              />
-            </label>
-          </div>
-
-          <div
-            style={{
-              padding: '12px',
-              borderRadius: '8px',
-              background: 'var(--bg-subtle, rgba(255,255,255,0.04))',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Resulting Due Balance:</span>
-            <strong style={{ fontSize: '15px', color: renewPrice - renewInitialPay > 0 ? 'var(--danger)' : '#10B981' }}>
-              {formatBDT(Math.max(0, renewPrice - renewInitialPay))}
-            </strong>
-          </div>
-
-          {renewPrice - renewInitialPay > 0 && (
-            <label className="form-group">
-              <span className="form-label">Due Clearance Date *</span>
-              <input
-                className="form-input"
-                type="date"
-                required
-                value={renewDueDate}
-                onChange={(e) => setRenewDueDate(e.target.value)}
-              />
-            </label>
-          )}
-        </form>
-      </Modal>
+        onRenewed={(r) => {
+          setCheckInNotice(
+            `Renewed: ${r.planName} until ${formatDatePretty(r.expiry)} (${r.invoiceNumber}).` +
+              (r.dueAmount > 0 ? ` ${formatBDT(r.dueAmount)} left to pay.` : '')
+          );
+          setTimeout(() => setCheckInNotice(''), 6000);
+        }}
+      />
 
       {/* ========================================================================= */}
       {/* MODAL 3: RECORD PAYMENT MODAL (Integrated with FinanceContext) */}

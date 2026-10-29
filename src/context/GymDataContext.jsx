@@ -549,6 +549,59 @@ export function GymDataProvider({ children }) {
     };
   };
 
+  // --- renewMembership: invoice + payment + new expiry -----------------------
+  // One database transaction (renew_membership RPC, migration 015). The
+  // database picks the start date when none is given, prices the plan and
+  // enforces the discount limit, so nothing is changed locally first: the
+  // screens update from the reload. Returns { renewal } on success or { error }.
+  const renewMembership = async ({
+    memberId,
+    planId,
+    startDate = null,
+    discountType = 'flat',
+    discountValue = 0,
+    discountReason = '',
+    paymentMethod = 'CASH',
+    paidAmount = null,
+    dueDate = null,
+    notes = null,
+  }) => {
+    if (!raw) return { error: new Error('Data is still loading. Try again in a moment.') };
+    if (!activePlans.some((p) => p.id === Number(planId))) {
+      return { error: new Error('Select an active membership plan.') };
+    }
+
+    const result = await commit({
+      persist: () => db.renewMembership({
+        memberId,
+        planId,
+        startDate,
+        discountType,
+        discountValue,
+        discountReason: discountReason || 'Discount',
+        paidAmount,
+        paymentMethod,
+        dueDate,
+        notes,
+      }),
+      reloadAll: true,
+    });
+    if (result?.error) return { error: result.error };
+
+    const row = result.data;
+    return {
+      renewal: {
+        invoiceId: row.invoice_id,
+        invoiceNumber: row.invoice_number,
+        startDate: row.start_date,
+        expiry: row.expiry,
+        netPayable: Number(row.net_payable),
+        paidAmount: Number(row.paid_amount),
+        dueAmount: Number(row.due_amount),
+      },
+    };
+  };
+
   // --- Applications --------------------------------------------------------------
   // Approval = addMember with submissionId: the member is created from the
   // submission's details and the submission is marked Approved in the same
@@ -1390,6 +1443,7 @@ export function GymDataProvider({ children }) {
         calculatePricing,
         canRoleApplyDiscount,
         addMember,
+        renewMembership,
         approveApplication,
         rejectApplication,
         checkInMember,

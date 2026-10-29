@@ -9,10 +9,9 @@
 
 ## Now
 
-- [ ] **Check the database foundation**
+- [x] **Check the database foundation** (backups moved to Deploy & handover: they need Supabase Pro)
   - [x] Migration `013` (membership start date) run and verified (26 Oct 2026)
   - [x] Confirm migrations `001`–`012` have all been run on the Supabase project (28 Oct 2026)
-  - [ ] Turn on Supabase backups, or take one export
   - [x] Merge branch `portal-updates` into `main` and deploy (26 Oct 2026)
 
 ---
@@ -22,7 +21,8 @@
 ### Stop fake data appearing on real screens
 - [x] **Member Details**: load history from real invoices/payments, attendance and AI plans; show "Member not found" instead of a demo member (28 Oct 2026)
   - [ ] Features & Perks tab: use the plan's real features (`plan_features`), not the hardcoded list
-  - [ ] Renew Subscription: save through a database function (invoice + payment + new expiry); currently screen-only
+  - [x] Renew Subscription: saves through `renew_membership()` (migration `015`): invoice + payment + new expiry in one transaction (29 Oct 2026)
+  - [ ] Renewal: also extend the member's locker assignment to the new expiry
   - [ ] Decide: add columns for RFID card, emergency relationship and medical notes, or remove them from the Profile tab
   - [ ] "Collected By" on payments: show the staff name (`payments.collected_by` → `users.name`)
 - [x] **Monthly revenue split**: paid amounts only, one equal part per membership month, VAT excluded; migration `014` (`invoices.service_start`) run and checked with test data (29 Oct 2026)
@@ -39,6 +39,7 @@
 
 ### Real defaults in forms
 - [ ] **Approval form**: first payment, due date and notes based on the chosen plan, not demo values
+  - [ ] Payment list: "Visa / Mastercard POS" sends `Bank Card`, which the database rejects; use `PAYMENT_METHODS` from `financeConfig.js` like the renewal form
 - [ ] **Reports export**: branch name from settings, not "Dhanmondi"
 
 ### Cleanup
@@ -60,6 +61,7 @@
 - [ ] Vercel environment variables for the admin portal and the admission form
 - [ ] Supabase Auth redirect URLs set to the live domain
 - [ ] **Custom email sending (SMTP)** for password-reset emails, e.g. a free Resend account; Supabase's built-in sender only allows a few emails per hour
+- [ ] Buy Supabase Pro **before the client enters real data**, then confirm daily backups appear under Database → Backups
 - [ ] Create the client's Super Admin account; enter the real gym name, plans, prices and payment methods
 - [ ] Clear out test data
 - [ ] Give the client logins, live URLs and a short guide
