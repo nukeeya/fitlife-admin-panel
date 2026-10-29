@@ -32,7 +32,8 @@
 - [x] **Dashboard**: calculate the male/female percentages (currently fixed at 72% / 28%) (29 Oct 2026)
   - [x] Trend arrows from real data; Today Collected / Monthly Revenue now count payments by payment date (29 Oct 2026)
   - [ ] Member status is not updated automatically when a membership expires or starts (Dashboard counts rely on it)
-  - [ ] Peak Hours chart: fixed bars; count check-ins per hour from `attendance`
+  - [x] Peak Hours chart: check-ins per hour over the last 30 days (30 Oct 2026)
+  - [ ] Weekly chart: remove the made-up fallback; revenue line from payments
 - [x] Remove the demo records from `FALLBACK_DATA` and delete `src/data/mockProfiles.js` (also `src/data/gymData.js`) (29 Oct 2026)
 
 ### Connect the pages that have no database

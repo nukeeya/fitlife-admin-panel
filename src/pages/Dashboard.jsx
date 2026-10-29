@@ -149,6 +149,28 @@ export default function Dashboard() {
     return result;
   }, [attendance, invoices]);
 
+  // Peak hours: check-ins per hour of the day over the last 30 days. Hours run
+  // from the earliest to the latest hour that has any check-in, with empty
+  // hours in between shown as 0.
+  const peakHours = useMemo(() => {
+    const from = new Date();
+    from.setDate(from.getDate() - 29);
+    const fromStr = `${from.getFullYear()}-${String(from.getMonth() + 1).padStart(2, '0')}-${String(from.getDate()).padStart(2, '0')}`;
+    const counts = Array(24).fill(0);
+    for (const a of attendance) {
+      if (a.date < fromStr || !a.checkInTime) continue;
+      const hour = Number(a.checkInTime.slice(0, 2));
+      if (hour >= 0 && hour < 24) counts[hour] += 1;
+    }
+    const used = counts.map((c, h) => (c > 0 ? h : -1)).filter((h) => h >= 0);
+    if (used.length === 0) return [];
+    const label = (h) => `${h % 12 || 12} ${h < 12 ? 'AM' : 'PM'}`;
+    return Array.from({ length: used[used.length - 1] - used[0] + 1 }, (_, i) => {
+      const h = used[0] + i;
+      return { hour: label(h), count: counts[h] };
+    });
+  }, [attendance]);
+
   return (
     <div className="page">
       {/* Page Header */}
@@ -390,17 +412,18 @@ export default function Dashboard() {
 
         <div style={{ background: 'var(--bg-card)', padding: '20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-base)' }}>
           <h2 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '14px' }}>
-            Peak Daily Hours
+            Peak Hours
+            <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)', marginLeft: '8px' }}>
+              check-ins by hour, last 30 days
+            </span>
           </h2>
+          {peakHours.length === 0 ? (
+            <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+              No check-ins in the last 30 days.
+            </div>
+          ) : (
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={[
-              { hour: '6 AM', count: 28 },
-              { hour: '8 AM', count: 45 },
-              { hour: '11 AM', count: 20 },
-              { hour: '4 PM', count: 32 },
-              { hour: '6 PM', count: 58 },
-              { hour: '8 PM', count: 48 },
-            ]}>
+            <BarChart data={peakHours}>
               <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
               <XAxis dataKey="hour" stroke={textColor} fontSize={11} />
               <YAxis stroke={textColor} fontSize={11} />
@@ -412,9 +435,10 @@ export default function Dashboard() {
                   color: theme === 'light' ? '#0F172A' : '#FFFFFF',
                 }}
               />
-              <Bar dataKey="count" fill={primaryColor} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="count" name="Check-ins" fill={primaryColor} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
+          )}
         </div>
       </div>
 
