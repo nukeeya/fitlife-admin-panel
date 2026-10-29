@@ -64,6 +64,11 @@ export default function Dashboard() {
   } = useGymData();
   const { overdueCount, setShowOverduePopup } = useFinance();
 
+  // Share of the TOTAL ACTIVE card; members without a gender count in neither.
+  const shareOfActive = (count) => (stats.activeMembers > 0
+    ? `${Math.round((count / stats.activeMembers) * 100)}% of active`
+    : 'No active members');
+
   const textColor = theme === 'light' ? '#666666' : '#8E8E93';
   const gridColor = theme === 'light' ? '#E5E5EA' : '#222222';
   const tooltipBg = theme === 'light' ? '#FFFFFF' : '#141414';
@@ -212,7 +217,7 @@ export default function Dashboard() {
         <StatCard
           title="ACTIVE MALE"
           value={analytics.activeMale.toLocaleString()}
-          changeLabel="72% of total"
+          changeLabel={shareOfActive(analytics.activeMale)}
           icon={Users}
         />
 
@@ -220,7 +225,7 @@ export default function Dashboard() {
         <StatCard
           title="ACTIVE FEMALE"
           value={analytics.activeFemale.toLocaleString()}
-          changeLabel="28% of total"
+          changeLabel={shareOfActive(analytics.activeFemale)}
           icon={Users}
         />
 

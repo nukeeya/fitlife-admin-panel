@@ -29,7 +29,9 @@
 - [x] **Empty tables** (Members, Trainers, Employees): show an empty list with "Add your first…", not demo records (29 Oct 2026)
 - [x] **Failed loads**: show an error with a Retry button instead of demo data, on Members, Trainers and Employees (`DataState`, `loadErrors`) (29 Oct 2026)
   - [ ] Use `DataState` on the other list pages too (Attendance, Finance, Applications, Diet/Workout plans…)
-- [ ] **Dashboard**: calculate the male/female percentages (currently fixed at 72% / 28%)
+- [x] **Dashboard**: calculate the male/female percentages (currently fixed at 72% / 28%) (29 Oct 2026)
+  - [ ] Trend arrows: "↑ 8.4%", "↑ 12.6%", "↑ 18.2%" are fixed text
+  - [ ] Peak Hours chart: fixed bars; count check-ins per hour from `attendance`
 - [x] Remove the demo records from `FALLBACK_DATA` and delete `src/data/mockProfiles.js` (also `src/data/gymData.js`) (29 Oct 2026)
 
 ### Connect the pages that have no database
