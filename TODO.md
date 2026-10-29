@@ -33,7 +33,7 @@
   - [x] Trend arrows from real data; Today Collected / Monthly Revenue now count payments by payment date (29 Oct 2026)
   - [ ] Member status is not updated automatically when a membership expires or starts (Dashboard counts rely on it)
   - [x] Peak Hours chart: check-ins per hour over the last 30 days (30 Oct 2026)
-  - [ ] Weekly chart: remove the made-up fallback; revenue line from payments
+  - [x] Weekly chart: no made-up fallback; check-ins and revenue (payments) as two charts (30 Oct 2026)
 - [x] Remove the demo records from `FALLBACK_DATA` and delete `src/data/mockProfiles.js` (also `src/data/gymData.js`) (29 Oct 2026)
 
 ### Connect the pages that have no database

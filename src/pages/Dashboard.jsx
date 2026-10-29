@@ -109,6 +109,7 @@ export default function Dashboard() {
   const membersOut = attendance.filter((a) => a.status === 'Out');
 
   const chartData = useMemo(() => {
+    const payments = invoices.flatMap((inv) => inv.payments || []);
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const result = [];
     const today = new Date();
@@ -120,9 +121,10 @@ export default function Dashboard() {
       const dayName = days[d.getDay()];
 
       const dayCheckins = attendance.filter((a) => a.date === dateStr).length;
-      const dayRevenue = invoices
-        .filter((inv) => inv.date === dateStr)
-        .reduce((sum, inv) => sum + (Number(inv.paidAmount) || Number(inv.netPayable) || 0), 0);
+      // Revenue = payments received that day (same rule as Today Collected).
+      const dayRevenue = payments
+        .filter((p) => p.date === dateStr)
+        .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
       result.push({
         day: dayName,
@@ -130,20 +132,6 @@ export default function Dashboard() {
         checkins: dayCheckins,
         revenue: dayRevenue,
       });
-    }
-
-    // Fallback baseline for initial display if historical records are empty
-    const hasData = result.some((r) => r.checkins > 0 || r.revenue > 0);
-    if (!hasData) {
-      return [
-        { day: 'Mon', checkins: 124, revenue: 12000 },
-        { day: 'Tue', checkins: 145, revenue: 18500 },
-        { day: 'Wed', checkins: 132, revenue: 9000 },
-        { day: 'Thu', checkins: 168, revenue: 24000 },
-        { day: 'Fri', checkins: 189, revenue: 31000 },
-        { day: 'Sat', checkins: 210, revenue: 42000 },
-        { day: 'Sun', checkins: 154, revenue: 15000 },
-      ];
     }
 
     return result;
@@ -384,20 +372,29 @@ export default function Dashboard() {
       <div className="split-grid" style={{ marginTop: '20px' }}>
         <div style={{ background: 'var(--bg-card)', padding: '20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-base)' }}>
           <h2 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '14px' }}>
-            Weekly Check-Ins & Revenue Trend
+            Last 7 Days
           </h2>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={chartData}>
+          {/* Two charts on one shared day axis instead of one chart with two
+              y-scales: check-ins (tens) and taka (thousands) can't share an axis. */}
+          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Check-ins</div>
+          {chartData.every((d) => d.checkins === 0) ? (
+            <div style={{ height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+              No check-ins in the last 7 days.
+            </div>
+          ) : (
+          <ResponsiveContainer width="100%" height={100}>
+            <AreaChart data={chartData} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorCheckins" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={primaryColor} stopOpacity={0.4}/>
                   <stop offset="95%" stopColor={primaryColor} stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-              <XAxis dataKey="day" stroke={textColor} fontSize={12} />
-              <YAxis stroke={textColor} fontSize={12} />
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+              <XAxis dataKey="day" stroke={textColor} fontSize={11} />
+              <YAxis stroke={textColor} fontSize={11} width={56} allowDecimals={false} />
               <Tooltip
+                labelFormatter={(_, items) => items?.[0]?.payload?.date || ''}
                 contentStyle={{
                   backgroundColor: tooltipBg,
                   borderColor: tooltipBorder,
@@ -405,9 +402,35 @@ export default function Dashboard() {
                   color: theme === 'light' ? '#0F172A' : '#FFFFFF',
                 }}
               />
-              <Area type="monotone" dataKey="checkins" stroke={primaryColor} fillOpacity={1} fill="url(#colorCheckins)" strokeWidth={2} />
+              <Area type="monotone" dataKey="checkins" name="Check-ins" stroke={primaryColor} fillOpacity={1} fill="url(#colorCheckins)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
+          )}
+          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginTop: '10px' }}>Revenue (payments received)</div>
+          {chartData.every((d) => d.revenue === 0) ? (
+            <div style={{ height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+              No payments in the last 7 days.
+            </div>
+          ) : (
+          <ResponsiveContainer width="100%" height={110}>
+            <BarChart data={chartData} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+              <XAxis dataKey="day" stroke={textColor} fontSize={11} />
+              <YAxis stroke={textColor} fontSize={11} width={56} tickFormatter={(v) => (v >= 1000 ? `${Math.round(v / 1000)}k` : v)} />
+              <Tooltip
+                labelFormatter={(_, items) => items?.[0]?.payload?.date || ''}
+                formatter={(v) => [`৳${Number(v).toLocaleString()}`, 'Revenue']}
+                contentStyle={{
+                  backgroundColor: tooltipBg,
+                  borderColor: tooltipBorder,
+                  borderRadius: '8px',
+                  color: theme === 'light' ? '#0F172A' : '#FFFFFF',
+                }}
+              />
+              <Bar dataKey="revenue" name="Revenue" fill={primaryColor} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+          )}
         </div>
 
         <div style={{ background: 'var(--bg-card)', padding: '20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-base)' }}>
