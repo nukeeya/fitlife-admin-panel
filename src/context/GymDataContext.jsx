@@ -12,7 +12,6 @@ import {
   mapRole,
   mapTrainer,
   mapEmployee,
-  mapLocker,
   mapApplication,
   mapMemberBase,
   mapExpense,
@@ -25,7 +24,6 @@ import {
   mapProgressLog,
   mapShopProduct,
   shopProductToRow,
-  FALLBACK_DATA,
 } from '../lib/supabaseData';
 import { resolveProfilePhotoUrls } from '../lib/profilePhotos';
 
@@ -43,12 +41,9 @@ export const DEFAULT_BRANDING = {
   address: 'Plot 42, Gulshan Avenue, Dhaka, Bangladesh',
 };
 
-/**
- * Fallback seeds shown while the DB loads and when a table is unreachable.
- * Plans/roles carry schema-matching seeds so admission & RBAC still work;
- * transactional slices start empty — the DB is the source of truth.
- */
-const INITIAL_DATA = { ...FALLBACK_DATA };
+// Every slice below is built only from database rows. While loading, or when
+// a table is empty or failed to load, the slice is an empty list, never demo
+// records: a fake plan, role or trainer could otherwise be picked and saved.
 
 export function GymDataProvider({ children }) {
   const { user, staff } = useAuth();
@@ -129,7 +124,7 @@ export function GymDataProvider({ children }) {
 
   // --- Derived camelCase slices (with graceful fallback) ----------------------
   const plans = useMemo(() => {
-    if (!raw?.plans) return INITIAL_DATA.plans;
+    if (!raw?.plans) return [];
     const features = {};
     for (const f of raw.planFeatures || []) {
       (features[f.plan_id] = features[f.plan_id] || []).push(f.feature_name);
@@ -142,7 +137,7 @@ export function GymDataProvider({ children }) {
   );
 
   const roles = useMemo(() => {
-    if (!raw?.roles) return INITIAL_DATA.roles;
+    if (!raw?.roles) return [];
     const counts = {};
     for (const u of raw.users || []) {
       if (u.role_id) counts[u.role_id] = (counts[u.role_id] || 0) + 1;
@@ -150,56 +145,28 @@ export function GymDataProvider({ children }) {
     return raw.roles.map((r) => mapRole(r, counts));
   }, [raw]);
 
-  const trainers = useMemo(() => (raw?.trainers && raw.trainers.length > 0
-    ? raw.trainers.map((row) => {
-      const trainer = mapTrainer(row);
-      return {
-        ...trainer,
-        avatar: profilePhotoUrls[row.avatar] || (row.avatar?.startsWith('http') ? row.avatar : initialsOf(row.name)),
-      };
-    })
-    : INITIAL_DATA.trainers), [raw, profilePhotoUrls]);
-  const employees = useMemo(() => (raw?.employees && raw.employees.length > 0
-    ? raw.employees.map((row) => {
-      const employee = mapEmployee(row);
-      return {
-        ...employee,
-        avatar: profilePhotoUrls[row.avatar] || (row.avatar?.startsWith('http') ? row.avatar : initialsOf(row.name)),
-      };
-    })
-    : INITIAL_DATA.employees), [raw, profilePhotoUrls]);
-
-  const lockers = useMemo(() => {
-    if (!raw?.lockers?.length) return INITIAL_DATA.lockers;
-    // Active assignments give locker -> member display values
-    const active = (raw.lockerAssignments || []).filter((a) => a.status === 'Active');
-    const byLocker = {};
-    for (const a of active) byLocker[a.locker_id] = a;
-    const membersById = {};
-    for (const m of raw.members || []) membersById[m.id] = m;
-
-    return raw.lockers.map((row) => {
-      const mapped = mapLocker(row);
-      const assignment = byLocker[row.id];
-      if (assignment && row.status === 'Occupied') {
-        const m = membersById[assignment.member_id];
-        mapped.assignedTo = m ? `${m.first_name} ${m.last_name}`.trim() : `Member #${assignment.member_id}`;
-        mapped.memberCode = m?.member_code || null;
-        mapped.expiryDate = assignment.expiry_date;
-      }
-      return mapped;
-    });
-  }, [raw]);
+  const trainers = useMemo(() => (raw?.trainers || []).map((row) => {
+    const trainer = mapTrainer(row);
+    return {
+      ...trainer,
+      avatar: profilePhotoUrls[row.avatar] || (row.avatar?.startsWith('http') ? row.avatar : initialsOf(row.name)),
+    };
+  }), [raw, profilePhotoUrls]);
+  const employees = useMemo(() => (raw?.employees || []).map((row) => {
+    const employee = mapEmployee(row);
+    return {
+      ...employee,
+      avatar: profilePhotoUrls[row.avatar] || (row.avatar?.startsWith('http') ? row.avatar : initialsOf(row.name)),
+    };
+  }), [raw, profilePhotoUrls]);
 
   const members = useMemo(() => {
-    if (!raw?.members || raw.members.length === 0) return INITIAL_DATA.members;
+    if (!raw?.members) return [];
 
     const plansByName = {};
     for (const p of plans) plansByName[p.name.toLowerCase()] = p;
     const trainersById = {};
     for (const t of trainers) trainersById[t.id] = t;
-    const lockersById = {};
-    for (const l of lockers) lockersById[l.id] = l;
     const discountsById = {};
     for (const d of raw.discounts || []) discountsById[d.id] = d;
 
@@ -217,7 +184,6 @@ export function GymDataProvider({ children }) {
       const base = mapMemberBase(row);
       const plan = plansByName[String(row.plan || '').toLowerCase()];
       const trainer = row.trainer_id ? trainersById[row.trainer_id] : null;
-      const locker = row.locker_id ? lockersById[row.locker_id] : null;
       const fin = financeByMember[row.id];
       const latestDisc = fin?.latest?.discount_id ? discountsById[fin.latest.discount_id] : null;
       const discountApplied = latestDisc
@@ -231,16 +197,15 @@ export function GymDataProvider({ children }) {
         avatar: profilePhotoUrls[row.avatar]
           || (row.avatar?.startsWith('http') ? row.avatar : initialsOf(`${row.first_name} ${row.last_name}`)),
         trainer: trainer?.name || 'None',
-        lockerNumber: locker?.number || 'None',
         balanceDue: fin?.due || 0,
         paidTotal: fin?.paid || 0,
         discountApplied,
       };
     });
-  }, [raw, plans, trainers, lockers, profilePhotoUrls]);
+  }, [raw, plans, trainers, profilePhotoUrls]);
 
   const invoices = useMemo(() => {
-    if (!raw?.invoices || !raw?.members) return INITIAL_DATA.invoices;
+    if (!raw?.invoices || !raw?.members) return [];
     const membersById = {};
     for (const m of raw.members) membersById[m.id] = m;
     const plansById = {};
@@ -314,7 +279,7 @@ export function GymDataProvider({ children }) {
     });
   }, [raw, profilePhotoUrls]);
 
-  const expenses = useMemo(() => (raw?.expenses ? raw.expenses.map((r) => mapExpense(r)) : INITIAL_DATA.expenses), [raw]);
+  const expenses = useMemo(() => (raw?.expenses ? raw.expenses.map((r) => mapExpense(r)) : []), [raw]);
 
   // Finance state (migration 012). Missing tables load as empty.
   const expenseCategories = useMemo(() => (raw?.expenseCategories || []).map((r) => r.name), [raw]);
@@ -329,7 +294,7 @@ export function GymDataProvider({ children }) {
   }, [raw]);
 
   const attendance = useMemo(() => {
-    if (!raw?.attendance || !raw?.members) return INITIAL_DATA.attendance;
+    if (!raw?.attendance || !raw?.members) return [];
     const membersById = {};
     for (const m of raw.members) membersById[m.id] = m;
     const plansById = {};
@@ -357,7 +322,7 @@ export function GymDataProvider({ children }) {
   }, [raw]);
 
   const applications = useMemo(() => {
-    if (!raw?.applications || raw.applications.length === 0) return INITIAL_DATA.applications;
+    if (!raw?.applications) return [];
     return raw.applications.map((r) => {
       const application = mapApplication(r, plans);
       return {
@@ -368,10 +333,10 @@ export function GymDataProvider({ children }) {
     });
   }, [raw, plans, profilePhotoUrls]);
 
-  const smsCampaigns = useMemo(() => (raw?.smsCampaigns ? raw.smsCampaigns.map(mapSmsCampaign) : INITIAL_DATA.smsCampaigns), [raw]);
+  const smsCampaigns = useMemo(() => (raw?.smsCampaigns ? raw.smsCampaigns.map(mapSmsCampaign) : []), [raw]);
 
   const jobs = useMemo(() => {
-    if (!raw?.jobs) return INITIAL_DATA.jobs;
+    if (!raw?.jobs) return [];
     const counts = {};
     for (const a of raw.jobApplications || []) counts[a.job_id] = (counts[a.job_id] || 0) + 1;
     return raw.jobs.map((r) => mapJob(r, counts));
@@ -381,7 +346,7 @@ export function GymDataProvider({ children }) {
   const workoutPlans = useMemo(() => (raw?.workoutPlans ? raw.workoutPlans.map(mapWorkoutPlan) : []), [raw]);
   const progressLogs = useMemo(() => (raw?.progressLogs ? raw.progressLogs.map(mapProgressLog) : []), [raw]);
   const shopProducts = useMemo(
-    () => (raw?.shopProducts ? raw.shopProducts.map(mapShopProduct) : INITIAL_DATA.shopProducts),
+    () => (raw?.shopProducts ? raw.shopProducts.map(mapShopProduct) : []),
     [raw]
   );
 
@@ -472,7 +437,7 @@ export function GymDataProvider({ children }) {
   const currentUserRole = staff?.role?.name || '';
   const canRoleApplyDiscount = () => Boolean(staff?.role?.canApplyDiscount);
 
-  // --- addMember: member + discount + invoice + payment (+ locker) ------------
+  // --- addMember: member + discount + invoice + payment ----------------------
   // One database transaction (create_member_with_invoice RPC). The database
   // recalculates the price from the plan and enforces the role's discount
   // limit, so the amounts shown here are a preview, never the source of truth.
@@ -484,7 +449,6 @@ export function GymDataProvider({ children }) {
     gender = 'Male',
     planId,
     trainerName = 'None',
-    lockerNumber = 'None',
     discountType = 'flat',
     discountValue = 0,
     discountReason = '',
@@ -500,10 +464,6 @@ export function GymDataProvider({ children }) {
     if (!selectedPlan || !raw) return { error: new Error('Select an active membership plan.') };
 
     const trainer = trainerName && trainerName !== 'None' ? trainers.find((t) => t.name === trainerName) : null;
-    const locker = lockerNumber && lockerNumber !== 'None' ? lockers.find((l) => l.number === lockerNumber) : null;
-    if (locker?.isMock) {
-      return { error: new Error('Demo lockers cannot be assigned. Add a real locker in the database first.') };
-    }
 
     const result = await commit({
       persist: () => db.createMemberWithInvoice({
@@ -518,7 +478,6 @@ export function GymDataProvider({ children }) {
         paidAmount,
         paymentMethod,
         trainerId: trainer?.id,
-        lockerId: locker?.id,
         avatar,
         submissionId,
         dueDate,
@@ -766,19 +725,6 @@ export function GymDataProvider({ children }) {
       return { error: new Error('Select an available trainer.') };
     }
 
-    const lockerId = assignments.lockerId ? Number(assignments.lockerId) : null;
-    const currentLockerId = member.lockerId ? Number(member.lockerId) : null;
-    const selectedLocker = lockerId === null ? null : lockers.find((locker) => locker.id === lockerId);
-    if (lockerId !== null && !selectedLocker) {
-      return { error: new Error('Select a valid locker.') };
-    }
-    if (selectedLocker?.isMock) {
-      return { error: new Error('Demo lockers cannot be assigned. Add a real locker in the database first.') };
-    }
-    if (lockerId !== currentLockerId && selectedLocker && selectedLocker.status !== 'Available') {
-      return { error: new Error('That locker is no longer available. Refresh and choose another locker.') };
-    }
-
     const nextStatus = member.status === 'Inactive'
       ? 'Inactive'
       : assignments.expiry < todayStr()
@@ -791,7 +737,6 @@ export function GymDataProvider({ children }) {
       expiry: assignments.expiry,
       status: nextStatus,
       trainer_id: trainerId,
-      locker_id: lockerId,
       ...(assignments.avatar ? { avatar: assignments.avatar } : {}),
     };
 
@@ -801,57 +746,13 @@ export function GymDataProvider({ children }) {
           prev
             ? {
                 ...prev,
-                lockers: prev.lockers.map((locker) => {
-                  if (locker.id === currentLockerId && locker.id !== lockerId) {
-                    return { ...locker, status: 'Available' };
-                  }
-                  if (locker.id === lockerId && locker.id !== currentLockerId) {
-                    return { ...locker, status: 'Occupied' };
-                  }
-                  return locker;
-                }),
-                lockerAssignments: [
-                  ...(prev.lockerAssignments || []).map((assignment) =>
-                    assignment.locker_id === currentLockerId && assignment.status === 'Active' && currentLockerId !== lockerId
-                      ? { ...assignment, status: 'Released' }
-                      : assignment
-                  ),
-                  ...(lockerId !== null && lockerId !== currentLockerId
-                    ? [{ locker_id: lockerId, member_id: member.id, expiry_date: assignments.expiry, status: 'Active' }]
-                    : []),
-                ],
                 members: prev.members.map((row) =>
                   row.id === member.id ? { ...row, ...patch } : row
                 ),
               }
             : prev
         ),
-      persist: async () => {
-        if (currentLockerId !== lockerId && currentLockerId !== null) {
-          const releaseLocker = await db.updateLocker(currentLockerId, { status: 'Available' });
-          if (releaseLocker.error) return releaseLocker;
-          const releaseAssignment = await db.updateLockerAssignment(currentLockerId, { status: 'Released' });
-          if (releaseAssignment.error) return releaseAssignment;
-        }
-
-        if (currentLockerId !== lockerId && lockerId !== null) {
-          const occupyLocker = await db.updateLocker(lockerId, { status: 'Occupied' });
-          if (occupyLocker.error) return occupyLocker;
-        }
-
-        const memberUpdate = await db.updateMember(member.id, patch);
-        if (memberUpdate.error) return memberUpdate;
-
-        if (currentLockerId !== lockerId && lockerId !== null) {
-          return db.insertLockerAssignment({
-            lockerId,
-            memberId: member.id,
-            expiryDate: assignments.expiry,
-          });
-        }
-
-        return memberUpdate;
-      },
+      persist: () => db.updateMember(member.id, patch),
       reloadAll: true,
     });
   };
@@ -950,85 +851,6 @@ export function GymDataProvider({ children }) {
 
   const addPeriodAdjustment = (adjustment) =>
     commit({ persist: () => db.insertPeriodAdjustment(adjustment), reloadAll: true });
-
-  // --- Lockers -------------------------------------------------------------------------------
-  const assignLocker = async ({ lockerId, memberId, expiryDate }) => {
-    const member = members.find((m) => m.id === Number(memberId));
-    if (!member || member.id < 0 || !raw) return;
-
-    if (lockers.some((locker) => locker.id === Number(lockerId) && locker.isMock)) {
-      alert('Demo lockers cannot be assigned. Add a real locker in the database first.');
-      return;
-    }
-
-    const expiry = expiryDate || addDays(todayStr(), 30);
-
-    await commit({
-      optimistic: () =>
-        setRaw((prev) =>
-          prev
-            ? {
-                ...prev,
-                lockers: prev.lockers.map((l) =>
-                  l.id === Number(lockerId) ? { ...l, status: 'Occupied' } : l
-                ),
-                members: prev.members.map((m) =>
-                  m.id === member.id ? { ...m, locker_id: Number(lockerId) } : m
-                ),
-                lockerAssignments: [
-                  ...(prev.lockerAssignments || []),
-                  { locker_id: Number(lockerId), member_id: member.id, expiry_date: expiry, status: 'Active' },
-                ],
-              }
-            : prev
-        ),
-      persist: async () => {
-        const upd = await db.updateLocker(Number(lockerId), { status: 'Occupied' });
-        if (upd.error) return upd;
-        const memberUpd = await db.updateMember(member.id, { locker_id: Number(lockerId) });
-        if (memberUpd.error) return memberUpd;
-        return db.insertLockerAssignment({ lockerId: Number(lockerId), memberId: member.id, expiryDate: expiry });
-      },
-      reloadAll: true,
-    });
-  };
-
-  const releaseLocker = async (lockerId) => {
-    if (lockers.some((locker) => locker.id === Number(lockerId) && locker.isMock)) {
-      alert('Demo lockers cannot be released. Add real locker records before managing assignments.');
-      return;
-    }
-
-    if (!raw) {
-      alert('Locker data is unavailable. Reconnect to the database before releasing a locker.');
-      return;
-    }
-
-    await commit({
-      optimistic: () =>
-        setRaw((prev) =>
-          prev
-            ? {
-                ...prev,
-                lockers: prev.lockers.map((l) =>
-                  l.id === Number(lockerId) ? { ...l, status: 'Available' } : l
-                ),
-                lockerAssignments: (prev.lockerAssignments || []).map((a) =>
-                  a.locker_id === Number(lockerId) && a.status === 'Active'
-                    ? { ...a, status: 'Released' }
-                    : a
-                ),
-              }
-            : prev
-        ),
-      persist: async () => {
-        const upd = await db.updateLocker(Number(lockerId), { status: 'Available' });
-        if (upd.error) return upd;
-        return db.updateLockerAssignment(Number(lockerId), { status: 'Released' });
-      },
-      reloadAll: true,
-    });
-  };
 
   // --- SMS --------------------------------------------------------------------------------------
   const sendSMS = async ({ title, recipientType, message }) => {
@@ -1412,7 +1234,6 @@ export function GymDataProvider({ children }) {
         pendingApprovals,
         plans,
         activePlans,
-        lockers,
         trainers,
         employees,
         invoices,
@@ -1462,8 +1283,6 @@ export function GymDataProvider({ children }) {
         closeMonth,
         periodAdjustments,
         addPeriodAdjustment,
-        assignLocker,
-        releaseLocker,
         sendSMS,
         updateRolePermission,
         getAnalytics,

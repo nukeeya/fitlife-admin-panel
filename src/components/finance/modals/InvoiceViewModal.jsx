@@ -108,7 +108,7 @@ export default function InvoiceViewModal({
                   <td>
                     <strong>{invoice.planName}</strong>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                      Full facility gym access, locker usage, biometric assessment
+                      Full facility gym access, biometric assessment
                     </div>
                   </td>
                   <td>{invoice.durationMonths ? `${invoice.durationMonths} Month(s)` : 'General'}</td>

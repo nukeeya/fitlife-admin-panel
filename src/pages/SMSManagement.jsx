@@ -31,7 +31,7 @@ const MESSAGE_TEMPLATES = [
     id: 'expiry_reminder',
     name: 'Membership Expiry Reminder',
     category: 'Reminder',
-    text: 'Hello {{member_name}},\n\nThis is a friendly reminder from {{gym_name}} that your {{plan_name}} membership expires on {{expiry_date}}.\n\nRenew today to maintain seamless access to gym facilities, lockers, and trainers! Visit reception or reply to this message.',
+    text: 'Hello {{member_name}},\n\nThis is a friendly reminder from {{gym_name}} that your {{plan_name}} membership expires on {{expiry_date}}.\n\nRenew today to maintain seamless access to gym facilities and trainers! Visit reception or reply to this message.',
   },
   {
     id: 'payment_reminder',
@@ -86,7 +86,7 @@ const INITIAL_MESSAGE_HISTORY = [
     recipientLabel: '6 Expiring Members',
     recipientSample: 'Nusrat Jahan, Mahin Islam, & 4 others',
     category: 'Reminder',
-    message: 'Hello, your FITLIFE membership expires within 3 days. Renew now to enjoy uninterrupted biometric access and locker privileges.',
+    message: 'Hello, your FITLIFE membership expires within 3 days. Renew now to enjoy uninterrupted gym access.',
     timestamp: '2026-10-21 09:00 AM',
     status: 'Delivered',
   },

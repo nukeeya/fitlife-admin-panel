@@ -169,9 +169,6 @@ export default function HorizontalNav() {
             <NavLink to="/subscription-plans?tab=features" className="submenu-link" onClick={() => setActiveDropdown(null)}>
               Feature List
             </NavLink>
-            <NavLink to="/subscription-plans?tab=lockers" className="submenu-link" onClick={() => setActiveDropdown(null)}>
-              Locker List
-            </NavLink>
           </div>
         )}
       </div>

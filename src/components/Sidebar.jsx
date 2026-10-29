@@ -300,9 +300,6 @@ export default function Sidebar({ isOpen = false, onClose }) {
               <NavLink to="/subscription-plans?tab=features" className="submenu-link">
                 • Subscription Feature List
               </NavLink>
-              <NavLink to="/subscription-plans?tab=lockers" className="submenu-link">
-                • Subscription Locker List
-              </NavLink>
             </div>
           )}
         </div>

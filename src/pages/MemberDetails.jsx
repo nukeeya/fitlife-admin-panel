@@ -610,7 +610,6 @@ export default function MemberDetails() {
           { key: 'installments', label: 'Installment Schedule', icon: Calendar, badge: totalDue > 0 ? 'Due' : null, badgeColor: totalDue > 0 ? 'var(--danger)' : null },
           { key: 'attendance', label: 'Attendance', icon: Clock, badge: `${attendanceLogs.length} logs` },
           { key: 'features', label: 'Features & Perks', icon: Award },
-          { key: 'locker', label: 'Locker', icon: Lock },
           { key: 'workout', label: 'Workout Plan', icon: Dumbbell },
           { key: 'diet', label: 'Diet Plan', icon: Utensils },
         ].map((tab) => {
@@ -726,10 +725,6 @@ export default function MemberDetails() {
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Assigned Coach</span>
                 <span style={{ fontSize: '14px', fontWeight: 600 }}>{member.trainer || 'None'}</span>
-              </div>
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Assigned Locker</span>
-                <span style={{ fontSize: '14px', fontWeight: 600 }}>{member.lockerNumber || 'None'}</span>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Residential Address</span>
@@ -1471,7 +1466,6 @@ export default function MemberDetails() {
             >
               {[
                 { title: 'Gym Floor & Cardio Suite Access', desc: 'Unlimited peak and off-peak entry to all strength, barbell, and cardio zones.', badge: 'Unlimited', icon: Dumbbell },
-                { title: 'Dedicated Executive Locker', desc: `Assigned locker ${member.lockerNumber || 'None'} in Zone B executive wing with RFID lock.`, badge: 'Active', icon: Lock },
                 { title: 'Steam & Sauna Privileges', desc: 'Complimentary weekend hydrotherapy, infrared sauna, and eucalyptus steam room access.', badge: 'Included', icon: Droplets },
                 { title: 'Trainer Review & Bi-weekly Check-in', desc: `Assigned coach: ${member.trainer || 'None'}. Includes form check and weight adjustments.`, badge: 'Bi-Weekly', icon: User },
                 { title: 'InBody 770 Body Composition Scans', desc: 'Monthly medical-grade impedance body fat, visceral fat, and muscle mass report.', badge: '1x / Month', icon: Activity },
@@ -1520,91 +1514,6 @@ export default function MemberDetails() {
                   </div>
                 );
               })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 8: LOCKER */}
-      {/* ========================================================================= */}
-      {activeTab === 'locker' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div className="activity-card" style={{ padding: '24px', borderRadius: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Lock size={20} style={{ color: 'var(--primary)' }} />
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>Dedicated Locker Assignment</h3>
-                  <p style={{ margin: '2px 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
-                    Personal storage locker details, zone assignment, and RFID credentials.
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => alert(`Locker ${member.lockerNumber || 'None'} released to available pool.`)}
-                >
-                  Release Locker
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm"
-                  onClick={() => alert('Locker change modal: Select a new locker from the floor map.')}
-                >
-                  Change Locker
-                </button>
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: '16px',
-                padding: '20px',
-                borderRadius: '12px',
-                background: 'var(--bg-subtle, rgba(255,255,255,0.03))',
-              }}
-            >
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Assigned Locker Number</span>
-                <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--primary)', marginTop: '4px' }}>
-                  {member.lockerNumber || 'None'}
-                </div>
-              </div>
-
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Locker Wing & Zone</span>
-                <div style={{ fontSize: '15px', fontWeight: 700, marginTop: '6px' }}>Zone B · Executive Suite</div>
-              </div>
-
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Locker Type</span>
-                <div style={{ fontSize: '15px', fontWeight: 700, marginTop: '6px' }}>Digital RFID Electronic Lock</div>
-              </div>
-
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>RFID Tag Assigned</span>
-                <div style={{ fontSize: '15px', fontWeight: 700, color: '#10B981', marginTop: '6px' }}>
-                  {member.rfidCard || '—'}
-                </div>
-              </div>
-
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Monthly Locker Fee</span>
-                <div style={{ fontSize: '15px', fontWeight: 700, marginTop: '6px' }}>৳0 (Included in Package)</div>
-              </div>
-
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Assignment Expiry</span>
-                <div style={{ fontSize: '15px', fontWeight: 700, marginTop: '6px' }}>
-                  {formatDatePretty(member.expiry)}
-                </div>
-              </div>
             </div>
           </div>
         </div>

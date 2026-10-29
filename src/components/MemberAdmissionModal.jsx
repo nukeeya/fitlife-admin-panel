@@ -17,7 +17,6 @@ import Modal from './common/Modal';
 export default function MemberAdmissionModal({ isOpen, onClose }) {
   const {
     activePlans,
-    lockers,
     trainers,
     calculatePricing,
     canRoleApplyDiscount,
@@ -33,7 +32,6 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
     gender: 'Male',
     planId: activePlans[0]?.id || 1,
     trainerName: 'None',
-    lockerNumber: 'None',
     discountType: 'percentage', // 'percentage' | 'flat'
     discountValue: 0,
     discountReason: '',
@@ -161,7 +159,6 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
         gender: formData.gender,
         planId: formData.planId,
         trainerName: formData.trainerName,
-        lockerNumber: formData.lockerNumber,
         discountType: hasDiscountPrivilege ? formData.discountType : 'flat',
         discountValue: hasDiscountPrivilege ? formData.discountValue : 0,
         discountReason: formData.discountReason,
@@ -393,25 +390,6 @@ export default function MemberAdmissionModal({ isOpen, onClose }) {
                     {t.name} ({t.specialty})
                   </option>
                 ))}
-              </select>
-            </div>
-
-            {/* Locker Assignment */}
-            <div className="form-group">
-              <label className="form-label">Assign Locker Number</label>
-              <select
-                className="form-select"
-                value={formData.lockerNumber}
-                onChange={(e) => handleChange('lockerNumber', e.target.value)}
-              >
-                <option value="None">No Locker Assigned</option>
-                {lockers
-                  .filter((l) => l.status === 'Available' && !l.isMock)
-                  .map((l) => (
-                    <option key={l.id} value={l.number}>
-                      {l.number} ({l.zone} - ৳{l.monthlyFee}/mo)
-                    </option>
-                  ))}
               </select>
             </div>
           </div>

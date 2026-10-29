@@ -22,12 +22,11 @@
 - [x] **Member Details**: load history from real invoices/payments, attendance and AI plans; show "Member not found" instead of a demo member (28 Oct 2026)
   - [ ] Features & Perks tab: use the plan's real features (`plan_features`), not the hardcoded list
   - [x] Renew Subscription: saves through `renew_membership()` (migration `015`): invoice + payment + new expiry in one transaction (29 Oct 2026)
-  - [ ] Renewal: also extend the member's locker assignment to the new expiry
   - [ ] Decide: add columns for RFID card, emergency relationship and medical notes, or remove them from the Profile tab
   - [ ] "Collected By" on payments: show the staff name (`payments.collected_by` → `users.name`)
 - [x] **Monthly revenue split**: paid amounts only, one equal part per membership month, VAT excluded; migration `014` (`invoices.service_start`) run and checked with test data (29 Oct 2026)
   - [ ] Payment dates: use Dhaka time, not UTC (a payment between 00:00 and 06:00 lands on the previous day, and on the 1st in the previous month)
-- [ ] **Empty tables** (Members, Trainers, Employees, Lockers): show an empty list with "Add your first…", not demo records
+- [ ] **Empty tables** (Members, Trainers, Employees): show an empty list with "Add your first…", not demo records
 - [ ] **Failed loads**: show an error with a Retry button instead of demo data
 - [ ] **Dashboard**: calculate the male/female percentages (currently fixed at 72% / 28%)
 - [ ] Remove the demo records from `FALLBACK_DATA` and delete `src/data/mockProfiles.js`
@@ -53,7 +52,7 @@
 
 ### Testing
 - [ ] Empty database test: no fake names anywhere
-- [ ] Full flow: admission form → approve → payment → check-in → locker; reload and confirm everything is saved
+- [ ] Full flow: admission form → approve → payment → check-in; reload and confirm everything is saved
 - [ ] Log in as each role (Super Admin, Branch Manager, Receptionist, Trainer, Accountant)
 - [ ] Phone, tablet and desktop; light and dark mode
 
@@ -70,6 +69,7 @@
 
 ## Later (not needed for delivery)
 
+- [ ] **Rebuild locker management** (removed from the app on 29 Oct 2026 because it was faulty). The database still has `lockers`, `locker_assignments`, `members.locker_id` and the `p_locker_id` parameter of `create_member_with_invoice()`; the old screens are in git history before this commit. Include: assign at admission, extend on renewal, release on expiry
 - [ ] **ZKTeco biometric integration**: first get the device model from Menu → System Info; then connect the Devices page to a `devices` table
 - [ ] Real SMS sending (needs an SMS provider)
 - [ ] "Upcoming" status for members whose start date is in the future

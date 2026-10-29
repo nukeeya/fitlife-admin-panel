@@ -6,8 +6,6 @@ import {
   Plus,
   MoreHorizontal,
   Eye,
-  KeyRound,
-  Unlock,
   CheckCircle2,
   Ban,
   ScanFace,
@@ -35,11 +33,8 @@ export default function Members() {
   const {
     members: liveMembers,
     plans,
-    lockers,
     dietPlans,
     workoutPlans,
-    assignLocker,
-    releaseLocker,
     assignDietPlan,
     assignWorkoutPlan,
   } = useGymData();
@@ -58,8 +53,6 @@ export default function Members() {
   const [planFilter, setPlanFilter] = useState('All');
   const [openMenuId, setOpenMenuId] = useState(null);
   const [menuPosition, setMenuPosition] = useState(null);
-  const [lockerMember, setLockerMember] = useState(null);
-  const [selectedLockerId, setSelectedLockerId] = useState('');
   const [planAssignment, setPlanAssignment] = useState(null);
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [messageMember, setMessageMember] = useState(null);
@@ -107,7 +100,6 @@ export default function Members() {
     return matchesSearch && matchesStatus && matchesPlan;
   });
 
-  const availableLockers = lockers.filter((locker) => !locker.isMock && (locker.status === 'Available' || locker.id === lockerMember?.lockerId));
   const availablePlans = planAssignment
     ? (planAssignment.type === 'diet' ? dietPlans : workoutPlans)
       .filter((plan) => plan.memberId === null || plan.memberId === undefined || Number(plan.memberId) !== planAssignment.member.id)
@@ -124,22 +116,6 @@ export default function Members() {
 
     if (action === 'remote-enroll') {
       setRemoteEnrollMember(member);
-      return;
-    }
-
-    if (action === 'assign') {
-      setLockerMember(member);
-      setSelectedLockerId(member.lockerId ? String(member.lockerId) : (availableLockers[0]?.id ? String(availableLockers[0].id) : ''));
-      return;
-    }
-
-    if (action === 'release') {
-      const lockerToRelease = lockers.find((locker) => locker.id === member.lockerId || (member.lockerNumber && locker.number === member.lockerNumber));
-      if (!lockerToRelease) {
-        alert('No locker is currently assigned to this member.');
-        return;
-      }
-      releaseLocker(lockerToRelease.id);
       return;
     }
 
@@ -232,20 +208,6 @@ export default function Members() {
 
   const disabledIntegrationTitle = 'Requires an access-control/face-ID system integration.';
 
-  const confirmLockerAssignment = async () => {
-    if (!lockerMember || !selectedLockerId) {
-      alert('Please select a valid locker.');
-      return;
-    }
-
-    await assignLocker({
-      lockerId: Number(selectedLockerId),
-      memberId: lockerMember.id,
-    });
-    setLockerMember(null);
-    setSelectedLockerId('');
-  };
-
   return (
     <div className="page">
       {/* Page Header */}
@@ -253,7 +215,7 @@ export default function Members() {
         <div className="page-title-group">
           <h1 className="page-title">Member Management</h1>
           <p className="page-subtitle">
-            Comprehensive member registry, dynamic discount audit trail, trainers & locker assignments.
+            Comprehensive member registry, dynamic discount audit trail and trainer assignments.
           </p>
         </div>
 
@@ -383,22 +345,6 @@ export default function Members() {
                         >
                           <Fingerprint size={14} /> Remote Enroll
                         </button>
-                        <button
-                          type="button"
-                          className="member-options-item"
-                          role="menuitem"
-                          onClick={() => handleMenuAction(m, 'assign')}
-                        >
-                          <KeyRound size={14} /> Assign Locker
-                        </button>
-                        <button
-                          type="button"
-                          className="member-options-item"
-                          role="menuitem"
-                          onClick={() => handleMenuAction(m, 'release')}
-                        >
-                          <Unlock size={14} /> Release Locker
-                        </button>
                         <div className="member-options-divider" />
                         <button type="button" className="member-options-item" role="menuitem" disabled title={disabledIntegrationTitle}>
                           <CheckCircle2 size={14} /> Force Access Allow
@@ -463,56 +409,6 @@ export default function Members() {
           {actionFeedback.text}
         </div>
       )}
-
-      <Modal
-        isOpen={!!lockerMember}
-        onClose={() => {
-          setLockerMember(null);
-          setSelectedLockerId('');
-        }}
-        title="Assign Locker"
-        subtitle={lockerMember ? `${lockerMember.name} · ${lockerMember.code}` : ''}
-        size="sm"
-        footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                setLockerMember(null);
-                setSelectedLockerId('');
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={confirmLockerAssignment}
-            >
-              Confirm Assignment
-            </button>
-          </div>
-        }
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <label className="form-group">
-            <span className="form-label">Select locker</span>
-            <select
-              className="form-select"
-              value={selectedLockerId}
-              onChange={(event) => setSelectedLockerId(event.target.value)}
-            >
-              <option value="">No locker</option>
-              {availableLockers.map((locker) => (
-                <option key={locker.id} value={String(locker.id)}>
-                  {locker.number}{locker.zone ? ` · ${locker.zone}` : ''}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      </Modal>
 
       <Modal
         isOpen={!!planAssignment}

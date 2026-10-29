@@ -60,20 +60,6 @@ export const FALLBACK_DATA = {
     { id: 5, memberId: 4, name: 'Nabila Karim', checkIn: '09:00 AM', checkOut: '—', status: 'In', date: '2026-10-22' },
     { id: 6, memberId: 5, name: 'Mahmudul Hasan', checkIn: '09:45 AM', checkOut: '11:00 AM', status: 'Out', date: '2026-10-22' },
   ],
-  lockers: [
-    { id: 9001, number: 'A-001', zone: 'Zone A', type: 'Standard', status: 'Occupied', assignedTo: 'Mahmudul Hasan', memberCode: 'FLM-1005', expiryDate: '2026-11-10', monthlyFee: 500, isMock: true },
-    { id: 9002, number: 'A-002', zone: 'Zone A', type: 'Standard', status: 'Occupied', assignedTo: 'Ashfaqur Rahman', memberCode: 'FLM-1011', expiryDate: '2026-11-30', monthlyFee: 500, isMock: true },
-    { id: 9003, number: 'A-003', zone: 'Zone A', type: 'Digital', status: 'Occupied', assignedTo: 'Sabrina Yasmin', memberCode: 'FLM-1002', expiryDate: '2026-10-28', monthlyFee: 650, isMock: true },
-    { id: 9004, number: 'A-004', zone: 'Zone A', type: 'Standard', status: 'Occupied', assignedTo: 'Zubair Al-Mamun', memberCode: 'FLM-1009', expiryDate: '2027-03-12', monthlyFee: 500, isMock: true },
-    { id: 9005, number: 'A-005', zone: 'Zone A', type: 'Standard', status: 'Maintenance', assignedTo: null, memberCode: null, expiryDate: null, monthlyFee: 500, isMock: true },
-    { id: 9006, number: 'B-001', zone: 'Zone B', type: 'Digital', status: 'Occupied', assignedTo: 'Nabila Karim', memberCode: 'FLM-1004', expiryDate: '2026-12-31', monthlyFee: 650, isMock: true },
-    { id: 9007, number: 'B-002', zone: 'Zone B', type: 'Standard', status: 'Occupied', assignedTo: 'Mehnaz Parveen', memberCode: 'FLM-1010', expiryDate: '2026-11-14', monthlyFee: 500, isMock: true },
-    { id: 9008, number: 'B-003', zone: 'Zone B', type: 'Standard', status: 'Occupied', assignedTo: 'Farhan Ahmed', memberCode: 'FLM-1008', expiryDate: '2026-12-31', monthlyFee: 500, isMock: true },
-    { id: 9009, number: 'B-004', zone: 'Zone B', type: 'Digital', status: 'Occupied', assignedTo: 'Sumaiya Akter', memberCode: 'FLM-1012', expiryDate: '2026-11-04', monthlyFee: 650, isMock: true },
-    { id: 9010, number: 'VIP-01', zone: 'Zone VIP', type: 'VIP Executive', status: 'Occupied', assignedTo: 'Kabir Chowdhury', memberCode: 'FLM-1001', expiryDate: '2027-01-09', monthlyFee: 1200, isMock: true },
-    { id: 9011, number: 'VIP-02', zone: 'Zone VIP', type: 'VIP Executive', status: 'Occupied', assignedTo: 'Tanvir Hossain', memberCode: 'FLM-1003', expiryDate: '2027-09-30', monthlyFee: 1200, isMock: true },
-    { id: 9012, number: 'VIP-03', zone: 'Zone VIP', type: 'Digital', status: 'Available', assignedTo: null, memberCode: null, expiryDate: null, monthlyFee: 850, isMock: true },
-  ],
   trainers: MOCK_TRAINERS,
   employees: MOCK_EMPLOYEES,
   roles: [
@@ -197,7 +183,6 @@ export function mapPlan(row, featuresByPlanId = {}) {
     period: '',
     durationDays: row.duration_days,
     features: featuresByPlanId[row.id] || [],
-    lockerZone: null,
     popular: !!row.is_popular,
     vatPercent: Number(row.vat_percentage ?? 5),
     status: row.status || 'Active',
@@ -253,21 +238,6 @@ export function mapEmployee(row) {
   };
 }
 
-export function mapLocker(row) {
-  if (!row) return null;
-  return {
-    id: row.id,
-    number: row.locker_number,
-    zone: row.zone,
-    type: row.type,
-    status: row.status,
-    assignedTo: null,
-    memberCode: null,
-    expiryDate: null,
-    monthlyFee: Number(row.monthly_fee ?? 0),
-  };
-}
-
 export function mapApplication(row, plans = []) {
   if (!row) return null;
   const planBySlug = plans.find((p) => p.code === row.plan);
@@ -299,7 +269,7 @@ export function mapApplication(row, plans = []) {
 
 /**
  * Members need enrichment from other loaded arrays (plans by name, trainer/
- * locker display values, invoice-derived financials) — done in the context
+ * invoice-derived financials) — done in the context
  * where those arrays are available. This mapper handles the row-only fields.
  */
 export function mapMemberBase(row) {
@@ -325,7 +295,6 @@ export function mapMemberBase(row) {
     visits: row.visits ?? 0,
     avatar: row.avatar || initialsOf(`${row.first_name} ${row.last_name}`),
     trainerId: row.trainer_id || null,
-    lockerId: row.locker_id || null,
   };
 }
 
@@ -504,8 +473,6 @@ export async function fetchAllData() {
     payments: () => supabase.from('payments')
       .select('id, receipt_number, invoice_id, amount, method, transaction_reference, payment_date')
       .order('payment_date'),
-    lockers: () => supabase.from('lockers').select('*').order('id'),
-    lockerAssignments: () => supabase.from('locker_assignments').select('*'),
     trainers: () => supabase.from('trainers').select('*').order('id'),
     employees: () => supabase.from('employees').select('*').order('id'),
     invoices: () => supabase.from('invoices').select('*').order('id', { ascending: false }),
@@ -556,7 +523,7 @@ export async function fetchAllData() {
 
 export const db = {
   // Members ------------------------------------------------------------------
-  async insertMember({ name, email, phone, gender, planName, trainerId, lockerId, avatar = null, status = 'Active', joined, expiry, visits = 0 }) {
+  async insertMember({ name, email, phone, gender, planName, trainerId, avatar = null, status = 'Active', joined, expiry, visits = 0 }) {
     const { firstName, lastName } = splitName(name);
     return supabase
       .from('members')
@@ -568,7 +535,6 @@ export const db = {
         gender,
         plan: planName,
         trainer_id: trainerId || null,
-        locker_id: lockerId || null,
         avatar,
         status,
         joined: joined || todayStr(),
@@ -606,11 +572,11 @@ export const db = {
   },
 
   // Admission / Payments (server-side RPCs, migration 011) ---------------------
-  // Member + discount + invoice + payment + locker in one transaction; prices
+  // Member + discount + invoice + payment in one transaction; prices
   // and discount limits are enforced by the database, not trusted from here.
   createMemberWithInvoice({
     planId, name, phone, email, gender, discountType, discountValue, discountReason,
-    paidAmount, paymentMethod, trainerId, lockerId, avatar, submissionId, dueDate, notes, startDate,
+    paidAmount, paymentMethod, trainerId, avatar, submissionId, dueDate, notes, startDate,
   }) {
     return supabase.rpc('create_member_with_invoice', {
       p_plan_id: Number(planId),
@@ -624,7 +590,6 @@ export const db = {
       p_paid_amount: paidAmount === null || paidAmount === undefined ? null : Number(paidAmount),
       p_payment_method: paymentMethod || 'CASH',
       p_trainer_id: trainerId || null,
-      p_locker_id: lockerId || null,
       p_avatar: avatar || null,
       p_submission_id: submissionId || null,
       p_due_date: dueDate || null,
@@ -739,27 +704,6 @@ export const db = {
       .eq('id', id)
       .select('*')
       .single();
-  },
-
-  // Lockers ------------------------------------------------------------------------
-  updateLocker(id, patch) {
-    return supabase.from('lockers').update(patch).eq('id', id).select('*').single();
-  },
-
-  insertLockerAssignment({ lockerId, memberId, expiryDate }) {
-    return supabase
-      .from('locker_assignments')
-      .insert({ locker_id: lockerId, member_id: memberId, expiry_date: expiryDate || addDays(todayStr(), 30) })
-      .select('*')
-      .single();
-  },
-
-  updateLockerAssignment(lockerId, patch) {
-    return supabase
-      .from('locker_assignments')
-      .update(patch)
-      .eq('locker_id', lockerId)
-      .eq('status', 'Active');
   },
 
   // SMS ------------------------------------------------------------------------------
