@@ -359,6 +359,38 @@ export function mapProgressLog(row) {
   return { ...(row.data || {}), id: row.id, timestamp: row.created_at || row.timestamp };
 }
 
+// Visitor log (migration 017). handledBy (staff name) is added in the context.
+export function mapVisitor(row) {
+  return {
+    id: row.id,
+    code: `VIS-${row.id}`,
+    name: row.name,
+    phone: row.phone,
+    date: row.visit_date,
+    time: String(row.visit_time || '').slice(0, 5), // 'HH:MM', for the time input
+    timeDisplay: toDisplayTime(row.visit_time),
+    type: row.visitor_type,
+    status: row.status,
+    notes: row.notes || '',
+    handledById: row.handled_by || null,
+    memberId: row.member_id || null,
+  };
+}
+
+// Only the fields that were passed, so an edit never blanks out the others.
+function visitorToRow({ name, phone, date, time, type, status, notes, memberId }) {
+  const row = {};
+  if (name !== undefined) row.name = String(name).trim();
+  if (phone !== undefined) row.phone = String(phone).trim();
+  if (date) row.visit_date = date;
+  if (time) row.visit_time = time.length === 5 ? `${time}:00` : time;
+  if (type !== undefined) row.visitor_type = type;
+  if (status !== undefined) row.status = status;
+  if (notes !== undefined) row.notes = String(notes || '').trim() || null;
+  if (memberId !== undefined) row.member_id = memberId || null;
+  return row;
+}
+
 export function mapShopProduct(row) {
   if (!row) return null;
   return {
@@ -435,6 +467,9 @@ export async function fetchAllData() {
     shopProducts: () => supabase.from('shop_products').select('*').order('id', { ascending: false }),
     progressLogs: () => supabase.from('progress_logs').select('*').order('id', { ascending: false }),
     appSettings: () => supabase.from('app_settings').select('*'),
+    visitors: () => supabase.from('visitors').select('*')
+      .order('visit_date', { ascending: false })
+      .order('visit_time', { ascending: false }),
   };
 
   const keys = Object.keys(jobs);
@@ -651,6 +686,20 @@ export const db = {
       .eq('id', id)
       .select('*')
       .single();
+  },
+
+  // Visitors (migration 017) -------------------------------------------------------
+  // The database fills in handled_by, and visit date/time when not given.
+  insertVisitor({ name, phone, date, time, type, status, notes }) {
+    return supabase
+      .from('visitors')
+      .insert(visitorToRow({ name, phone, date, time, type, status, notes }))
+      .select('*')
+      .single();
+  },
+
+  updateVisitor(id, fields) {
+    return supabase.from('visitors').update(visitorToRow(fields)).eq('id', id).select('*').single();
   },
 
   // SMS ------------------------------------------------------------------------------

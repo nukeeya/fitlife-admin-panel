@@ -37,7 +37,8 @@
 - [x] Remove the demo records from `FALLBACK_DATA` and delete `src/data/mockProfiles.js` (also `src/data/gymData.js`) (29 Oct 2026)
 
 ### Connect the pages that have no database
-- [ ] **Visitor Entry**: new `visitors` table; dates default to today
+- [x] **Visitor Entry**: new `visitors` table (migration `017`); dates default to today; handled-by set by the database (30 Oct 2026)
+- [ ] **Day passes / trials**: real prices and payments through Finance (Visitor Entry no longer records fees; the One-Day Trial tab under Subscription Plans is still demo data)
 - [ ] **Job applicants**: use the existing `job_applications` table
 - [ ] **WhatsApp Business messaging (replaces SMS)**: the client connects their WhatsApp Business account and sends promotions, info and reminders (expiry, dues)
   - Official WhatsApp Business Platform (Cloud API) only; unofficial WhatsApp Web tools risk a number ban

@@ -23,6 +23,7 @@ import {
   mapWorkoutPlan,
   mapProgressLog,
   mapShopProduct,
+  mapVisitor,
   shopProductToRow,
 } from '../lib/supabaseData';
 import { resolveProfilePhotoUrls } from '../lib/profilePhotos';
@@ -358,6 +359,20 @@ export function GymDataProvider({ children }) {
   const dietPlans = useMemo(() => (raw?.dietPlans ? raw.dietPlans.map(mapDietPlan) : []), [raw]);
   const workoutPlans = useMemo(() => (raw?.workoutPlans ? raw.workoutPlans.map(mapWorkoutPlan) : []), [raw]);
   const progressLogs = useMemo(() => (raw?.progressLogs ? raw.progressLogs.map(mapProgressLog) : []), [raw]);
+  // Visitor log (migration 017), newest first, with the staff name who logged it.
+  const visitors = useMemo(() => {
+    if (!raw?.visitors) return [];
+    const staffNameById = {};
+    for (const u of raw.users || []) staffNameById[u.id] = u.name;
+    return raw.visitors.map((row) => {
+      const visitor = mapVisitor(row);
+      return {
+        ...visitor,
+        handledBy: visitor.handledById ? staffNameById[visitor.handledById] || 'Unknown staff' : '—',
+      };
+    });
+  }, [raw]);
+
   const shopProducts = useMemo(
     () => (raw?.shopProducts ? raw.shopProducts.map(mapShopProduct) : []),
     [raw]
@@ -865,6 +880,21 @@ export function GymDataProvider({ children }) {
   const addPeriodAdjustment = (adjustment) =>
     commit({ persist: () => db.insertPeriodAdjustment(adjustment), reloadAll: true });
 
+  // --- Visitors ------------------------------------------------------------------------------
+  // The database sets handled_by and default date/time, so nothing is shown
+  // before the save; the list updates from the reload. Each returns { visitor } or { error }.
+  const addVisitor = async (fields) => {
+    const result = await commit({ persist: () => db.insertVisitor(fields), reloadAll: true });
+    if (result?.error) return { error: result.error };
+    return { visitor: mapVisitor(result.data) };
+  };
+
+  const updateVisitor = async (id, fields) => {
+    const result = await commit({ persist: () => db.updateVisitor(id, fields), reloadAll: true });
+    if (result?.error) return { error: result.error };
+    return { visitor: mapVisitor(result.data) };
+  };
+
   // --- SMS --------------------------------------------------------------------------------------
   const sendSMS = async ({ title, recipientType, message }) => {
     if (!raw) return false;
@@ -1308,6 +1338,9 @@ export function GymDataProvider({ children }) {
         progressLogs,
         logMemberProgress,
         shopProducts,
+        visitors,
+        addVisitor,
+        updateVisitor,
         saveShopProduct,
         deleteShopProduct,
         fetchShopOrders,

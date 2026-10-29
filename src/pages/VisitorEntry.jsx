@@ -1,256 +1,187 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   UserPlus,
   Search,
-  Plus,
-  Calendar,
   Clock,
-  Filter,
   CheckCircle2,
   AlertCircle,
   Eye,
   Edit,
-  UserCheck,
-  Phone,
   FileText,
   X,
-  CreditCard,
   Users,
-  ArrowRight,
   Footprints,
 } from 'lucide-react';
 import Modal from '../components/common/Modal';
+import DataState from '../components/common/DataState';
+import { useGymData } from '../context/GymDataContext';
+import { todayStr } from '../lib/supabaseData';
+import { formatDatePretty } from '../utils/financeCalculators';
 
-const INITIAL_VISITORS = [
-  {
-    id: 'VIS-2026-101',
-    name: 'Tamim Iqbal',
-    phone: '+880 1712-445566',
-    dateTime: '2026-10-24 09:30 AM',
-    date: '2026-10-24',
-    type: 'Prospective Member',
-    package: 'None / Facility Tour Only',
-    paymentStatus: 'Free Tour / N/A',
-    fee: 0,
-    status: 'Inquiry',
-    notes: 'Touring free weights and cardio mezzanine. Looking for annual membership.',
-    handledBy: 'Reception Desk 1',
-  },
-  {
-    id: 'VIS-2026-102',
-    name: 'Nazmul Shanto',
-    phone: '+880 1819-556677',
-    dateTime: '2026-10-24 10:15 AM',
-    date: '2026-10-24',
-    type: 'One-Day Trial',
-    package: 'Single Day Pass - ৳300',
-    paymentStatus: 'Paid',
-    fee: 300,
-    status: 'Checked In',
-    notes: 'Paid cash at counter. Assigned temporary locker #14.',
-    handledBy: 'Reception Desk 1',
-  },
-  {
-    id: 'VIS-2026-103',
-    name: 'Farzana Haque',
-    phone: '+880 1911-223344',
-    dateTime: '2026-10-24 11:00 AM',
-    date: '2026-10-24',
-    type: 'General Visit',
-    package: 'None / Facility Tour Only',
-    paymentStatus: 'Free Tour / N/A',
-    fee: 0,
-    status: 'Completed',
-    notes: 'Visiting current member (Rahim Ahmed). Waited at nutrition lounge.',
-    handledBy: 'Reception Desk 2',
-  },
-  {
-    id: 'VIS-2026-104',
-    name: 'Mustafizur Rahman',
-    phone: '+880 1622-778899',
-    dateTime: '2026-10-24 11:45 AM',
-    date: '2026-10-24',
-    type: 'Prospective Member',
-    package: '3-Day Explorer - ৳800',
-    paymentStatus: 'Paid',
-    fee: 800,
-    status: 'Inquiry',
-    notes: 'Interested in evening crossfit & sauna. Follow-up call scheduled.',
-    handledBy: 'Front Desk Lead',
-  },
-  {
-    id: 'VIS-2026-105',
-    name: 'Mehedi Hasan',
-    phone: '+880 1733-990011',
-    dateTime: '2026-10-23 04:30 PM',
-    date: '2026-10-23',
-    type: 'One-Day Trial',
-    package: 'Single Day Pass - ৳300',
-    paymentStatus: 'Paid',
-    fee: 300,
-    status: 'Completed',
-    notes: 'Trial completed yesterday with Coach Tariq.',
-    handledBy: 'Reception Desk 1',
-  },
+// Must match the check constraints in database/migrations/017_visitors.sql.
+const VISITOR_TYPES = [
+  { value: 'Prospective Member', label: 'Prospective Member (Membership Inquiry / Tour)', short: 'Prospective' },
+  { value: 'One-Day Trial', label: 'One-Day Trial (Guest Workout)', short: 'Trial' },
+  { value: 'General Visit', label: 'General Visit (Member Guest / Inquiring for Friend)', short: 'General' },
 ];
+const VISITOR_STATUSES = ['Inquiry', 'Checked In', 'Completed', 'Converted to Member'];
+
+const typeBadge = (type) => (type === 'Prospective Member' ? 'badge-info' : type === 'One-Day Trial' ? 'badge-primary' : 'badge-secondary');
+const statusBadge = (status) => (
+  status === 'Converted to Member' ? 'badge-success'
+    : status === 'Checked In' ? 'badge-primary'
+    : status === 'Completed' ? 'badge-secondary'
+    : 'badge-info'
+);
+
+const nowTime = () => {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
+
+const errorBoxStyle = {
+  padding: '10px 14px',
+  borderRadius: 'var(--radius-sm)',
+  background: 'rgba(239, 68, 68, 0.12)',
+  border: '1px solid var(--danger)',
+  color: 'var(--danger)',
+  fontSize: '12px',
+  fontWeight: 600,
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+};
 
 export default function VisitorEntry() {
-  const navigate = useNavigate();
-  const [visitors, setVisitors] = useState(INITIAL_VISITORS);
+  const { visitors, addVisitor, updateVisitor, loading, loadErrors, refresh } = useGymData();
 
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
-  const [dateFilter, setDateFilter] = useState('2026-10-24'); // defaults to today
+  const [dateFilter, setDateFilter] = useState(todayStr());
 
   // Modals state
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState(null);
 
   // New Visitor Form State
   const [visitorName, setVisitorName] = useState('');
   const [phone, setPhone] = useState('');
-  const [visitDate, setVisitDate] = useState('2026-10-24');
-  const [visitTime, setVisitTime] = useState('11:30 AM');
+  const [visitDate, setVisitDate] = useState(todayStr());
+  const [visitTime, setVisitTime] = useState(nowTime());
   const [visitorType, setVisitorType] = useState('Prospective Member');
-  const [selectedPackage, setSelectedPackage] = useState('None / Facility Tour Only');
-  const [paymentStatus, setPaymentStatus] = useState('Free Tour / N/A');
   const [notes, setNotes] = useState('');
   const [formError, setFormError] = useState('');
-
-  // Conversion Form State
-  const [convertPlan, setConvertPlan] = useState('3-Month Standard');
-  const [convertAdmissionFee, setConvertAdmissionFee] = useState('1000');
-  const [convertNotes, setConvertNotes] = useState('');
+  const [saving, setSaving] = useState(false);
 
   // Notification Toast
   const [notification, setNotification] = useState(null);
-
-  // Auto-sync payment status based on package in New Visitor Form
-  const handlePackageSelection = (pkg) => {
-    setSelectedPackage(pkg);
-    if (pkg.includes('Single Day Pass') || pkg.includes('3-Day Explorer')) {
-      setPaymentStatus('Paid');
-    } else {
-      setPaymentStatus('Free Tour / N/A');
-    }
+  const notify = (text) => {
+    setNotification({ type: 'success', text });
+    setTimeout(() => setNotification(null), 5000);
   };
 
-  // Open New Entry Modal
+  // Open New Entry Modal: date and time start at today / now.
   const openNewEntryModal = () => {
     setVisitorName('');
     setPhone('');
-    setVisitDate('2026-10-24');
-    setVisitTime('11:30 AM');
+    setVisitDate(todayStr());
+    setVisitTime(nowTime());
     setVisitorType('Prospective Member');
-    setSelectedPackage('None / Facility Tour Only');
-    setPaymentStatus('Free Tour / N/A');
     setNotes('');
     setFormError('');
     setIsEntryModalOpen(true);
   };
 
-  // Submit New Visitor Entry
-  const handleEntrySubmit = (e) => {
+  // Submit New Visitor Entry (handled_by is set by the database)
+  const handleEntrySubmit = async (e) => {
     e.preventDefault();
     setFormError('');
 
-    if (!visitorName.trim()) {
+    if (visitorName.trim().length < 2) {
       setFormError('Please enter the visitor\'s full name.');
       return;
     }
-    if (!phone.trim() || phone.trim().length < 6) {
+    if (phone.trim().length < 6) {
       setFormError('Please enter a valid contact phone number.');
       return;
     }
 
-    const fee = selectedPackage.includes('300') ? 300 : selectedPackage.includes('800') ? 800 : 0;
-    const newVisitor = {
-      id: `VIS-2026-${String(visitors.length + 101)}`,
-      name: visitorName.trim(),
-      phone: phone.trim(),
-      dateTime: `${visitDate} ${visitTime}`,
+    setSaving(true);
+    const { visitor, error } = await addVisitor({
+      name: visitorName,
+      phone,
       date: visitDate,
+      time: visitTime,
       type: visitorType,
-      package: selectedPackage,
-      paymentStatus,
-      fee,
+      // Trial guests start working out straight away.
       status: visitorType === 'One-Day Trial' ? 'Checked In' : 'Inquiry',
-      notes: notes.trim(),
-      handledBy: 'Reception Desk 1',
-    };
-
-    setVisitors((prev) => [newVisitor, ...prev]);
-    setIsEntryModalOpen(false);
-    setNotification({
-      type: 'success',
-      text: `Visitor "${newVisitor.name}" registered successfully at reception!`,
+      notes,
     });
-    setTimeout(() => setNotification(null), 5000);
+    setSaving(false);
+    if (error) {
+      setFormError(error.message || 'Could not save the visitor. Please try again.');
+      return;
+    }
+
+    setIsEntryModalOpen(false);
+    // Show the day the visitor was logged for, so the new row is visible.
+    if (dateFilter && visitor.date !== dateFilter) setDateFilter(visitor.date);
+    notify(`Visitor "${visitor.name}" registered (${visitor.code}).`);
   };
 
   // Edit Visitor Submission
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!selectedVisitor) return;
+    setFormError('');
 
-    setVisitors((prev) =>
-      prev.map((v) => (v.id === selectedVisitor.id ? { ...selectedVisitor } : v))
-    );
+    if (selectedVisitor.name.trim().length < 2 || selectedVisitor.phone.trim().length < 6) {
+      setFormError('Enter the visitor\'s name and a valid phone number.');
+      return;
+    }
+
+    setSaving(true);
+    const { error } = await updateVisitor(selectedVisitor.id, {
+      name: selectedVisitor.name,
+      phone: selectedVisitor.phone,
+      date: selectedVisitor.date,
+      time: selectedVisitor.time,
+      type: selectedVisitor.type,
+      status: selectedVisitor.status,
+      notes: selectedVisitor.notes,
+    });
+    setSaving(false);
+    if (error) {
+      setFormError(error.message || 'Could not save the changes. Please try again.');
+      return;
+    }
+
     setIsEditModalOpen(false);
-    setNotification({
-      type: 'success',
-      text: `Visitor record for ${selectedVisitor.name} updated successfully!`,
-    });
-    setTimeout(() => setNotification(null), 5000);
+    notify(`Visitor record for ${selectedVisitor.name} updated.`);
   };
 
-  // Convert Visitor to Member
-  const handleConvertSubmit = (e) => {
-    e.preventDefault();
-    if (!selectedVisitor) return;
-
-    setVisitors((prev) =>
-      prev.map((v) =>
-        v.id === selectedVisitor.id
-          ? {
-              ...v,
-              status: 'Converted to Member',
-              notes: `${v.notes} [Converted to member with ${convertPlan}]`,
-            }
-          : v
-      )
-    );
-    setIsConvertModalOpen(false);
-    setNotification({
-      type: 'success',
-      text: `Success! ${selectedVisitor.name} converted to Member on "${convertPlan}". You can now proceed to Admissions & Approvals.`,
-    });
-    setTimeout(() => setNotification(null), 6000);
-  };
-
-  // Metrics calculation
+  // Metrics for the selected day (or all dates when the filter is cleared)
   const metrics = useMemo(() => {
-    const todayVisitors = visitors.filter((v) => v.date === dateFilter);
-    const totalToday = todayVisitors.length;
-    const prospective = todayVisitors.filter((v) => v.type === 'Prospective Member').length;
-    const trial = todayVisitors.filter((v) => v.type === 'One-Day Trial').length;
-    const general = todayVisitors.filter((v) => v.type === 'General Visit').length;
-    return { totalToday, prospective, trial, general };
+    const dayVisitors = dateFilter ? visitors.filter((v) => v.date === dateFilter) : visitors;
+    return {
+      total: dayVisitors.length,
+      prospective: dayVisitors.filter((v) => v.type === 'Prospective Member').length,
+      trial: dayVisitors.filter((v) => v.type === 'One-Day Trial').length,
+      general: dayVisitors.filter((v) => v.type === 'General Visit').length,
+    };
   }, [visitors, dateFilter]);
 
   // Filtered visitors table
   const filteredVisitors = useMemo(() => {
+    const q = searchTerm.toLowerCase();
     return visitors.filter((v) => {
-      const q = searchTerm.toLowerCase();
       const matchesSearch =
         v.name.toLowerCase().includes(q) ||
         v.phone.includes(q) ||
-        v.id.toLowerCase().includes(q);
+        v.code.toLowerCase().includes(q);
       const matchesType = typeFilter === 'All' || v.type === typeFilter;
       const matchesDate = !dateFilter || v.date === dateFilter;
       return matchesSearch && matchesType && matchesDate;
@@ -283,7 +214,7 @@ export default function VisitorEntry() {
           </div>
           <h1 className="page-title">Walk-In Visitor Entry System</h1>
           <p className="page-subtitle">
-            Log guest arrivals, track prospective member inquiries, manage day passes, and convert to memberships.
+            Log guest arrivals, track prospective member inquiries and one-day trial guests.
           </p>
         </div>
 
@@ -306,9 +237,9 @@ export default function VisitorEntry() {
           style={{
             padding: '12px 18px',
             borderRadius: 'var(--radius-md)',
-            background: notification.type === 'success' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-            border: `1px solid ${notification.type === 'success' ? 'var(--success)' : 'var(--warning)'}`,
-            color: notification.type === 'success' ? 'var(--success)' : 'var(--warning)',
+            background: 'rgba(16, 185, 129, 0.15)',
+            border: '1px solid var(--success)',
+            color: 'var(--success)',
             fontSize: '13px',
             fontWeight: 700,
             display: 'flex',
@@ -341,9 +272,9 @@ export default function VisitorEntry() {
         }}
       >
         <div className="stat-widget">
-          <span className="stat-widget-title">Total Visitors (Selected Day)</span>
-          <div className="stat-widget-value primary-highlight">{metrics.totalToday}</div>
-          <div className="stat-widget-sub">Date: {dateFilter || 'All Dates'}</div>
+          <span className="stat-widget-title">Total Visitors</span>
+          <div className="stat-widget-value primary-highlight">{metrics.total}</div>
+          <div className="stat-widget-sub">{dateFilter ? formatDatePretty(dateFilter) : 'All dates'}</div>
         </div>
 
         <div className="stat-widget">
@@ -359,7 +290,7 @@ export default function VisitorEntry() {
           <div className="stat-widget-value" style={{ color: 'var(--success)' }}>
             {metrics.trial}
           </div>
-          <div className="stat-widget-sub">Day pass users</div>
+          <div className="stat-widget-sub">Guest workouts</div>
         </div>
 
         <div className="stat-widget">
@@ -372,6 +303,15 @@ export default function VisitorEntry() {
       </div>
 
       {/* Visitors Table Section */}
+      <DataState
+        loading={loading}
+        error={loadErrors.visitors}
+        isEmpty={visitors.length === 0}
+        noun="visitors"
+        onRetry={refresh}
+        onAdd={openNewEntryModal}
+        addLabel="Log your first visitor"
+      >
       <div className="activity-card">
         <div className="activity-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -379,7 +319,7 @@ export default function VisitorEntry() {
             <div>
               <span style={{ fontWeight: 800, fontSize: '15px' }}>Visitor Log & Inquiries</span>
               <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)' }}>
-                Reception visitor records kept visually separated from registered gym members
+                Reception visitor records, kept separate from registered gym members
               </p>
             </div>
           </div>
@@ -416,15 +356,15 @@ export default function VisitorEntry() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)' }}>TYPE:</span>
-              {['All', 'Prospective Member', 'One-Day Trial', 'General Visit'].map((t) => (
+              {[{ value: 'All', short: 'All' }, ...VISITOR_TYPES].map((t) => (
                 <button
-                  key={t}
+                  key={t.value}
                   type="button"
-                  className={`btn btn-sm ${typeFilter === t ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => setTypeFilter(t)}
+                  className={`btn btn-sm ${typeFilter === t.value ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setTypeFilter(t.value)}
                   style={{ fontSize: '11px', padding: '3px 8px' }}
                 >
-                  {t === 'Prospective Member' ? 'Prospective' : t === 'One-Day Trial' ? 'Trial' : t === 'General Visit' ? 'General' : 'All'}
+                  {t.short}
                 </button>
               ))}
             </div>
@@ -438,15 +378,24 @@ export default function VisitorEntry() {
                 onChange={(e) => setDateFilter(e.target.value)}
                 style={{ height: '32px', fontSize: '12px', padding: '2px 8px' }}
               />
-              {dateFilter && (
+              {dateFilter ? (
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
                   onClick={() => setDateFilter('')}
                   style={{ padding: '3px 6px', fontSize: '10px' }}
-                  title="Clear date filter to show all history"
+                  title="Show visitors from all dates"
                 >
-                  Clear Date
+                  All Dates
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setDateFilter(todayStr())}
+                  style={{ padding: '3px 6px', fontSize: '10px' }}
+                >
+                  Today
                 </button>
               )}
             </div>
@@ -463,8 +412,8 @@ export default function VisitorEntry() {
                 <th>Phone Number</th>
                 <th>Visit Date & Time</th>
                 <th>Visitor Type</th>
-                <th>Package & Fee</th>
-                <th>Payment</th>
+                <th>Status</th>
+                <th>Handled By</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -472,7 +421,9 @@ export default function VisitorEntry() {
               {filteredVisitors.length === 0 ? (
                 <tr>
                   <td colSpan="8" style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
-                    No visitor records found for the selected filter criteria.
+                    {dateFilter
+                      ? `No visitors on ${formatDatePretty(dateFilter)} match these filters.`
+                      : 'No visitors match these filters.'}
                   </td>
                 </tr>
               ) : (
@@ -491,66 +442,30 @@ export default function VisitorEntry() {
                           color: 'var(--text-primary)',
                         }}
                       >
-                        {v.id}
+                        {v.code}
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <strong style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
-                          {v.name}
-                        </strong>
-                        {v.status === 'Converted to Member' && (
-                          <span className="badge badge-success" style={{ alignSelf: 'flex-start', fontSize: '9px', padding: '1px 4px', marginTop: '2px' }}>
-                            Converted to Member
-                          </span>
-                        )}
-                      </div>
+                      <strong style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{v.name}</strong>
                     </td>
                     <td style={{ fontSize: '12px' }}>{v.phone}</td>
                     <td style={{ fontSize: '12px', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <Clock size={12} color="var(--text-muted)" />
-                        <span>{v.dateTime}</span>
+                        <span>{formatDatePretty(v.date)} · {v.timeDisplay}</span>
                       </div>
                     </td>
                     <td>
-                      <span
-                        className={`badge ${
-                          v.type === 'Prospective Member'
-                            ? 'badge-info'
-                            : v.type === 'One-Day Trial'
-                            ? 'badge-primary'
-                            : 'badge-secondary'
-                        }`}
-                        style={{ fontSize: '11px' }}
-                      >
+                      <span className={`badge ${typeBadge(v.type)}`} style={{ fontSize: '11px' }}>
                         {v.type}
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 600 }}>{v.package}</span>
-                        {v.fee > 0 && (
-                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                            Fee: ৳{v.fee}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td>
-                      <span
-                        className={`badge ${
-                          v.paymentStatus === 'Paid'
-                            ? 'badge-success'
-                            : v.paymentStatus === 'Pending'
-                            ? 'badge-warning'
-                            : 'badge-secondary'
-                        }`}
-                        style={{ fontSize: '10px' }}
-                      >
-                        {v.paymentStatus}
+                      <span className={`badge ${statusBadge(v.status)}`} style={{ fontSize: '10px' }}>
+                        {v.status}
                       </span>
                     </td>
+                    <td style={{ fontSize: '12px' }}>{v.handledBy}</td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <button
@@ -570,6 +485,7 @@ export default function VisitorEntry() {
                           className="btn btn-secondary btn-sm"
                           onClick={() => {
                             setSelectedVisitor({ ...v });
+                            setFormError('');
                             setIsEditModalOpen(true);
                           }}
                           style={{ padding: '3px 8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '3px' }}
@@ -577,23 +493,6 @@ export default function VisitorEntry() {
                         >
                           <Edit size={12} /> Edit
                         </button>
-                        {v.status !== 'Converted to Member' && (
-                          <button
-                            type="button"
-                            className="btn btn-primary btn-sm"
-                            onClick={() => {
-                              setSelectedVisitor(v);
-                              setConvertPlan('3-Month Standard');
-                              setConvertAdmissionFee('1000');
-                              setConvertNotes('');
-                              setIsConvertModalOpen(true);
-                            }}
-                            style={{ padding: '3px 8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 700 }}
-                            title="Convert visitor to registered gym member"
-                          >
-                            <UserCheck size={12} /> Convert
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -603,13 +502,14 @@ export default function VisitorEntry() {
           </table>
         </div>
       </div>
+      </DataState>
 
       {/* NEW VISITOR ENTRY MODAL */}
       <Modal
         isOpen={isEntryModalOpen}
-        onClose={() => setIsEntryModalOpen(false)}
+        onClose={() => !saving && setIsEntryModalOpen(false)}
         title="Reception Walk-In Visitor Entry"
-        subtitle="Log visitor check-in, select interest or trial pass, and record reception notes"
+        subtitle="Log a visitor's arrival and reception notes"
         icon={UserPlus}
         size="md"
         footer={
@@ -618,6 +518,7 @@ export default function VisitorEntry() {
               type="button"
               className="btn btn-secondary"
               onClick={() => setIsEntryModalOpen(false)}
+              disabled={saving}
             >
               Cancel
             </button>
@@ -625,10 +526,11 @@ export default function VisitorEntry() {
               type="submit"
               form="visitor-entry-form"
               className="btn btn-primary"
+              disabled={saving}
               style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <CheckCircle2 size={16} />
-              Register Visitor
+              {saving ? 'Saving…' : 'Register Visitor'}
             </button>
           </div>
         }
@@ -639,20 +541,7 @@ export default function VisitorEntry() {
           style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}
         >
           {formError && (
-            <div
-              style={{
-                padding: '10px 14px',
-                borderRadius: 'var(--radius-sm)',
-                background: 'rgba(239, 68, 68, 0.12)',
-                border: '1px solid var(--danger)',
-                color: 'var(--danger)',
-                fontSize: '12px',
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
+            <div style={errorBoxStyle}>
               <AlertCircle size={15} />
               <span>{formError}</span>
             </div>
@@ -688,7 +577,7 @@ export default function VisitorEntry() {
             />
           </label>
 
-          {/* Date & Time */}
+          {/* Date & Time: start at today / now */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
             <label className="form-group">
               <span className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>
@@ -698,6 +587,7 @@ export default function VisitorEntry() {
                 type="date"
                 className="form-input"
                 value={visitDate}
+                max={todayStr()}
                 onChange={(e) => setVisitDate(e.target.value)}
                 required
               />
@@ -708,11 +598,10 @@ export default function VisitorEntry() {
                 Visit Time
               </span>
               <input
-                type="text"
+                type="time"
                 className="form-input"
                 value={visitTime}
                 onChange={(e) => setVisitTime(e.target.value)}
-                placeholder="10:30 AM"
               />
             </label>
           </div>
@@ -727,42 +616,9 @@ export default function VisitorEntry() {
               value={visitorType}
               onChange={(e) => setVisitorType(e.target.value)}
             >
-              <option value="Prospective Member">Prospective Member (Membership Inquiry / Tour)</option>
-              <option value="One-Day Trial">One-Day Trial (Guest Workout)</option>
-              <option value="General Visit">General Visit (Member Guest / Inquiring for Friend)</option>
-            </select>
-          </label>
-
-          {/* Selected Package (Optional) */}
-          <label className="form-group">
-            <span className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>
-              Selected Package (Optional)
-            </span>
-            <select
-              className="form-select"
-              value={selectedPackage}
-              onChange={(e) => handlePackageSelection(e.target.value)}
-            >
-              <option value="None / Facility Tour Only">None / Facility Tour Only (Free)</option>
-              <option value="Single Day Pass - ৳300">Single Day Pass - ৳300</option>
-              <option value="3-Day Explorer - ৳800">3-Day Explorer - ৳800</option>
-              <option value="Personal Training Trial - ৳500">Personal Training Trial - ৳500</option>
-            </select>
-          </label>
-
-          {/* Payment Status (if applicable) */}
-          <label className="form-group">
-            <span className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>
-              Payment Status
-            </span>
-            <select
-              className="form-select"
-              value={paymentStatus}
-              onChange={(e) => setPaymentStatus(e.target.value)}
-            >
-              <option value="Free Tour / N/A">Free Tour / N/A</option>
-              <option value="Paid">Paid (Cash / bKash)</option>
-              <option value="Pending">Pending</option>
+              {VISITOR_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
             </select>
           </label>
 
@@ -776,7 +632,7 @@ export default function VisitorEntry() {
               rows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Wants to start next Monday, interested in student discount."
+              placeholder="e.g. Wants to start next Monday, interested in evening classes."
             />
           </label>
         </form>
@@ -786,25 +642,12 @@ export default function VisitorEntry() {
       <Modal
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
-        title="Visitor Registration Details"
-        subtitle={selectedVisitor ? `${selectedVisitor.name} (${selectedVisitor.id})` : ''}
+        title="Visitor Details"
+        subtitle={selectedVisitor ? `${selectedVisitor.name} (${selectedVisitor.code})` : ''}
         icon={FileText}
         size="md"
         footer={
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-            {selectedVisitor?.status !== 'Converted to Member' ? (
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                onClick={() => {
-                  setIsViewModalOpen(false);
-                  setIsConvertModalOpen(true);
-                }}
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <UserCheck size={14} /> Convert to Member
-              </button>
-            ) : <span />}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
             <button
               type="button"
               className="btn btn-secondary"
@@ -839,34 +682,27 @@ export default function VisitorEntry() {
               <div>
                 <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>VISIT TYPE</span>
                 <div>
-                  <span className="badge badge-info">{selectedVisitor.type}</span>
+                  <span className={`badge ${typeBadge(selectedVisitor.type)}`}>{selectedVisitor.type}</span>
                 </div>
               </div>
               <div>
                 <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>DATE & TIME</span>
-                <div style={{ fontWeight: 700 }}>{selectedVisitor.dateTime}</div>
+                <div style={{ fontWeight: 700 }}>{formatDatePretty(selectedVisitor.date)} · {selectedVisitor.timeDisplay}</div>
               </div>
               <div>
-                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>PACKAGE</span>
-                <div style={{ fontWeight: 700 }}>{selectedVisitor.package}</div>
-              </div>
-              <div>
-                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>PAYMENT STATUS</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>STATUS</span>
                 <div>
-                  <span className={`badge ${selectedVisitor.paymentStatus === 'Paid' ? 'badge-success' : 'badge-secondary'}`}>
-                    {selectedVisitor.paymentStatus}
-                  </span>
+                  <span className={`badge ${statusBadge(selectedVisitor.status)}`}>{selectedVisitor.status}</span>
                 </div>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>HANDLED BY</span>
+                <div style={{ fontWeight: 700 }}>{selectedVisitor.handledBy}</div>
               </div>
             </div>
 
-            {selectedVisitor.notes && (
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                <strong>Receptionist Notes:</strong> {selectedVisitor.notes}
-              </div>
-            )}
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              Handled by: {selectedVisitor.handledBy}
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'pre-line' }}>
+              <strong>Reception Notes:</strong> {selectedVisitor.notes || '—'}
             </div>
           </div>
         )}
@@ -875,9 +711,9 @@ export default function VisitorEntry() {
       {/* EDIT VISITOR MODAL */}
       <Modal
         isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
+        onClose={() => !saving && setIsEditModalOpen(false)}
         title="Edit Visitor Entry"
-        subtitle={selectedVisitor ? `Updating ${selectedVisitor.name} (${selectedVisitor.id})` : ''}
+        subtitle={selectedVisitor ? `Updating ${selectedVisitor.name} (${selectedVisitor.code})` : ''}
         icon={Edit}
         size="md"
         footer={
@@ -886,6 +722,7 @@ export default function VisitorEntry() {
               type="button"
               className="btn btn-secondary"
               onClick={() => setIsEditModalOpen(false)}
+              disabled={saving}
             >
               Cancel
             </button>
@@ -893,8 +730,9 @@ export default function VisitorEntry() {
               type="submit"
               form="edit-visitor-form"
               className="btn btn-primary"
+              disabled={saving}
             >
-              Save Changes
+              {saving ? 'Saving…' : 'Save Changes'}
             </button>
           </div>
         }
@@ -905,6 +743,13 @@ export default function VisitorEntry() {
             onSubmit={handleEditSubmit}
             style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
           >
+            {formError && (
+              <div style={errorBoxStyle}>
+                <AlertCircle size={15} />
+                <span>{formError}</span>
+              </div>
+            )}
+
             <label className="form-group">
               <span className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>Visitor Name</span>
               <input
@@ -929,28 +774,52 @@ export default function VisitorEntry() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
               <label className="form-group">
+                <span className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>Visit Date</span>
+                <input
+                  type="date"
+                  className="form-input"
+                  value={selectedVisitor.date}
+                  max={todayStr()}
+                  onChange={(e) => setSelectedVisitor({ ...selectedVisitor, date: e.target.value })}
+                  required
+                />
+              </label>
+              <label className="form-group">
+                <span className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>Visit Time</span>
+                <input
+                  type="time"
+                  className="form-input"
+                  value={selectedVisitor.time}
+                  onChange={(e) => setSelectedVisitor({ ...selectedVisitor, time: e.target.value })}
+                  required
+                />
+              </label>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+              <label className="form-group">
                 <span className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>Visitor Type</span>
                 <select
                   className="form-select"
                   value={selectedVisitor.type}
                   onChange={(e) => setSelectedVisitor({ ...selectedVisitor, type: e.target.value })}
                 >
-                  <option value="Prospective Member">Prospective Member</option>
-                  <option value="One-Day Trial">One-Day Trial</option>
-                  <option value="General Visit">General Visit</option>
+                  {VISITOR_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>{t.value}</option>
+                  ))}
                 </select>
               </label>
 
               <label className="form-group">
-                <span className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>Payment Status</span>
+                <span className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>Status</span>
                 <select
                   className="form-select"
-                  value={selectedVisitor.paymentStatus}
-                  onChange={(e) => setSelectedVisitor({ ...selectedVisitor, paymentStatus: e.target.value })}
+                  value={selectedVisitor.status}
+                  onChange={(e) => setSelectedVisitor({ ...selectedVisitor, status: e.target.value })}
                 >
-                  <option value="Free Tour / N/A">Free Tour / N/A</option>
-                  <option value="Paid">Paid</option>
-                  <option value="Pending">Pending</option>
+                  {VISITOR_STATUSES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
                 </select>
               </label>
             </div>
@@ -962,131 +831,6 @@ export default function VisitorEntry() {
                 rows={2}
                 value={selectedVisitor.notes || ''}
                 onChange={(e) => setSelectedVisitor({ ...selectedVisitor, notes: e.target.value })}
-              />
-            </label>
-          </form>
-        )}
-      </Modal>
-
-      {/* CONVERT TO MEMBER MODAL */}
-      <Modal
-        isOpen={isConvertModalOpen}
-        onClose={() => setIsConvertModalOpen(false)}
-        title="Convert Visitor to Member"
-        subtitle={selectedVisitor ? `Enrolling ${selectedVisitor.name} (${selectedVisitor.phone}) into Full Membership` : ''}
-        icon={UserCheck}
-        size="md"
-        footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', width: '100%' }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setIsConvertModalOpen(false)}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              form="convert-visitor-form"
-              className="btn btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <CheckCircle2 size={16} />
-              Confirm Conversion & Enroll
-            </button>
-          </div>
-        }
-      >
-        {selectedVisitor && (
-          <form
-            id="convert-visitor-form"
-            onSubmit={handleConvertSubmit}
-            style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}
-          >
-            <div
-              style={{
-                padding: '12px',
-                borderRadius: 'var(--radius-md)',
-                background: 'rgba(200, 255, 0, 0.08)',
-                border: '1px solid rgba(200, 255, 0, 0.25)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-              }}
-            >
-              <UserCheck size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} />
-              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                Converting visitor <strong>{selectedVisitor.name}</strong> will create an active membership applicant record.
-              </span>
-            </div>
-
-            <div
-              style={{
-                background: 'var(--bg-surface)',
-                borderRadius: 'var(--radius-md)',
-                padding: '12px',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: '8px',
-                fontSize: '12px',
-              }}
-            >
-              <div>
-                <span style={{ color: 'var(--text-muted)' }}>Name:</span>{' '}
-                <strong style={{ color: 'var(--text-primary)' }}>{selectedVisitor.name}</strong>
-              </div>
-              <div>
-                <span style={{ color: 'var(--text-muted)' }}>Phone:</span>{' '}
-                <strong style={{ color: 'var(--text-primary)' }}>{selectedVisitor.phone}</strong>
-              </div>
-              <div>
-                <span style={{ color: 'var(--text-muted)' }}>First Visited:</span>{' '}
-                <span>{selectedVisitor.date}</span>
-              </div>
-              <div>
-                <span style={{ color: 'var(--text-muted)' }}>Original Inquiry:</span>{' '}
-                <span>{selectedVisitor.type}</span>
-              </div>
-            </div>
-
-            <label className="form-group">
-              <span className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>
-                Select Target Membership Plan
-              </span>
-              <select
-                className="form-select"
-                value={convertPlan}
-                onChange={(e) => setConvertPlan(e.target.value)}
-              >
-                <option value="1-Month Starter - ৳3,500">1-Month Starter (৳3,500)</option>
-                <option value="3-Month Standard - ৳9,500">3-Month Standard (৳9,500)</option>
-                <option value="6-Month Silver - ৳17,000">6-Month Silver (৳17,000)</option>
-                <option value="12-Month Pro Annual - ৳30,000">12-Month Pro Annual (৳30,000)</option>
-              </select>
-            </label>
-
-            <label className="form-group">
-              <span className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>
-                Initial Admission Fee (BDT)
-              </span>
-              <input
-                type="number"
-                className="form-input"
-                value={convertAdmissionFee}
-                onChange={(e) => setConvertAdmissionFee(e.target.value)}
-              />
-            </label>
-
-            <label className="form-group">
-              <span className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>
-                Conversion Notes
-              </span>
-              <input
-                type="text"
-                className="form-input"
-                value={convertNotes}
-                onChange={(e) => setConvertNotes(e.target.value)}
-                placeholder="e.g. Visitor decided to join after experiencing morning cardio facilities"
               />
             </label>
           </form>
