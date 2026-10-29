@@ -7,7 +7,6 @@ import {
   Receipt,
   Calendar,
   Clock,
-  Activity,
   CheckCircle2,
   AlertCircle,
   ShieldAlert,
@@ -15,7 +14,6 @@ import {
   Dumbbell,
   Utensils,
   Award,
-  Droplets,
   Phone,
   Mail,
   Printer,
@@ -23,7 +21,6 @@ import {
   Pencil,
   RefreshCw,
   ShieldCheck,
-  Flame,
   ChevronRight,
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
@@ -122,6 +119,10 @@ export default function MemberDetails() {
     });
     return list.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   }, [memberInvoices]);
+
+  // The member's current plan (members.plan, matched to a plan by name in GymDataContext)
+  const currentPlan = (plans || []).find((p) => p.id === member?.planId) || null;
+  const currentPlanFeatures = currentPlan?.features || [];
 
   // Subscriptions data
   const subscriptions = useMemo(() => {
@@ -1450,71 +1451,47 @@ export default function MemberDetails() {
           <div className="activity-card" style={{ padding: '24px', borderRadius: '12px' }}>
             <div style={{ marginBottom: '20px' }}>
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>
-                Membership Privileges & Active Perks
+                Membership Features
               </h3>
               <p style={{ margin: '3px 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
-                Features entitled to this member under their {member.plan} package.
+                Included in the member's current plan: <strong style={{ color: 'var(--text-main)' }}>{member.plan || '—'}</strong>
               </p>
             </div>
 
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                gap: '16px',
-              }}
-            >
-              {[
-                { title: 'Gym Floor & Cardio Suite Access', desc: 'Unlimited peak and off-peak entry to all strength, barbell, and cardio zones.', badge: 'Unlimited', icon: Dumbbell },
-                { title: 'Steam & Sauna Privileges', desc: 'Complimentary weekend hydrotherapy, infrared sauna, and eucalyptus steam room access.', badge: 'Included', icon: Droplets },
-                { title: 'Trainer Review & Bi-weekly Check-in', desc: `Assigned coach: ${member.trainer || 'None'}. Includes form check and weight adjustments.`, badge: 'Bi-Weekly', icon: User },
-                { title: 'InBody 770 Body Composition Scans', desc: 'Monthly medical-grade impedance body fat, visceral fat, and muscle mass report.', badge: '1x / Month', icon: Activity },
-                { title: 'Combat & Functional Turf Zone', desc: 'Heavy bag suite, sled pushes, battle ropes, and kettlebell conditioning zone access.', badge: 'All Batches', icon: Flame },
-                { title: 'Juice Bar & Supplement Discounts', desc: '10% discount on all pre-workouts, whey isolates, and fresh protein shakes at reception.', badge: '10% Off', icon: Utensils },
-                { title: 'Complimentary Guest Day-Passes', desc: 'Invite friends or family members for free guest workout sessions.', badge: '2 Passes Left', icon: Award },
-              ].map((perk, i) => {
-                const Icon = perk.icon;
-                return (
+            {/* From plan_features for the member's current plan */}
+            {currentPlanFeatures.length === 0 ? (
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>
+                {currentPlan
+                  ? 'No features are listed for this plan yet. They can be added under Subscription Plans.'
+                  : "This member's plan was not found among the subscription plans."}
+              </p>
+            ) : (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                  gap: '12px',
+                }}
+              >
+                {currentPlanFeatures.map((feature) => (
                   <div
-                    key={i}
+                    key={feature}
                     style={{
-                      padding: '18px',
+                      padding: '14px 16px',
                       borderRadius: '10px',
                       background: 'var(--bg-subtle, rgba(255,255,255,0.03))',
                       border: '1px solid var(--border-color)',
                       display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
+                      alignItems: 'center',
                       gap: '10px',
                     }}
                   >
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <Icon size={16} style={{ color: 'var(--primary)' }} />
-                          <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>{perk.title}</strong>
-                        </div>
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            padding: '2px 8px',
-                            borderRadius: '10px',
-                            background: 'rgba(255, 107, 0, 0.15)',
-                            color: 'var(--primary)',
-                          }}
-                        >
-                          {perk.badge}
-                        </span>
-                      </div>
-                      <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-                        {perk.desc}
-                      </p>
-                    </div>
+                    <CheckCircle2 size={16} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                    <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>{feature}</strong>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

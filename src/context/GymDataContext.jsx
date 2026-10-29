@@ -134,6 +134,7 @@ export function GymDataProvider({ children }) {
     if (!raw?.plans) return [];
     const features = {};
     for (const f of raw.planFeatures || []) {
+      if (f.is_included === false) continue; // listed but switched off for this plan
       (features[f.plan_id] = features[f.plan_id] || []).push(f.feature_name);
     }
     return raw.plans.map((r) => mapPlan(r, features));

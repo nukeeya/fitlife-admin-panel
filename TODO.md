@@ -20,7 +20,7 @@
 
 ### Stop fake data appearing on real screens
 - [x] **Member Details**: load history from real invoices/payments, attendance and AI plans; show "Member not found" instead of a demo member (28 Oct 2026)
-  - [ ] Features & Perks tab: use the plan's real features (`plan_features`), not the hardcoded list
+  - [x] Features & Perks tab: use the plan's real features (`plan_features`), not the hardcoded list (30 Oct 2026)
   - [x] Renew Subscription: saves through `renew_membership()` (migration `015`): invoice + payment + new expiry in one transaction (29 Oct 2026)
   - [ ] Decide: add columns for RFID card, emergency relationship and medical notes, or remove them from the Profile tab
   - [ ] "Collected By" on payments: show the staff name (`payments.collected_by` → `users.name`)
