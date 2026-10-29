@@ -13,7 +13,7 @@ import {
   getDateRange,
   isDateInRange,
   calculateDaysOverdue,
-  calculateRevenueRecognition,
+  calculateMembershipRevenue,
 } from '../utils/financeCalculators';
 
 const FinanceContext = createContext(null);
@@ -60,8 +60,6 @@ export function FinanceProvider({ children }) {
   const [dateFilterKey, setDateFilterKey] = useState('this_month');
   const [customDateRange, setCustomDateRange] = useState(currentMonthRange);
 
-  // Revenue Recognition Policy: 'equal_monthly' | 'service_days'
-  const [recognitionPolicy, setRecognitionPolicy] = useState('equal_monthly');
 
   const activeDateRange = useMemo(() => {
     return getDateRange(dateFilterKey, customDateRange, today);
@@ -177,16 +175,18 @@ export function FinanceProvider({ children }) {
 
   const overdueCount = overdueDues.length;
 
-  // Dynamic Revenue Recognition Schedules for all invoices
+  // Monthly revenue split for every invoice: paid amounts only, one equal
+  // part per membership month (see calculateMembershipRevenue).
   const revenueRecognitionSchedules = useMemo(() => {
     return invoices.map((inv) => {
-      const recognition = calculateRevenueRecognition({
-        packagePrice: inv.baseAmount,
+      const recognition = calculateMembershipRevenue({
+        payments: inv.payments,
+        netPayable: inv.netPayable,
+        baseAmount: inv.baseAmount,
         discountAmount: inv.discountAmount,
         startDate: inv.startDate || inv.date,
-        endDate: inv.endDate || inv.date,
+        months: inv.durationMonths,
         asOfDate: today,
-        method: recognitionPolicy,
       });
 
       return {
@@ -194,7 +194,7 @@ export function FinanceProvider({ children }) {
         recognition,
       };
     });
-  }, [invoices, recognitionPolicy, today]);
+  }, [invoices, today]);
 
   // Financial Metrics (reconciled across all tabs)
   const financialMetrics = useMemo(() => {
@@ -477,10 +477,6 @@ export function FinanceProvider({ children }) {
     setCustomDateRange,
     activeDateRange,
     resetFilters,
-
-    // Revenue Policy
-    recognitionPolicy,
-    setRecognitionPolicy,
 
     // Persistent Overdue Reminder Notification
     showOverduePopup,

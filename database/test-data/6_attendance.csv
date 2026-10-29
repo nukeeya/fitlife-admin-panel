@@ -1,0 +1,9 @@
+id,member_id,attendance_date,check_in_time,check_out_time,status,method
+9001,9001,2026-10-25,06:30:00,08:00:00,Out,RFID Card
+9002,9001,2026-10-26,06:35:00,07:50:00,Out,RFID Card
+9003,9001,2026-10-27,06:40:00,08:10:00,Out,Biometric
+9004,9001,2026-10-28,06:45:00,,In,RFID Card
+9005,9002,2026-10-20,18:00:00,19:30:00,Out,Manual Admin
+9006,9002,2026-10-28,17:30:00,,In,Biometric
+9007,9005,2026-10-28,07:00:00,08:15:00,Out,RFID Card
+9008,9010,2026-10-27,19:00:00,20:00:00,Out,Manual Admin

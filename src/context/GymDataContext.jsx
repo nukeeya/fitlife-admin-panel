@@ -269,6 +269,8 @@ export function GymDataProvider({ children }) {
       const plan = row.plan_id ? plansById[row.plan_id] : null;
       const disc = row.discount_id ? discountsById[row.discount_id] : null;
       const durationDays = Number(plan?.duration_days) || 30;
+      // Membership start (migration 014); older databases fall back to the invoice date.
+      const serviceStart = row.service_start || row.invoice_date;
       return {
         id: row.id,
         number: row.invoice_number,
@@ -281,8 +283,8 @@ export function GymDataProvider({ children }) {
         planId: row.plan_id || null,
         planName: plan?.name || m.plan || 'Plan',
         durationMonths: Math.max(1, Math.round(durationDays / 30)),
-        startDate: row.invoice_date,
-        endDate: addDays(row.invoice_date, durationDays - 1), // inclusive last day of service
+        startDate: serviceStart,
+        endDate: addDays(serviceStart, durationDays), // same rule as members.expiry (start + duration)
         isExtended: Boolean(row.due_extended_at),
         extensionHistory: row.due_extended_at
           ? [{

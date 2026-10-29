@@ -25,6 +25,8 @@
   - [ ] Renew Subscription: save through a database function (invoice + payment + new expiry); currently screen-only
   - [ ] Decide: add columns for RFID card, emergency relationship and medical notes, or remove them from the Profile tab
   - [ ] "Collected By" on payments: show the staff name (`payments.collected_by` → `users.name`)
+- [x] **Monthly revenue split**: paid amounts only, one equal part per membership month, VAT excluded; migration `014` (`invoices.service_start`) run and checked with test data (29 Oct 2026)
+  - [ ] Payment dates: use Dhaka time, not UTC (a payment between 00:00 and 06:00 lands on the previous day, and on the 1st in the previous month)
 - [ ] **Empty tables** (Members, Trainers, Employees, Lockers): show an empty list with "Add your first…", not demo records
 - [ ] **Failed loads**: show an error with a Retry button instead of demo data
 - [ ] **Dashboard**: calculate the male/female percentages (currently fixed at 72% / 28%)

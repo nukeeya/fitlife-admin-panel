@@ -1,0 +1,5 @@
+id,code,name,billing_period,duration_days,base_price,vat_percentage,is_popular,status
+9001,test-1m,Test 1 Month,monthly,30,5000,0,false,Active
+9002,test-3m,Test 3 Months,quarterly,90,15000,0,false,Active
+9003,test-6m,Test 6 Months,quarterly,180,28000,0,false,Active
+9004,test-1y,Test 1 Year,yearly,365,50000,5,false,Active

@@ -5,7 +5,6 @@ import {
   FileSpreadsheet,
   Search,
   Eye,
-  CheckCircle2,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { formatBDT, formatDatePretty } from '../../utils/financeCalculators';
@@ -16,10 +15,10 @@ import RevenueSimulatorModal from './modals/RevenueSimulatorModal';
 export default function RevenueRecognitionTab() {
   const {
     revenueRecognitionSchedules,
-    recognitionPolicy,
-    setRecognitionPolicy,
     activeDateRange,
+    today,
   } = useFinance();
+  const currentMonthLabel = new Date(`${today.slice(0, 7)}-01T00:00:00`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
   const [searchTerm, setSearchTerm] = useState('');
   const [durationFilter, setDurationFilter] = useState('ALL');
@@ -50,6 +49,10 @@ export default function RevenueRecognitionTab() {
   const totalConsideration = displayedSchedules.reduce((s, i) => s + i.recognition.netConsideration, 0);
   const totalRecognized = displayedSchedules.reduce((s, i) => s + i.recognition.recognizedToDate, 0);
   const totalDeferred = displayedSchedules.reduce((s, i) => s + i.recognition.deferredRevenue, 0);
+  const totalUnpaid = displayedSchedules.reduce(
+    (s, i) => s + Math.max(0, i.recognition.planValue - i.recognition.netConsideration),
+    0
+  );
 
   // Excel Export
   const handleExportExcel = () => {
@@ -61,9 +64,9 @@ export default function RevenueRecognitionTab() {
       { key: 'durationStr', label: 'Duration' },
       { key: 'baseAmountStr', label: 'Base Price' },
       { key: 'discountStr', label: 'Discount' },
-      { key: 'netConsiderationStr', label: 'Net Consideration' },
+      { key: 'netConsiderationStr', label: 'Paid (excl. VAT)' },
       { key: 'periodStr', label: 'Membership Period' },
-      { key: 'monthlyRateStr', label: 'Avg Monthly Run Rate' },
+      { key: 'monthlyRateStr', label: 'Avg per Month' },
       { key: 'recognizedStr', label: 'Recognized to Date' },
       { key: 'deferredStr', label: 'Deferred Revenue' },
     ];
@@ -118,34 +121,11 @@ export default function RevenueRecognitionTab() {
             </h2>
           </div>
           <p style={{ margin: '3px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
-            Separating upfront liquid cash collections from recognized accrual revenue across 1, 3, 6, 12-month and custom packages.
+            Each payment is split into equal monthly parts across the membership months it pays for.
           </p>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          {/* Policy Selector Toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-surface)', padding: '4px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-base)' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, paddingLeft: '6px', color: 'var(--text-muted)' }}>
-              Allocation Policy:
-            </span>
-            <button
-              type="button"
-              className={`btn btn-sm ${recognitionPolicy === 'equal_monthly' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setRecognitionPolicy('equal_monthly')}
-              style={{ fontSize: '11px', padding: '4px 8px' }}
-            >
-              Equal Monthly
-            </button>
-            <button
-              type="button"
-              className={`btn btn-sm ${recognitionPolicy === 'service_days' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setRecognitionPolicy('service_days')}
-              style={{ fontSize: '11px', padding: '4px 8px' }}
-            >
-              Daily Pro-Rata
-            </button>
-          </div>
-
           <button
             type="button"
             className="btn btn-primary btn-sm"
@@ -171,33 +151,31 @@ export default function RevenueRecognitionTab() {
       {/* KPI Widgets */}
       <div className="dashboard-metrics-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))' }}>
         <div className="stat-widget">
-          <span className="stat-widget-title">Total Package Consideration</span>
+          <span className="stat-widget-title">Paid (excl. VAT)</span>
           <div className="stat-widget-value primary-highlight">{formatBDT(totalConsideration)}</div>
-          <div className="stat-widget-sub">Net contracted value across packages</div>
+          <div className="stat-widget-sub">Membership money received</div>
         </div>
 
         <div className="stat-widget">
-          <span className="stat-widget-title">Recognized Revenue to Date</span>
+          <span className="stat-widget-title">Earned to Date</span>
           <div className="stat-widget-value" style={{ color: '#10B981' }}>{formatBDT(totalRecognized)}</div>
-          <div className="stat-widget-sub">Accrual earned through October 2026</div>
+          <div className="stat-widget-sub">Monthly parts up to {currentMonthLabel}</div>
         </div>
 
         <div className="stat-widget">
-          <span className="stat-widget-title">Remaining Deferred (Unearned)</span>
+          <span className="stat-widget-title">Prepaid for Future Months</span>
           <div className="stat-widget-value" style={{ color: 'var(--primary)' }}>{formatBDT(totalDeferred)}</div>
-          <div className="stat-widget-sub">Held on balance sheet for future months</div>
+          <div className="stat-widget-sub">Paid, but not yet earned</div>
         </div>
 
         <div className="stat-widget">
-          <span className="stat-widget-title">Penny-Rounding Reconciliation</span>
-          <div className="stat-widget-value" style={{ color: '#10B981', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <CheckCircle2 size={18} /> 100% Balanced
-          </div>
-          <div className="stat-widget-sub">Allocations strictly equal net price</div>
+          <span className="stat-widget-title">Not Yet Paid</span>
+          <div className="stat-widget-value" style={{ color: totalUnpaid > 0 ? 'var(--danger)' : '#10B981' }}>{formatBDT(totalUnpaid)}</div>
+          <div className="stat-widget-sub">Counted as revenue once paid</div>
         </div>
       </div>
 
-      {/* Required Examples Callout Banner */}
+      {/* How the split works */}
       <div style={{
         padding: '12px 16px',
         borderRadius: 'var(--radius-md)',
@@ -207,16 +185,16 @@ export default function RevenueRecognitionTab() {
         color: 'var(--text-secondary)',
         lineHeight: '1.5',
       }}>
-        <strong>Required Accounting Test Cases:</strong>
+        <strong>How revenue is split:</strong>
         <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
           <li>
-            <strong>3-Month Package (৳15,000, 1 Oct – 31 Dec 2026):</strong> If paid upfront, October cash collected is ৳15,000, while recognized revenue is strictly <strong>৳5,000 in Oct, ৳5,000 in Nov, and ৳5,000 in Dec</strong> under equal monthly allocation.
+            A 3-month plan of ৳15,000 paid in full and starting 15 Oct earns <strong>৳5,000 in Oct, ৳5,000 in Nov and ৳5,000 in Dec</strong>, one part for each month the membership starts in.
           </li>
           <li>
-            <strong>6-Month Package (৳30,000):</strong> Allocated strictly at <strong>৳5,000/month</strong> for each applicable service month.
+            Only money received counts. A due paid later is split over the membership months that haven't passed yet, so earlier months never change.
           </li>
           <li>
-            <strong>12-Month Package (৳50,000):</strong> Allocated at <strong>৳4,166.67/month</strong> with automatic final month penny rounding adjustment so the cumulative total equals exactly ৳50,000.
+            VAT is not counted as revenue.
           </li>
         </ul>
       </div>
@@ -245,9 +223,9 @@ export default function RevenueRecognitionTab() {
           {[
             { key: 'ALL', label: 'All Durations' },
             { key: '1m', label: '1-Month' },
-            { key: '3m', label: '3-Month (৳15k)' },
-            { key: '6m', label: '6-Month (৳30k)' },
-            { key: '12m', label: '12-Month (৳50k)' },
+            { key: '3m', label: '3-Month' },
+            { key: '6m', label: '6-Month' },
+            { key: '12m', label: '12-Month' },
             { key: 'custom', label: 'Custom Durations' },
           ].map((dur) => (
             <button
@@ -284,11 +262,11 @@ export default function RevenueRecognitionTab() {
                 <th>Package Plan</th>
                 <th>Base Price</th>
                 <th>Discount</th>
-                <th>Net Consideration</th>
+                <th>Paid (excl. VAT)</th>
                 <th>Service Period</th>
-                <th>Monthly Allocation</th>
-                <th>Recognized to Date</th>
-                <th>Deferred Revenue</th>
+                <th>Avg per Month</th>
+                <th>Earned to Date</th>
+                <th>Prepaid (Future)</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -331,7 +309,7 @@ export default function RevenueRecognitionTab() {
                       <td style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>
                         {formatDatePretty(item.startDate)} – {formatDatePretty(item.endDate)}
                         <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '10px' }}>
-                          ({recognition.numMonths} mo / {recognition.totalServiceDays} days)
+                          ({recognition.numMonths} {recognition.numMonths === 1 ? 'month' : 'months'})
                         </span>
                       </td>
                       <td style={{ fontWeight: 700, color: 'var(--primary)' }}>

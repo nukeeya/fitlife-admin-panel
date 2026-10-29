@@ -247,7 +247,7 @@ export default function FinancialReportsTab() {
             { key: 'code', label: 'Member ID' },
             { key: 'plan', label: 'Plan' },
             { key: 'duration', label: 'Duration' },
-            { key: 'considerationStr', label: 'Net Consideration' },
+            { key: 'considerationStr', label: 'Paid (excl. VAT)' },
             { key: 'period', label: 'Period' },
             { key: 'recognizedStr', label: 'Recognized to Date' },
             { key: 'deferredStr', label: 'Deferred Revenue' },

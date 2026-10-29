@@ -27,7 +27,7 @@ export default function RevenueScheduleModal({
       footer={
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-            Policy: <strong>{recognition.method === 'equal_monthly' ? 'Equal Monthly Allocation' : 'Daily Pro-Rata Allocation'}</strong>
+            Rule: <strong>Equal part per membership month (paid amounts only)</strong>
           </span>
           <button type="button" className="btn btn-secondary" onClick={onClose}>
             Close
@@ -47,13 +47,13 @@ export default function RevenueScheduleModal({
           border: '1px solid var(--border-base)',
         }}>
           <div>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Net Consideration</span>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Paid (excl. VAT)</span>
             <span style={{ fontSize: '14px', fontWeight: 800 }}>{formatBDT(recognition.netConsideration)}</span>
           </div>
           <div>
             <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Service Duration</span>
             <span style={{ fontSize: '13px', fontWeight: 700 }}>
-              {recognition.numMonths} Month(s) ({recognition.totalServiceDays} Days)
+              {recognition.numMonths} Month(s)
             </span>
           </div>
           <div>
@@ -110,7 +110,7 @@ export default function RevenueScheduleModal({
               <thead>
                 <tr>
                   <th>Service Month</th>
-                  <th>Service Days</th>
+                  <th>Membership Month</th>
                   <th>Monthly Allocation</th>
                   <th>% Share</th>
                   <th>Recognition Status</th>
@@ -121,7 +121,7 @@ export default function RevenueScheduleModal({
                 {recognition.monthlySchedule.map((m, idx) => (
                   <tr key={m.monthKey}>
                     <td style={{ fontWeight: 800, color: 'var(--primary)' }}>{m.monthLabel}</td>
-                    <td>{m.daysInService} Days</td>
+                    <td>{m.membershipMonth ? `${m.membershipMonth} of ${recognition.numMonths}` : 'Paid after plan ended'}</td>
                     <td style={{ fontWeight: 800, fontSize: '14px' }}>{formatBDT(m.allocatedRevenue)}</td>
                     <td>{m.recognitionPercentage.toFixed(1)}%</td>
                     <td>
@@ -155,7 +155,7 @@ export default function RevenueScheduleModal({
           color: 'var(--text-secondary)',
           lineHeight: '1.5',
         }}>
-          <strong>Cash vs. Accrual Principle:</strong> Upfront cash collections are received as liquid assets into cash/bank. Revenue is recognized progressively over the service period. In this schedule, the sum of monthly allocations strictly equals {formatBDT(recognition.netConsideration)} with automatic penny reconciliation on the final period.
+          <strong>Cash vs. earned revenue:</strong> Money is in the bank the day it is paid, but it is earned one equal part per membership month. A due paid later is split over the months that haven't passed yet. The monthly parts above add up exactly to {formatBDT(recognition.netConsideration)} paid (excluding VAT).
         </div>
       </div>
     </Modal>

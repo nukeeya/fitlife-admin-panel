@@ -125,6 +125,96 @@ export function calculateDaysOverdue(dueDate, dueAmount, referenceDate = todayIs
 }
 
 /**
+ * Monthly revenue split for one membership invoice (the rule agreed with the client).
+ *
+ * - A plan of N months is split into N equal parts. Part k counts in the
+ *   calendar month that membership month k starts in: a 3-month plan starting
+ *   15 Oct earns in Oct, Nov and Dec (none in Jan).
+ * - Only money actually paid is split. Each payment is spread over the
+ *   membership months from the payment's own month onwards, so months that
+ *   have already passed (and may be closed) never change. A payment before
+ *   the start covers all months; one made after the last month counts in the
+ *   month it was paid.
+ * - VAT is not revenue: each payment is scaled by (base - discount) / net payable.
+ * - Amounts are worked in paisa; any leftover paisa go to the earliest months,
+ *   so the parts always add up exactly to what was paid.
+ *
+ * Returns the same shape as calculateRevenueRecognition() below, so the
+ * finance screens can use either.
+ */
+export function calculateMembershipRevenue({
+  payments = [],
+  netPayable = 0,
+  baseAmount = 0,
+  discountAmount = 0,
+  startDate,
+  months = 1,
+  asOfDate = todayIso(),
+}) {
+  const numMonths = Math.max(1, Math.round(Number(months) || 1));
+  const planValue = Math.max(0, (Number(baseAmount) || 0) - (Number(discountAmount) || 0));
+  const net = Number(netPayable) || 0;
+  const revenueShare = net > 0 ? Math.min(1, planValue / net) : 1;
+
+  const keyOf = (y, m) => `${y}-${String(m + 1).padStart(2, '0')}`;
+  const [sy, sm] = String(startDate || asOfDate).slice(0, 7).split('-').map(Number);
+  const membershipKeys = Array.from({ length: numMonths }, (_, k) => {
+    const d = new Date(sy, sm - 1 + k, 1);
+    return keyOf(d.getFullYear(), d.getMonth());
+  });
+
+  const paisaByMonth = new Map(membershipKeys.map((key) => [key, 0]));
+  let totalPaisa = 0;
+
+  for (const p of payments) {
+    const paisa = Math.round((Number(p.amount) || 0) * revenueShare * 100);
+    if (paisa <= 0) continue;
+    totalPaisa += paisa;
+    const payKey = String(p.date || asOfDate).slice(0, 7);
+    const eligible = membershipKeys.filter((key) => key >= payKey);
+    const targets = eligible.length > 0 ? eligible : [payKey];
+    const each = Math.floor(paisa / targets.length);
+    let leftover = paisa - each * targets.length;
+    for (const key of targets) {
+      const extra = leftover > 0 ? 1 : 0;
+      leftover -= extra;
+      paisaByMonth.set(key, (paisaByMonth.get(key) || 0) + each + extra);
+    }
+  }
+
+  const currentMonthKey = String(asOfDate).slice(0, 7);
+  const monthlySchedule = [...paisaByMonth.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([monthKey, paisa]) => {
+      const [y, m] = monthKey.split('-').map(Number);
+      const index = membershipKeys.indexOf(monthKey);
+      return {
+        monthKey,
+        monthLabel: new Date(y, m - 1, 1).toLocaleString('en-US', { month: 'short', year: 'numeric' }),
+        membershipMonth: index >= 0 ? index + 1 : null, // null = paid after the plan ended
+        allocatedRevenue: paisa / 100,
+        recognitionPercentage: totalPaisa > 0 ? (paisa / totalPaisa) * 100 : 0,
+        status: monthKey < currentMonthKey ? 'recognized' : monthKey === currentMonthKey ? 'current' : 'deferred',
+      };
+    });
+
+  const recognizedPaisa = [...paisaByMonth.entries()]
+    .filter(([key]) => key <= currentMonthKey)
+    .reduce((sum, [, paisa]) => sum + paisa, 0);
+
+  return {
+    netConsideration: totalPaisa / 100, // paid, excluding VAT
+    planValue, // full plan price excluding VAT, paid or not
+    numMonths,
+    method: 'membership_months',
+    monthlySchedule,
+    recognizedToDate: recognizedPaisa / 100,
+    deferredRevenue: (totalPaisa - recognizedPaisa) / 100,
+    isFullyRecognized: totalPaisa === recognizedPaisa,
+  };
+}
+
+/**
  * Dynamic Membership Revenue Recognition Engine
  *
  * Supports:

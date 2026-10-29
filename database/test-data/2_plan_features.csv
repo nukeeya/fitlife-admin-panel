@@ -1,0 +1,15 @@
+id,plan_id,feature_name,is_included
+9001,9001,Gym floor access,true
+9002,9001,Locker,true
+9003,9002,Gym floor access,true
+9004,9002,Locker,true
+9005,9002,Monthly trainer review,true
+9006,9003,Gym floor access,true
+9007,9003,Locker,true
+9008,9003,Monthly trainer review,true
+9009,9003,Diet plan,true
+9010,9004,Gym floor access,true
+9011,9004,Locker,true
+9012,9004,Weekly trainer review,true
+9013,9004,Diet plan,true
+9014,9004,Steam room,true
