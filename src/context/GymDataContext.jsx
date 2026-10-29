@@ -50,7 +50,8 @@ export function GymDataProvider({ children }) {
 
   // --- Raw DB rows -----------------------------------------------------------
   const [raw, setRaw] = useState(null); // null = still loading
-  const [loadError, setLoadError] = useState(null);
+  // { tableKey: message } for tables that failed on the last load, e.g. { trainers: '…' }.
+  const [loadErrors, setLoadErrors] = useState({});
   const [branding, setBranding] = useState(DEFAULT_BRANDING);
   const [smsBalanceOverride, setSmsBalanceOverride] = useState(null);
   const [profilePhotoUrls, setProfilePhotoUrls] = useState({});
@@ -68,11 +69,7 @@ export function GymDataProvider({ children }) {
     const { data, errors } = await fetchAllData();
     if (!mountedRef.current) return;
 
-    if (Object.keys(errors).length > 0 && errors.plans && errors.members) {
-      setLoadError('Could not reach Supabase. Showing cached sample data — check VITE_SUPABASE_URL / keys.');
-    } else {
-      setLoadError(null);
-    }
+    setLoadErrors(errors);
 
     // Branding from app_settings
     const brandingRow = (data.appSettings || []).find((r) => r.key === 'branding');
@@ -85,7 +82,17 @@ export function GymDataProvider({ children }) {
     const smsRow = (data.smsSettings || [])[0];
     if (smsRow) setSmsBalanceOverride(smsRow.remaining_balance ?? 0);
 
-    setRaw(data);
+    // A table that fails on a reload keeps its last loaded rows (shown with
+    // the error), so a short network blip doesn't empty the screen. On the
+    // first load there is nothing to keep, so it stays null (an empty list).
+    setRaw((prev) => {
+      if (!prev) return data;
+      const next = { ...data };
+      for (const key of Object.keys(errors)) {
+        if (prev[key] != null) next[key] = prev[key];
+      }
+      return next;
+    });
   }, []);
 
   // Refetch whenever auth state changes: before login RLS returns empty
@@ -1288,7 +1295,7 @@ export function GymDataProvider({ children }) {
         getAnalytics,
         refresh,
         loading: raw === null,
-        loadError,
+        loadErrors,
       }}
     >
       {children}

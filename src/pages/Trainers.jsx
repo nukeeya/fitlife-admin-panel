@@ -16,11 +16,12 @@ import { useGymData } from '../context/GymDataContext';
 import { supabase } from '../lib/supabase';
 import { uploadProfilePhoto } from '../lib/profilePhotos';
 import Modal from '../components/common/Modal';
+import DataState from '../components/common/DataState';
 import ProfilePhotoField from '../components/ProfilePhotoField';
 import Avatar from '../components/common/Avatar';
 
 export default function Trainers() {
-  const { trainers: liveTrainers, members: liveMembers, refresh } = useGymData();
+  const { trainers: liveTrainers, members: liveMembers, refresh, loading, loadErrors } = useGymData();
   const allTrainers = liveTrainers || [];
   const members = liveMembers || [];
 
@@ -250,6 +251,15 @@ export default function Trainers() {
       </div>
 
       {/* Trainers Grid */}
+      <DataState
+        loading={loading}
+        error={loadErrors.trainers}
+        isEmpty={allTrainers.length === 0}
+        noun="trainers"
+        onRetry={refresh}
+        onAdd={handleOpenAdd}
+        addLabel="Add your first trainer"
+      >
       <div className="trainers-grid trainer-grid">
         {filtered.length === 0 ? (
           <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-base)' }}>
@@ -317,6 +327,7 @@ export default function Trainers() {
           })
         )}
       </div>
+      </DataState>
 
       {/* Add / Edit Coach Modal */}
       <Modal

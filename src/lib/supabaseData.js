@@ -503,16 +503,17 @@ export async function fetchAllData() {
       try {
         const { data, error } = await jobs[k]();
         if (error) throw error;
-        return [k, data];
+        return [k, data, null];
       } catch (e) {
         console.warn(`[supabaseData] Failed to load '${k}':`, e.message);
-        return [k, null];
+        return [k, null, e.message || 'Unknown error'];
       }
     })
   );
 
-  const data = Object.fromEntries(results);
-  const errors = Object.fromEntries(results.filter(([, v]) => v === null).map(([k]) => [k, true]));
+  // errors: { tableKey: message } for each table that failed, e.g. { trainers: 'permission denied' }
+  const data = Object.fromEntries(results.map(([k, v]) => [k, v]));
+  const errors = Object.fromEntries(results.filter(([, , msg]) => msg).map(([k, , msg]) => [k, msg]));
   return { data, errors };
 }
 

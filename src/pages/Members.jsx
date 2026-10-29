@@ -18,8 +18,8 @@ import {
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
 import { useAuth } from '../context/AuthContext';
-import { members as fallbackMembers } from '../data/gymData';
 import Modal from '../components/common/Modal';
+import DataState from '../components/common/DataState';
 import Avatar from '../components/common/Avatar';
 import RemoteEnrollModal from '../components/RemoteEnrollModal';
 
@@ -37,9 +37,12 @@ export default function Members() {
     workoutPlans,
     assignDietPlan,
     assignWorkoutPlan,
+    refresh,
+    loading,
+    loadErrors,
   } = useGymData();
   const { resetPassword } = useAuth();
-  const allMembers = liveMembers || fallbackMembers;
+  const allMembers = liveMembers || [];
 
   const [searchTerm, setSearchTerm] = useState(queryFromUrl);
 
@@ -272,6 +275,15 @@ export default function Members() {
         </div>
       </div>
 
+      <DataState
+        loading={loading}
+        error={loadErrors.members}
+        isEmpty={allMembers.length === 0}
+        noun="members"
+        onRetry={refresh}
+        onAdd={openAdmission}
+        addLabel="Add your first member"
+      >
       <div className="table-card">
         <table className="data-table">
           <thead>
@@ -285,6 +297,13 @@ export default function Members() {
             </tr>
           </thead>
           <tbody>
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  No members match your search or filters.
+                </td>
+              </tr>
+            )}
             {filtered.map((m) => (
               <tr
                 key={m.id}
@@ -400,6 +419,7 @@ export default function Members() {
           </tbody>
         </table>
       </div>
+      </DataState>
 
       {actionFeedback && (
         <div

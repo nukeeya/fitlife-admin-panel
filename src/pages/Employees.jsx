@@ -14,11 +14,12 @@ import { useGymData } from '../context/GymDataContext';
 import { supabase } from '../lib/supabase';
 import { uploadProfilePhoto } from '../lib/profilePhotos';
 import Modal from '../components/common/Modal';
+import DataState from '../components/common/DataState';
 import ProfilePhotoField from '../components/ProfilePhotoField';
 import Avatar from '../components/common/Avatar';
 
 export default function Employees() {
-  const { employees: liveEmployees, branding, refresh } = useGymData();
+  const { employees: liveEmployees, branding, refresh, loading, loadErrors } = useGymData();
   const allEmployees = liveEmployees || [];
 
   const [activeTab, setActiveTab] = useState('directory'); // 'directory' | 'payroll'
@@ -293,6 +294,15 @@ export default function Employees() {
         </button>
       </div>
 
+      <DataState
+        loading={loading}
+        error={loadErrors.employees}
+        isEmpty={allEmployees.length === 0}
+        noun="employees"
+        onRetry={refresh}
+        onAdd={handleOpenAdd}
+        addLabel="Add your first employee"
+      >
       {/* TAB 1: STAFF DIRECTORY */}
       {activeTab === 'directory' && (
         <>
@@ -581,6 +591,7 @@ export default function Employees() {
           </div>
         </div>
       )}
+      </DataState>
 
       {/* Add / Edit Staff Modal */}
       <Modal
