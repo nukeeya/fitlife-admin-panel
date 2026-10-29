@@ -405,7 +405,7 @@ export async function fetchAllData() {
     members: () => supabase.from('members').select('*').order('id', { ascending: false }),
     applications: () => supabase.from('admission_submissions').select('*').order('submitted_at', { ascending: false }),
     payments: () => supabase.from('payments')
-      .select('id, receipt_number, invoice_id, amount, method, transaction_reference, payment_date')
+      .select('id, receipt_number, invoice_id, amount, method, transaction_reference, payment_date, collected_by')
       .order('payment_date'),
     trainers: () => supabase.from('trainers').select('*').order('id'),
     employees: () => supabase.from('employees').select('*').order('id'),
@@ -418,7 +418,8 @@ export async function fetchAllData() {
     periodAdjustments: () => supabase.from('finance_period_adjustments').select('*').order('id'),
     attendance: () => supabase.from('attendance').select('*').order('id', { ascending: false }),
     roles: () => supabase.from('roles').select('*').order('id'),
-    users: () => supabase.from('users').select('role_id'),
+    // Staff names for "Collected By"; role_id for the per-role user counts.
+    users: () => supabase.from('users').select('id, name, role_id'),
     smsCampaigns: () => supabase.from('sms_campaigns').select('*').order('id', { ascending: false }),
     // Explicit columns: api_key is not readable by the browser role (migration 011).
     smsSettings: () => supabase.from('sms_settings').select(SMS_SETTINGS_COLUMNS).limit(1),

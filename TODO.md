@@ -23,7 +23,7 @@
   - [x] Features & Perks tab: use the plan's real features (`plan_features`), not the hardcoded list (30 Oct 2026)
   - [x] Renew Subscription: saves through `renew_membership()` (migration `015`): invoice + payment + new expiry in one transaction (29 Oct 2026)
   - [ ] Decide: add columns for RFID card, emergency relationship and medical notes, or remove them from the Profile tab
-  - [ ] "Collected By" on payments: show the staff name (`payments.collected_by` → `users.name`)
+  - [x] "Collected By" on payments: show the staff name (`payments.collected_by` → `users.name`) (30 Oct 2026)
 - [x] **Monthly revenue split**: paid amounts only, one equal part per membership month, VAT excluded; migration `014` (`invoices.service_start`) run and checked with test data (29 Oct 2026)
   - [ ] Payment dates: use Dhaka time, not UTC (a payment between 00:00 and 06:00 lands on the previous day, and on the 1st in the previous month)
 - [x] **Empty tables** (Members, Trainers, Employees): show an empty list with "Add your first…", not demo records (29 Oct 2026)

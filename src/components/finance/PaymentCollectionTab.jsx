@@ -181,7 +181,7 @@ export default function PaymentCollectionTab() {
                       {formatDatePretty(p.date)}
                     </td>
                     <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      {p.collectedBy || 'Front Desk'}
+                      {p.collectedBy || '—'}
                     </td>
                     <td>
                       <span className="badge badge-success">Confirmed</span>

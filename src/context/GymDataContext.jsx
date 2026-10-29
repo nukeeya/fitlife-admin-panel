@@ -220,6 +220,8 @@ export function GymDataProvider({ children }) {
     for (const p of raw.plans || []) plansById[p.id] = p;
     const discountsById = {};
     for (const d of raw.discounts || []) discountsById[d.id] = d;
+    const staffNameById = {};
+    for (const u of raw.users || []) staffNameById[u.id] = u.name;
     const paymentsByInvoice = new Map();
     for (const payment of raw.payments || []) {
       if (payment.invoice_id == null) continue;
@@ -233,6 +235,8 @@ export function GymDataProvider({ children }) {
         methodId: payment.method || null,
         reference: payment.transaction_reference || '',
         date: String(payment.payment_date || '').slice(0, 10),
+        // Staff who took the payment (set by the payment RPCs); null for imported rows.
+        collectedBy: payment.collected_by ? staffNameById[payment.collected_by] || 'Unknown staff' : null,
       });
       paymentsByInvoice.set(invoiceId, payments);
     }
