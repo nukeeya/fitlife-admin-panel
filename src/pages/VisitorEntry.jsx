@@ -11,12 +11,14 @@ import {
   X,
   Users,
   Footprints,
+  Ticket,
 } from 'lucide-react';
 import Modal from '../components/common/Modal';
 import DataState from '../components/common/DataState';
 import { useGymData } from '../context/GymDataContext';
 import { todayStr } from '../lib/supabaseData';
-import { formatDatePretty } from '../utils/financeCalculators';
+import { formatBDT, formatDatePretty } from '../utils/financeCalculators';
+import { PAYMENT_METHODS } from '../data/financeConfig';
 
 // Must match the check constraints in database/migrations/017_visitors.sql.
 const VISITOR_TYPES = [
@@ -53,7 +55,16 @@ const errorBoxStyle = {
 };
 
 export default function VisitorEntry() {
-  const { visitors, addVisitor, updateVisitor, loading, loadErrors, refresh } = useGymData();
+  const {
+    visitors,
+    addVisitor,
+    updateVisitor,
+    activeDayPassPlans,
+    sellDayPass,
+    loading,
+    loadErrors,
+    refresh,
+  } = useGymData();
 
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,6 +86,13 @@ export default function VisitorEntry() {
   const [notes, setNotes] = useState('');
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Sell Day Pass form state (the price comes from the package)
+  const [isSellModalOpen, setIsSellModalOpen] = useState(false);
+  const [passPlanId, setPassPlanId] = useState('');
+  const [passMethod, setPassMethod] = useState('CASH');
+  const [passNotes, setPassNotes] = useState('');
+  const passPlan = activeDayPassPlans.find((p) => p.id === Number(passPlanId)) || null;
 
   // Notification Toast
   const [notification, setNotification] = useState(null);
@@ -130,6 +148,44 @@ export default function VisitorEntry() {
     // Show the day the visitor was logged for, so the new row is visible.
     if (dateFilter && visitor.date !== dateFilter) setDateFilter(visitor.date);
     notify(`Visitor "${visitor.name}" registered (${visitor.code}).`);
+  };
+
+  // Open Sell Day Pass for one visit (only visits without a pass get the button)
+  const openSellModal = (visitor) => {
+    setSelectedVisitor(visitor);
+    setPassPlanId(activeDayPassPlans[0]?.id || '');
+    setPassMethod('CASH');
+    setPassNotes('');
+    setFormError('');
+    setIsSellModalOpen(true);
+  };
+
+  // Sell Day Pass: invoice + payment in one database transaction (sell_day_pass)
+  const handleSellSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedVisitor) return;
+    setFormError('');
+
+    if (!passPlan) {
+      setFormError('Select a day-pass package.');
+      return;
+    }
+
+    setSaving(true);
+    const { sale, error } = await sellDayPass({
+      visitorId: selectedVisitor.id,
+      planId: passPlan.id,
+      paymentMethod: passMethod,
+      notes: passNotes,
+    });
+    setSaving(false);
+    if (error) {
+      setFormError(error.message || 'Could not sell the day pass. Please try again.');
+      return;
+    }
+
+    setIsSellModalOpen(false);
+    notify(`${sale.plan} sold to ${selectedVisitor.name}: ${formatBDT(sale.amount)} paid (${sale.invoiceNumber}).`);
   };
 
   // Edit Visitor Submission
@@ -413,6 +469,7 @@ export default function VisitorEntry() {
                 <th>Visit Date & Time</th>
                 <th>Visitor Type</th>
                 <th>Status</th>
+                <th>Day Pass</th>
                 <th>Handled By</th>
                 <th>Actions</th>
               </tr>
@@ -420,7 +477,7 @@ export default function VisitorEntry() {
             <tbody>
               {filteredVisitors.length === 0 ? (
                 <tr>
-                  <td colSpan="8" style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
+                  <td colSpan="9" style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
                     {dateFilter
                       ? `No visitors on ${formatDatePretty(dateFilter)} match these filters.`
                       : 'No visitors match these filters.'}
@@ -465,6 +522,19 @@ export default function VisitorEntry() {
                         {v.status}
                       </span>
                     </td>
+                    <td style={{ fontSize: '12px', whiteSpace: 'nowrap' }}>
+                      {v.dayPass ? (
+                        <span
+                          className="badge badge-success"
+                          style={{ fontSize: '10px' }}
+                          title={`${v.dayPass.plan} · ${v.dayPass.invoiceNumber}`}
+                        >
+                          Paid {formatBDT(v.dayPass.amount)}
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>—</span>
+                      )}
+                    </td>
                     <td style={{ fontSize: '12px' }}>{v.handledBy}</td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -493,6 +563,17 @@ export default function VisitorEntry() {
                         >
                           <Edit size={12} /> Edit
                         </button>
+                        {!v.dayPass && (
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            onClick={() => openSellModal(v)}
+                            style={{ padding: '3px 8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '3px' }}
+                            title="Sell a day pass for this visit"
+                          >
+                            <Ticket size={12} /> Sell Pass
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -699,6 +780,14 @@ export default function VisitorEntry() {
                 <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>HANDLED BY</span>
                 <div style={{ fontWeight: 700 }}>{selectedVisitor.handledBy}</div>
               </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>DAY PASS</span>
+                <div style={{ fontWeight: 700 }}>
+                  {selectedVisitor.dayPass
+                    ? `${selectedVisitor.dayPass.plan} · ${formatBDT(selectedVisitor.dayPass.amount)} paid · ${selectedVisitor.dayPass.invoiceNumber}`
+                    : 'Not sold'}
+                </div>
+              </div>
             </div>
 
             <div style={{ fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'pre-line' }}>
@@ -706,6 +795,106 @@ export default function VisitorEntry() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* SELL DAY PASS MODAL */}
+      <Modal
+        isOpen={isSellModalOpen}
+        onClose={() => !saving && setIsSellModalOpen(false)}
+        title="Sell Day Pass"
+        subtitle={selectedVisitor ? `${selectedVisitor.name} (${selectedVisitor.code}) · ${formatDatePretty(selectedVisitor.date)}` : ''}
+        icon={Ticket}
+        size="md"
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', width: '100%' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setIsSellModalOpen(false)}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="sell-day-pass-form"
+              className="btn btn-primary"
+              disabled={saving || !passPlan}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <CheckCircle2 size={16} />
+              {saving ? 'Saving…' : passPlan ? `Collect ${formatBDT(passPlan.price)}` : 'Collect Payment'}
+            </button>
+          </div>
+        }
+      >
+        <form
+          id="sell-day-pass-form"
+          onSubmit={handleSellSubmit}
+          style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}
+        >
+          {formError && (
+            <div style={errorBoxStyle}>
+              <AlertCircle size={15} />
+              <span>{formError}</span>
+            </div>
+          )}
+
+          {activeDayPassPlans.length === 0 ? (
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+              There are no active day-pass packages yet. Add one under Subscription Plans first.
+            </div>
+          ) : (
+            <>
+              <label className="form-group">
+                <span className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>
+                  Day-Pass Package <span style={{ color: 'var(--danger)' }}>*</span>
+                </span>
+                <select
+                  className="form-select"
+                  value={passPlanId}
+                  onChange={(e) => setPassPlanId(e.target.value)}
+                >
+                  {activeDayPassPlans.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name} · {formatBDT(p.price)}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="form-group">
+                <span className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>
+                  Payment Method <span style={{ color: 'var(--danger)' }}>*</span>
+                </span>
+                <select
+                  className="form-select"
+                  value={passMethod}
+                  onChange={(e) => setPassMethod(e.target.value)}
+                >
+                  {PAYMENT_METHODS.map((m) => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="form-group">
+                <span className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>
+                  Notes (Optional)
+                </span>
+                <textarea
+                  className="form-input"
+                  rows={2}
+                  value={passNotes}
+                  onChange={(e) => setPassNotes(e.target.value)}
+                  placeholder="e.g. Guest of member FLM-0012"
+                />
+              </label>
+
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                Paid in full. Finance records it on the visit date.
+              </div>
+            </>
+          )}
+        </form>
       </Modal>
 
       {/* EDIT VISITOR MODAL */}

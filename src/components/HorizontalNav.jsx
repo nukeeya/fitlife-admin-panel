@@ -164,7 +164,7 @@ export default function HorizontalNav() {
               Plan List
             </NavLink>
             <NavLink to="/subscription-plans?tab=trial" className="submenu-link" onClick={() => setActiveDropdown(null)}>
-              One-Day Trial Registration
+              Day-Pass Packages
             </NavLink>
             <NavLink to="/subscription-plans?tab=features" className="submenu-link" onClick={() => setActiveDropdown(null)}>
               Feature List

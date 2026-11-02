@@ -38,7 +38,8 @@
 
 ### Connect the pages that have no database
 - [x] **Visitor Entry**: new `visitors` table (migration `017`); dates default to today; handled-by set by the database (30 Oct 2026)
-- [ ] **Day passes / trials**: real prices and payments through Finance (Visitor Entry no longer records fees; the One-Day Trial tab under Subscription Plans is still demo data)
+- [x] **Day passes / trials**: migrations `018` (invoices/payments can belong to a visitor, `plans.kind`) and `019` (`sell_day_pass()`); Sell Pass on Visitor Entry; Day-Pass Packages tab under Subscription Plans replaces the demo One-Day Trial tab (2 Nov 2026)
+  - [ ] Edit a plan's or package's price (today: add a new one and remove the old)
 - [ ] **Job applicants**: use the existing `job_applications` table
 - [ ] **WhatsApp Business messaging (replaces SMS)**: the client connects their WhatsApp Business account and sends promotions, info and reminders (expiry, dues)
   - Official WhatsApp Business Platform (Cloud API) only; unofficial WhatsApp Web tools risk a number ban

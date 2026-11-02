@@ -120,6 +120,8 @@ export function mapPlan(row, featuresByPlanId = {}) {
     popular: !!row.is_popular,
     vatPercent: Number(row.vat_percentage ?? 5),
     status: row.status || 'Active',
+    // 'membership' or 'day_pass' (migration 018)
+    kind: row.kind || 'membership',
   };
 }
 
@@ -598,6 +600,16 @@ export const db = {
       p_paid_amount: paidAmount === null || paidAmount === undefined ? null : Number(paidAmount),
       p_payment_method: paymentMethod || 'CASH',
       p_due_date: dueDate || null,
+      p_notes: notes || null,
+    });
+  },
+
+  // Migration 019. Price comes from the plan; the pass is always paid in full.
+  sellDayPass({ visitorId, planId, paymentMethod, notes }) {
+    return supabase.rpc('sell_day_pass', {
+      p_visitor_id: Number(visitorId),
+      p_plan_id: Number(planId),
+      p_payment_method: paymentMethod || 'CASH',
       p_notes: notes || null,
     });
   },

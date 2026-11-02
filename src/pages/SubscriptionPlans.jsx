@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Check, Plus, RotateCcw, Trash2, CalendarCheck, Award } from 'lucide-react';
+import { Check, Plus, RotateCcw, Trash2, Ticket, Award } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
 import { supabase } from '../lib/supabase';
 import Modal from '../components/common/Modal';
-import OneDayTrialManagement from '../components/OneDayTrialManagement';
 
 const EMPTY_FORM = {
   name: '',
@@ -15,8 +14,16 @@ const EMPTY_FORM = {
 
 export default function SubscriptionPlans() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const currentTab = searchParams.get('tab') || 'plans';
-  const { plans, activePlans, refresh } = useGymData();
+  // '?tab=trial' is kept as the day-pass URL so existing menu links still work.
+  const currentTab = searchParams.get('tab') === 'trial' ? 'trial' : 'plans';
+  const isDayPassTab = currentTab === 'trial';
+  const { plans: allPlans, activePlans, refresh } = useGymData();
+  // plans.kind (migration 018): membership plans and day-pass packages are
+  // listed on separate tabs; Visitor Entry sells the day-pass ones.
+  const membershipPlans = allPlans.filter((plan) => plan.kind === 'membership');
+  const dayPassPlans = allPlans.filter((plan) => plan.kind === 'day_pass');
+  const plans = isDayPassTab ? dayPassPlans : membershipPlans;
+  const itemLabel = isDayPassTab ? 'package' : 'plan';
   const [showAddModal, setShowAddModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
@@ -32,12 +39,15 @@ export default function SubscriptionPlans() {
 
     const name = form.name.trim();
     const price = Number(form.price);
-    const durationDays = Number(form.durationDays);
+    // A day pass always lasts one day.
+    const durationDays = isDayPassTab ? 1 : Number(form.durationDays);
     const code = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
       || `plan-${Date.now()}`;
     if (!name || !Number.isFinite(price) || price <= 0
       || !Number.isInteger(durationDays) || durationDays <= 0) {
-      setError('Enter a plan name, a price greater than zero, and a valid duration in days.');
+      setError(isDayPassTab
+        ? 'Enter a package name and a price greater than zero.'
+        : 'Enter a plan name, a price greater than zero, and a valid duration in days.');
       setSubmitting(false);
       return;
     }
@@ -54,6 +64,7 @@ export default function SubscriptionPlans() {
           vat_percentage: 0,
           is_popular: false,
           status: 'Active',
+          kind: isDayPassTab ? 'day_pass' : 'membership',
         })
         .select('id')
         .single();
@@ -76,7 +87,9 @@ export default function SubscriptionPlans() {
       await refresh();
       setForm(EMPTY_FORM);
       setShowAddModal(false);
-      setNotice(`"${name}" was added to the subscription plans.`);
+      setNotice(isDayPassTab
+        ? `"${name}" was added to the day-pass packages.`
+        : `"${name}" was added to the subscription plans.`);
     } catch (saveError) {
       console.error('Could not add subscription plan:', saveError);
       setError(saveError.message || 'Could not add the plan. Please try again.');
@@ -85,13 +98,20 @@ export default function SubscriptionPlans() {
     }
   };
 
+  // Admission and renewal need at least one active membership plan; day-pass
+  // packages can all be removed (Visitor Entry then says there are none).
+  const isLastMembershipPlan = (plan) =>
+    plan.kind === 'membership' && plan.status === 'Active' && activePlans.length <= 1;
+
   const handleSetPlanStatus = async (plan, status) => {
-    if (status === 'Inactive' && activePlans.length <= 1) {
-      setError('At least one active plan must remain available.');
+    if (status === 'Inactive' && isLastMembershipPlan(plan)) {
+      setError('At least one active membership plan must remain available.');
       return;
     }
     if (status === 'Inactive' && !window.confirm(
-      `Remove "${plan.name}" from new membership selections? Existing member and invoice history will be kept.`
+      plan.kind === 'day_pass'
+        ? `Stop selling "${plan.name}"? Passes already sold will be kept.`
+        : `Remove "${plan.name}" from new membership selections? Existing member and invoice history will be kept.`
     )) return;
 
     setSavingPlanId(plan.id);
@@ -104,9 +124,11 @@ export default function SubscriptionPlans() {
         .eq('id', plan.id);
       if (updateError) throw updateError;
       await refresh();
-      setNotice(status === 'Inactive'
-        ? `"${plan.name}" was removed from new membership selections.`
-        : `"${plan.name}" is active again.`);
+      setNotice(status === 'Active'
+        ? `"${plan.name}" is active again.`
+        : plan.kind === 'day_pass'
+          ? `"${plan.name}" is no longer sold.`
+          : `"${plan.name}" was removed from new membership selections.`);
     } catch (saveError) {
       console.error('Could not update subscription plan status:', saveError);
       setError(saveError.message || 'Could not update the plan. Please try again.');
@@ -120,17 +142,15 @@ export default function SubscriptionPlans() {
       <div className="page-header">
         <div className="page-title-group">
           <h1 className="page-title">Subscription Plans & Package Catalog</h1>
-          <p className="page-subtitle">Membership tiers, duration terms, and one-day trial registration.</p>
+          <p className="page-subtitle">Membership plans and day-pass packages for visitors.</p>
         </div>
-        {currentTab === 'plans' && (
-          <button className="btn btn-primary" onClick={() => {
-            setForm(EMPTY_FORM);
-            setError('');
-            setShowAddModal(true);
-          }}>
-            <Plus size={16} /> ADD PLAN
-          </button>
-        )}
+        <button className="btn btn-primary" onClick={() => {
+          setForm(EMPTY_FORM);
+          setError('');
+          setShowAddModal(true);
+        }}>
+          <Plus size={16} /> {isDayPassTab ? 'ADD PACKAGE' : 'ADD PLAN'}
+        </button>
       </div>
 
       {/* Subtabs Bar */}
@@ -138,30 +158,36 @@ export default function SubscriptionPlans() {
         <button
           type="button"
           className={`subtab-btn ${currentTab === 'plans' ? 'active' : ''}`}
-          onClick={() => setSearchParams({ tab: 'plans' })}
+          onClick={() => { setNotice(''); setError(''); setSearchParams({ tab: 'plans' }); }}
           style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
         >
           <Award size={14} />
-          <span>Subscription Plans ({plans.length})</span>
+          <span>Membership Plans ({membershipPlans.length})</span>
         </button>
         <button
           type="button"
           className={`subtab-btn ${currentTab === 'trial' ? 'active' : ''}`}
-          onClick={() => setSearchParams({ tab: 'trial' })}
+          onClick={() => { setNotice(''); setError(''); setSearchParams({ tab: 'trial' }); }}
           style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
         >
-          <CalendarCheck size={14} />
-          <span>One-Day Trial Registration</span>
+          <Ticket size={14} />
+          <span>Day-Pass Packages ({dayPassPlans.length})</span>
         </button>
       </div>
 
-      {currentTab === 'trial' ? (
-        <OneDayTrialManagement />
-      ) : (
-        <>
-          {notice && <p role="status" style={{ color: 'var(--success, #10B981)' }}>{notice}</p>}
-          {error && !showAddModal && <p role="alert" style={{ color: 'var(--danger)' }}>{error}</p>}
+      {isDayPassTab && (
+        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: 0 }}>
+          Packages for one-day visitors. Staff sell them from Visitor Entry with the Sell Pass button.
+        </p>
+      )}
+      {notice && <p role="status" style={{ color: 'var(--success, #10B981)' }}>{notice}</p>}
+      {error && !showAddModal && <p role="alert" style={{ color: 'var(--danger)' }}>{error}</p>}
 
+      {plans.length === 0 ? (
+        <p style={{ fontSize: '13px', color: 'var(--text-muted)', padding: '24px 0' }}>
+          No {itemLabel}s yet. Use {isDayPassTab ? 'ADD PACKAGE' : 'ADD PLAN'} to create the first one.
+        </p>
+      ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
         {plans.map((plan) => (
           <div
@@ -215,28 +241,31 @@ export default function SubscriptionPlans() {
               type="button"
               className={plan.status === 'Active' ? 'btn btn-secondary' : 'btn btn-primary'}
               style={{ marginTop: 'auto', justifyContent: 'center' }}
-              disabled={savingPlanId === plan.id || (plan.status === 'Active' && activePlans.length <= 1)}
-              title={plan.status === 'Active' && activePlans.length <= 1 ? 'Keep at least one plan active' : undefined}
+              disabled={savingPlanId === plan.id || isLastMembershipPlan(plan)}
+              title={isLastMembershipPlan(plan) ? 'Keep at least one membership plan active' : undefined}
               onClick={() => handleSetPlanStatus(plan, plan.status === 'Active' ? 'Inactive' : 'Active')}
             >
-              {plan.status === 'Active' ? <><Trash2 size={14} /> REMOVE PLAN</> : <><RotateCcw size={14} /> RESTORE PLAN</>}
+              {plan.status === 'Active'
+                ? <><Trash2 size={14} /> REMOVE {itemLabel.toUpperCase()}</>
+                : <><RotateCcw size={14} /> RESTORE {itemLabel.toUpperCase()}</>}
             </button>
           </div>
         ))}
       </div>
-        </>
       )}
 
       <Modal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        title="Add Subscription Plan"
-        subtitle="New plans are immediately available for membership applications."
+        title={isDayPassTab ? 'Add Day-Pass Package' : 'Add Subscription Plan'}
+        subtitle={isDayPassTab
+          ? 'New packages can be sold from Visitor Entry right away.'
+          : 'New plans are immediately available for membership applications.'}
       >
         <form onSubmit={handleAddPlan} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {error && <p role="alert" style={{ color: 'var(--danger)', margin: 0 }}>{error}</p>}
           <div className="form-group">
-            <label className="form-label" htmlFor="plan-name">Plan Name *</label>
+            <label className="form-label" htmlFor="plan-name">{isDayPassTab ? 'Package Name *' : 'Plan Name *'}</label>
             <input
               id="plan-name"
               className="form-input"
@@ -245,7 +274,7 @@ export default function SubscriptionPlans() {
               required
             />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isDayPassTab ? '1fr' : '1fr 1fr', gap: 12 }}>
             <div className="form-group">
               <label className="form-label" htmlFor="plan-price">Price (৳) *</label>
               <input
@@ -259,7 +288,7 @@ export default function SubscriptionPlans() {
                 required
               />
             </div>
-            <div className="form-group">
+            {!isDayPassTab && <div className="form-group">
               <label className="form-label" htmlFor="plan-duration">Duration (days) *</label>
               <input
                 id="plan-duration"
@@ -271,7 +300,7 @@ export default function SubscriptionPlans() {
                 onChange={(event) => setForm({ ...form, durationDays: event.target.value })}
                 required
               />
-            </div>
+            </div>}
           </div>
           <div className="form-group">
             <label className="form-label" htmlFor="plan-features">Benefits (one per line, optional)</label>
@@ -281,7 +310,7 @@ export default function SubscriptionPlans() {
               rows="3"
               value={form.features}
               onChange={(event) => setForm({ ...form, features: event.target.value })}
-              placeholder="No Admission Fee"
+              placeholder={isDayPassTab ? 'Steam & sauna access' : 'No Admission Fee'}
             />
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
@@ -289,7 +318,7 @@ export default function SubscriptionPlans() {
               Cancel
             </button>
             <button type="submit" className="btn btn-primary" disabled={submitting}>
-              {submitting ? 'SAVING...' : 'ADD PLAN'}
+              {submitting ? 'SAVING...' : isDayPassTab ? 'ADD PACKAGE' : 'ADD PLAN'}
             </button>
           </div>
         </form>

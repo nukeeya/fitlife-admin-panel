@@ -140,8 +140,15 @@ export function GymDataProvider({ children }) {
     }
     return raw.plans.map((r) => mapPlan(r, features));
   }, [raw]);
+  // Membership screens (admission, approval, renewal) only offer membership
+  // plans; day-pass packages (plans.kind = 'day_pass', migration 018) are sold
+  // to visitors through sellDayPass.
   const activePlans = useMemo(
-    () => plans.filter((plan) => plan.status === 'Active'),
+    () => plans.filter((plan) => plan.status === 'Active' && plan.kind === 'membership'),
+    [plans]
+  );
+  const activeDayPassPlans = useMemo(
+    () => plans.filter((plan) => plan.status === 'Active' && plan.kind === 'day_pass'),
     [plans]
   );
 
@@ -223,6 +230,8 @@ export function GymDataProvider({ children }) {
     for (const d of raw.discounts || []) discountsById[d.id] = d;
     const staffNameById = {};
     for (const u of raw.users || []) staffNameById[u.id] = u.name;
+    const visitorsById = {};
+    for (const v of raw.visitors || []) visitorsById[v.id] = v;
     const paymentsByInvoice = new Map();
     for (const payment of raw.payments || []) {
       if (payment.invoice_id == null) continue;
@@ -244,6 +253,8 @@ export function GymDataProvider({ children }) {
 
     return raw.invoices.map((row) => {
       const m = membersById[row.member_id] || {};
+      // Day-pass invoices belong to a visitor instead of a member (migration 018).
+      const visitor = row.visitor_id ? visitorsById[row.visitor_id] || { id: row.visitor_id } : null;
       const plan = row.plan_id ? plansById[row.plan_id] : null;
       const disc = row.discount_id ? discountsById[row.discount_id] : null;
       const durationDays = Number(plan?.duration_days) || 30;
@@ -253,9 +264,15 @@ export function GymDataProvider({ children }) {
         id: row.id,
         number: row.invoice_number,
         memberId: row.member_id,
-        memberName: `${m.first_name || ''} ${m.last_name || ''}`.trim() || 'Member',
-        memberCode: m.member_code || `FLM-${String(row.member_id).padStart(4, '0')}`,
-        memberPhone: m.phone || '',
+        visitorId: row.visitor_id || null,
+        isDayPass: Boolean(visitor),
+        memberName: visitor
+          ? visitor.name || 'Visitor'
+          : `${m.first_name || ''} ${m.last_name || ''}`.trim() || 'Member',
+        memberCode: visitor
+          ? `VIS-${visitor.id}`
+          : m.member_code || `FLM-${String(row.member_id).padStart(4, '0')}`,
+        memberPhone: visitor ? visitor.phone || '' : m.phone || '',
         memberEmail: m.email || '',
         memberAvatar: profilePhotoUrls[m.avatar] || (m.avatar?.startsWith('http') ? m.avatar : null),
         planId: row.plan_id || null,
@@ -364,11 +381,25 @@ export function GymDataProvider({ children }) {
     if (!raw?.visitors) return [];
     const staffNameById = {};
     for (const u of raw.users || []) staffNameById[u.id] = u.name;
+    // The day pass sold for each visit, if any (sell_day_pass, migration 019).
+    const plansById = {};
+    for (const p of raw.plans || []) plansById[p.id] = p;
+    const dayPassByVisitor = {};
+    for (const inv of raw.invoices || []) {
+      if (!inv.visitor_id) continue;
+      dayPassByVisitor[inv.visitor_id] = {
+        invoiceNumber: inv.invoice_number,
+        plan: plansById[inv.plan_id]?.name || 'Day pass',
+        amount: Number(inv.paid_amount),
+        method: inv.payment_method,
+      };
+    }
     return raw.visitors.map((row) => {
       const visitor = mapVisitor(row);
       return {
         ...visitor,
         handledBy: visitor.handledById ? staffNameById[visitor.handledById] || 'Unknown staff' : '—',
+        dayPass: dayPassByVisitor[visitor.id] || null,
       };
     });
   }, [raw]);
@@ -895,6 +926,35 @@ export function GymDataProvider({ children }) {
     return { visitor: mapVisitor(result.data) };
   };
 
+  // --- sellDayPass: paid invoice + payment for a visitor ----------------------
+  // One database transaction (sell_day_pass RPC, migration 019). The database
+  // takes the price from the plan and refuses a second pass for the same
+  // visit, so nothing changes locally first: Finance, the Dashboard and the
+  // visitor list update from the reload. Returns { sale } or { error }.
+  const sellDayPass = async ({ visitorId, planId, paymentMethod = 'CASH', notes = null }) => {
+    if (!raw) return { error: new Error('Data is still loading. Try again in a moment.') };
+    if (!activeDayPassPlans.some((p) => p.id === Number(planId))) {
+      return { error: new Error('Select an active day-pass package.') };
+    }
+
+    const result = await commit({
+      persist: () => db.sellDayPass({ visitorId, planId, paymentMethod, notes }),
+      reloadAll: true,
+    });
+    if (result?.error) return { error: result.error };
+
+    const row = result.data;
+    return {
+      sale: {
+        invoiceId: row.invoice_id,
+        invoiceNumber: row.invoice_number,
+        plan: row.plan,
+        amount: Number(row.amount),
+        paymentMethod: row.payment_method,
+      },
+    };
+  };
+
   // --- SMS --------------------------------------------------------------------------------------
   const sendSMS = async ({ title, recipientType, message }) => {
     if (!raw) return false;
@@ -1318,6 +1378,7 @@ export function GymDataProvider({ children }) {
         pendingApprovals,
         plans,
         activePlans,
+        activeDayPassPlans,
         trainers,
         employees,
         invoices,
@@ -1341,6 +1402,7 @@ export function GymDataProvider({ children }) {
         visitors,
         addVisitor,
         updateVisitor,
+        sellDayPass,
         saveShopProduct,
         deleteShopProduct,
         fetchShopOrders,

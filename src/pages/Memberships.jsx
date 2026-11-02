@@ -20,7 +20,7 @@ export default function Memberships() {
           style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
         >
           <CalendarCheck size={16} />
-          One-Day Trial Registration
+          Day-Pass Packages
         </button>
       </div>
 
