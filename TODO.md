@@ -51,7 +51,7 @@
 
 ### Real defaults in forms
 - [ ] **Approval form**: first payment, due date and notes based on the chosen plan, not demo values
-  - [ ] Payment list: "Visa / Mastercard POS" sends `Bank Card`, which the database rejects; use `PAYMENT_METHODS` from `financeConfig.js` like the renewal form
+  - [x] Payment list: "Visa / Mastercard POS" sent `Bank Card`, which the database rejected; now uses `PAYMENT_METHODS` from `financeConfig.js` like the renewal form (4 Nov 2026)
 - [ ] **Reports export**: branch name from settings, not "Dhanmondi"
 
 ### Cleanup

@@ -13,6 +13,7 @@ import {
 import { useGymData } from '../context/GymDataContext';
 import { formatBDT, formatDatePretty } from '../utils/financeCalculators';
 import { todayStr, addDays } from '../lib/supabaseData';
+import { PAYMENT_METHODS } from '../data/financeConfig';
 import Modal from './common/Modal';
 import Avatar from './common/Avatar';
 
@@ -34,7 +35,8 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
   const [initialPayment, setInitialPayment] = useState('10000');
   const [dueDate, setDueDate] = useState('2026-10-25');
   const [startDate, setStartDate] = useState(todayStr());
-  const [paymentMethod, setPaymentMethod] = useState('bKash');
+  // Ids from PAYMENT_METHODS, the codes the database accepts (CASH, bKASH, CARD...).
+  const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [notes, setNotes] = useState('First installment paid on approval. Balance due by 25 Oct 2026.');
   const [validationError, setValidationError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
@@ -76,7 +78,7 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
       setInitialPayment('10000');
       setDueDate('2026-10-25');
       setStartDate(todayStr());
-      setPaymentMethod('bKash');
+      setPaymentMethod('CASH');
       setNotes('First installment paid on approval. Balance due on 25 Oct 2026.');
       setValidationError('');
       setIsSuccess(false);
@@ -375,11 +377,9 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value)}
               >
-                <option value="bKash">bKash Merchant Payment</option>
-                <option value="Cash">Cash at Reception Desk</option>
-                <option value="Nagad">Nagad Digital Wallet</option>
-                <option value="Rocket">Rocket (DBBL)</option>
-                <option value="Bank Card">Visa / Mastercard POS</option>
+                {PAYMENT_METHODS.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
               </select>
             </div>
           </div>
