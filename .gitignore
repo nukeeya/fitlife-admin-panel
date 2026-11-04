@@ -34,3 +34,6 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Device probe log (holds member user numbers and scan times)
+tools/device-probe/probe-log.jsonl

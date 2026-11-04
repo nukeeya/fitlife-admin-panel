@@ -9,7 +9,13 @@
 
 ## Now
 
-- [ ] **Reports export**: branch name from settings, not "Dhanmondi"
+- [ ] **ZKTeco SenseFace 3A** (face + fingerprint, door lock, AC push / ADMS mode): scans reach the database
+  - [x] Device probe `tools/device-probe/` to see what the machine sends (5 Nov 2026)
+  - [ ] At the gym: run the probe; photos of System Info and Cloud Server Setting; collect `probe-log.jsonl`
+  - [ ] Migration `021`: `devices`, `members.device_user_id`, `device_punches` (raw, no duplicates), scans → `attendance`; attendance date/time defaults in Dhaka time (now UTC)
+  - [ ] Receiver: Supabase Edge Function, plus a relay for the fixed `/iclock/...` paths (Vercel rewrite if HTTPS works, else a Cloudflare Worker); only registered serial numbers accepted
+  - [ ] App: real Devices page; Device user ID on members; replace the simulated `RemoteEnrollModal`
+  - Fingerprints and faces are enrolled on the machine and stay there; the database only links device user number → member
 
 ---
 
@@ -81,7 +87,7 @@
 
 - [ ] **Rebuild locker management** (removed from the app on 29 Oct 2026 because it was faulty). The database still has `lockers`, `locker_assignments`, `members.locker_id` and the `p_locker_id` parameter of `create_member_with_invoice()`; the old screens are in git history before this commit. Include: assign at admission, extend on renewal, release on expiry
 - [ ] **Public job apply form**: candidates apply themselves (e.g. on the admission-form site); needs an anonymous-insert rule on `job_applications` and spam protection. For now staff enter applicants (4 Nov 2026)
-- [ ] **ZKTeco biometric integration**: first get the device model from Menu → System Info; then connect the Devices page to a `devices` table. Decide then how a member links to the device (RFID card number, device user ID) and add that column to `members`
+- [ ] **Block expired members at the door**: sync membership start/expiry to the SenseFace user's StartTime/EndTime (AC push commands); add members to the machine from the app
 - [ ] "Upcoming" status for members whose start date is in the future
 - [ ] Ask for confirmation before deleting a device
 - [ ] Split the large JavaScript bundle
