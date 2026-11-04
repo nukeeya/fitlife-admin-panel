@@ -348,6 +348,50 @@ export function mapJob(row, appsByJobId = {}) {
   };
 }
 
+// Only the fields that were passed, so a status change never blanks out the rest.
+// posted_date is left to the database default (today in Dhaka, migration 020).
+function jobToRow({ title, department, type, salary, vacancies, description, status }) {
+  const row = {};
+  if (title !== undefined) row.job_title = String(title).trim();
+  if (department !== undefined) row.department = department;
+  if (type !== undefined) row.job_type = type;
+  if (salary !== undefined) row.salary_range = String(salary || '').trim() || null;
+  if (vacancies !== undefined) row.vacancies = Math.max(Number(vacancies) || 1, 1);
+  if (description !== undefined) row.description = String(description || '').trim() || null;
+  if (status !== undefined) row.status = status;
+  return row;
+}
+
+// Applicant entered by staff (migration 020). The job title is added in the context.
+export function mapJobApplication(row) {
+  return {
+    id: row.id,
+    jobId: row.job_id,
+    name: row.candidate_name,
+    phone: row.candidate_phone,
+    email: row.candidate_email || '',
+    experienceYears: row.experience_years == null ? null : Number(row.experience_years),
+    status: row.status,
+    notes: row.notes || '',
+    appliedDate: toDhakaDate(row.applied_at),
+  };
+}
+
+// Only the fields that were passed, same as jobToRow.
+function jobApplicationToRow({ jobId, name, phone, email, experienceYears, status, notes }) {
+  const row = {};
+  if (jobId !== undefined) row.job_id = Number(jobId);
+  if (name !== undefined) row.candidate_name = String(name).trim();
+  if (phone !== undefined) row.candidate_phone = String(phone).trim();
+  if (email !== undefined) row.candidate_email = String(email || '').trim() || null;
+  if (experienceYears !== undefined) {
+    row.experience_years = experienceYears === '' || experienceYears == null ? null : Number(experienceYears);
+  }
+  if (status !== undefined) row.status = status;
+  if (notes !== undefined) row.notes = String(notes || '').trim() || null;
+  return row;
+}
+
 export function mapDietPlan(row) {
   if (!row) return null;
   const payload = row.meals_json || {};
@@ -484,7 +528,7 @@ export async function fetchAllData() {
     // Explicit columns: api_key is not readable by the browser role (migration 011).
     smsSettings: () => supabase.from('sms_settings').select(SMS_SETTINGS_COLUMNS).limit(1),
     jobs: () => supabase.from('job_postings').select('*').order('id', { ascending: false }),
-    jobApplications: () => supabase.from('job_applications').select('job_id'),
+    jobApplications: () => supabase.from('job_applications').select('*').order('applied_at', { ascending: false }),
     dietPlans: () => supabase.from('ai_diet_plans').select('*').order('id', { ascending: false }),
     workoutPlans: () => supabase.from('ai_workout_plans').select('*').order('id', { ascending: false }),
     shopProducts: () => supabase.from('shop_products').select('*').order('id', { ascending: false }),
@@ -754,6 +798,31 @@ export const db = {
   async decrementSmsBalance(settingsId, by, current) {
     const next = Math.max(Number(current) - Number(by), 0);
     return supabase.from('sms_settings').update({ remaining_balance: next }).eq('id', settingsId).select(SMS_SETTINGS_COLUMNS).single();
+  },
+
+  // Recruitment (migration 020) ---------------------------------------------------------
+  insertJob(fields) {
+    return supabase.from('job_postings').insert(jobToRow({ status: 'Open', ...fields })).select('*').single();
+  },
+
+  updateJob(id, fields) {
+    return supabase.from('job_postings').update(jobToRow(fields)).eq('id', id).select('*').single();
+  },
+
+  insertJobApplication(fields) {
+    return supabase
+      .from('job_applications')
+      .insert(jobApplicationToRow({ status: 'Applied', ...fields }))
+      .select('*')
+      .single();
+  },
+
+  updateJobApplication(id, fields) {
+    return supabase.from('job_applications').update(jobApplicationToRow(fields)).eq('id', id).select('*').single();
+  },
+
+  deleteJobApplication(id) {
+    return supabase.from('job_applications').delete().eq('id', id);
   },
 
   // Roles ------------------------------------------------------------------------------

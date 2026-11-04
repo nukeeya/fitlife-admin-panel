@@ -20,6 +20,7 @@ import {
   mapPeriodAdjustment,
   mapSmsCampaign,
   mapJob,
+  mapJobApplication,
   mapDietPlan,
   mapWorkoutPlan,
   mapProgressLog,
@@ -372,6 +373,17 @@ export function GymDataProvider({ children }) {
     const counts = {};
     for (const a of raw.jobApplications || []) counts[a.job_id] = (counts[a.job_id] || 0) + 1;
     return raw.jobs.map((r) => mapJob(r, counts));
+  }, [raw]);
+
+  // Applicants entered by staff (migration 020), newest first, with the job title.
+  const jobApplications = useMemo(() => {
+    if (!raw?.jobApplications) return [];
+    const titleByJobId = {};
+    for (const j of raw.jobs || []) titleByJobId[j.id] = j.job_title;
+    return raw.jobApplications.map((row) => {
+      const applicant = mapJobApplication(row);
+      return { ...applicant, jobTitle: titleByJobId[applicant.jobId] || 'Removed job' };
+    });
   }, [raw]);
 
   const dietPlans = useMemo(() => (raw?.dietPlans ? raw.dietPlans.map(mapDietPlan) : []), [raw]);
@@ -927,6 +939,56 @@ export function GymDataProvider({ children }) {
     return { visitor: mapVisitor(result.data) };
   };
 
+  // --- Recruitment (migration 020) ------------------------------------------------------------
+  // Nothing is shown before the save. On success the saved row replaces (or is
+  // added to) the local copy, so only these two lists re-render instead of the
+  // whole app reloading. On failure commit() reloads everything.
+  // Each returns { job } / { applicant } / {} on success, or { error }.
+  const putRawRow = (key, row) =>
+    setRaw((prev) => {
+      if (!prev) return prev;
+      const rows = prev[key] || [];
+      const exists = rows.some((r) => r.id === row.id);
+      return { ...prev, [key]: exists ? rows.map((r) => (r.id === row.id ? row : r)) : [row, ...rows] };
+    });
+
+  const addJob = async (fields) => {
+    const result = await commit({ persist: () => db.insertJob(fields) });
+    if (result?.error) return { error: result.error };
+    putRawRow('jobs', result.data);
+    return { job: mapJob(result.data) };
+  };
+
+  const updateJob = async (id, fields) => {
+    const result = await commit({ persist: () => db.updateJob(id, fields) });
+    if (result?.error) return { error: result.error };
+    putRawRow('jobs', result.data);
+    return { job: mapJob(result.data) };
+  };
+
+  const addJobApplication = async (fields) => {
+    const result = await commit({ persist: () => db.insertJobApplication(fields) });
+    if (result?.error) return { error: result.error };
+    putRawRow('jobApplications', result.data);
+    return { applicant: mapJobApplication(result.data) };
+  };
+
+  const updateJobApplication = async (id, fields) => {
+    const result = await commit({ persist: () => db.updateJobApplication(id, fields) });
+    if (result?.error) return { error: result.error };
+    putRawRow('jobApplications', result.data);
+    return { applicant: mapJobApplication(result.data) };
+  };
+
+  const deleteJobApplication = async (id) => {
+    const result = await commit({ persist: () => db.deleteJobApplication(id) });
+    if (result?.error) return { error: result.error };
+    setRaw((prev) =>
+      prev ? { ...prev, jobApplications: (prev.jobApplications || []).filter((a) => a.id !== id) } : prev
+    );
+    return {};
+  };
+
   // --- sellDayPass: paid invoice + payment for a visitor ----------------------
   // One database transaction (sell_day_pass RPC, migration 019). The database
   // takes the price from the plan and refuses a second pass for the same
@@ -1389,6 +1451,12 @@ export function GymDataProvider({ children }) {
         smsCampaigns,
         smsBalance,
         jobs,
+        addJob,
+        updateJob,
+        jobApplications,
+        addJobApplication,
+        updateJobApplication,
+        deleteJobApplication,
         dietPlans,
         saveDietPlan,
         deleteDietPlan,

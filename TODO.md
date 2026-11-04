@@ -9,10 +9,7 @@
 
 ## Now
 
-- [x] **Check the database foundation** (backups moved to Deploy & handover: they need Supabase Pro)
-  - [x] Migration `013` (membership start date) run and verified (26 Oct 2026)
-  - [x] Confirm migrations `001`–`012` have all been run on the Supabase project (28 Oct 2026)
-  - [x] Merge branch `portal-updates` into `main` and deploy (26 Oct 2026)
+- [ ] **Approval form**: first payment, due date and notes based on the chosen plan, not demo values
 
 ---
 
@@ -40,7 +37,7 @@
 - [x] **Visitor Entry**: new `visitors` table (migration `017`); dates default to today; handled-by set by the database (30 Oct 2026)
 - [x] **Day passes / trials**: migrations `018` (invoices/payments can belong to a visitor, `plans.kind`) and `019` (`sell_day_pass()`); Sell Pass on Visitor Entry; Day-Pass Packages tab under Subscription Plans replaces the demo One-Day Trial tab (2 Nov 2026)
   - [ ] Edit a plan's or package's price (today: add a new one and remove the old)
-- [ ] **Job applicants**: use the existing `job_applications` table
+- [x] **Job applicants**: staff add applicants (phone / walk-in / social media) to `job_applications`; migration `020` (notes, 'Shortlisted' stage, email optional); Post Vacancy saves; demo candidates removed (4 Nov 2026)
 - [ ] **WhatsApp Business messaging (replaces SMS)**: the client connects their WhatsApp Business account and sends promotions, info and reminders (expiry, dues)
   - Official WhatsApp Business Platform (Cloud API) only; unofficial WhatsApp Web tools risk a number ban
   - Client needs: Meta Business account (ideally verified), WhatsApp Business account, phone number on the API, payment method on Meta (charged per message; check the current Bangladesh rates first)
@@ -83,6 +80,7 @@
 ## Later (not needed for delivery)
 
 - [ ] **Rebuild locker management** (removed from the app on 29 Oct 2026 because it was faulty). The database still has `lockers`, `locker_assignments`, `members.locker_id` and the `p_locker_id` parameter of `create_member_with_invoice()`; the old screens are in git history before this commit. Include: assign at admission, extend on renewal, release on expiry
+- [ ] **Public job apply form**: candidates apply themselves (e.g. on the admission-form site); needs an anonymous-insert rule on `job_applications` and spam protection. For now staff enter applicants (4 Nov 2026)
 - [ ] **ZKTeco biometric integration**: first get the device model from Menu → System Info; then connect the Devices page to a `devices` table. Decide then how a member links to the device (RFID card number, device user ID) and add that column to `members`
 - [ ] "Upcoming" status for members whose start date is in the future
 - [ ] Ask for confirmation before deleting a device
