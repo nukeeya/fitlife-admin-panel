@@ -17,6 +17,27 @@ export function todayStr() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+const dhakaDateFormat = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Dhaka',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+/**
+ * Calendar date (YYYY-MM-DD) of a timestamp in Dhaka time.
+ * Supabase returns timestamptz in UTC ('2026-11-03T20:30:00+00:00'), so slicing
+ * the string would put a payment made at 02:30 in Dhaka on the previous day.
+ * Plain 'YYYY-MM-DD' values are returned unchanged.
+ */
+export function toDhakaDate(value) {
+  if (!value) return '';
+  const s = String(value);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? s.slice(0, 10) : dhakaDateFormat.format(d);
+}
+
 export function addDays(dateStr, days) {
   const d = dateStr ? new Date(`${dateStr}T00:00:00`) : new Date();
   d.setDate(d.getDate() + days);

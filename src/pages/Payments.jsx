@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Plus, Search, CheckCircle2, CreditCard, DollarSign, Calendar, Tag } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
 import { supabase } from '../lib/supabase';
+import { toDhakaDate } from '../lib/supabaseData';
 import Modal from '../components/common/Modal';
 
 export default function Payments() {
@@ -48,7 +49,7 @@ export default function Payments() {
           method: p.method,
           status: p.status,
           trxId: p.transaction_reference,
-          date: (p.payment_date || '').slice(0, 10),
+          date: toDhakaDate(p.payment_date),
         }))
       );
     }

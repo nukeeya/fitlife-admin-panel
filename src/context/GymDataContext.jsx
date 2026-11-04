@@ -4,6 +4,7 @@ import {
   db,
   fetchAllData,
   todayStr,
+  toDhakaDate,
   addDays,
   nowDisplayTime,
   toDisplayTime,
@@ -244,7 +245,7 @@ export function GymDataProvider({ children }) {
         method: payment.method || '—',
         methodId: payment.method || null,
         reference: payment.transaction_reference || '',
-        date: String(payment.payment_date || '').slice(0, 10),
+        date: toDhakaDate(payment.payment_date),
         // Staff who took the payment (set by the payment RPCs); null for imported rows.
         collectedBy: payment.collected_by ? staffNameById[payment.collected_by] || 'Unknown staff' : null,
       });

@@ -25,7 +25,7 @@
   - [x] Emergency relationship and medical conditions: migration `016` adds them to members, approval copies them from the application, editable on the profile; RFID removed from the Profile tab (30 Oct 2026)
   - [x] "Collected By" on payments: show the staff name (`payments.collected_by` → `users.name`) (30 Oct 2026)
 - [x] **Monthly revenue split**: paid amounts only, one equal part per membership month, VAT excluded; migration `014` (`invoices.service_start`) run and checked with test data (29 Oct 2026)
-  - [ ] Payment dates: use Dhaka time, not UTC (a payment between 00:00 and 06:00 lands on the previous day, and on the 1st in the previous month)
+  - [x] Payment dates: use Dhaka time, not UTC (`toDhakaDate()`; a payment between 00:00 and 06:00 landed on the previous day) (4 Nov 2026)
 - [x] **Empty tables** (Members, Trainers, Employees): show an empty list with "Add your first…", not demo records (29 Oct 2026)
 - [x] **Failed loads**: show an error with a Retry button instead of demo data, on Members, Trainers and Employees (`DataState`, `loadErrors`) (29 Oct 2026)
   - [ ] Use `DataState` on the other list pages too (Attendance, Finance, Applications, Diet/Workout plans…)
