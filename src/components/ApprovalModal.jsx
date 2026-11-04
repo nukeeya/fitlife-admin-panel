@@ -27,17 +27,18 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
     approveApplication,
   } = useGymData();
 
-  const [planId, setPlanId] = useState(application?.desiredPlanId || activePlans[0]?.id || 1);
+  const [planId, setPlanId] = useState(application?.desiredPlanId || activePlans[0]?.id || '');
   const [discountType, setDiscountType] = useState('flat');
   const [discountValue, setDiscountValue] = useState(0);
-  const [discountReason, setDiscountReason] = useState('Online Application Early Bird Promo');
-  const [paymentOption, setPaymentOption] = useState('partial'); // 'full' | 'partial'
-  const [initialPayment, setInitialPayment] = useState('10000');
-  const [dueDate, setDueDate] = useState('2026-10-25');
+  const [discountReason, setDiscountReason] = useState('');
+  // Full payment by default; staff switch to partial when the member pays part now.
+  const [paymentOption, setPaymentOption] = useState('full'); // 'full' | 'partial'
+  const [initialPayment, setInitialPayment] = useState('');
+  const [dueDate, setDueDate] = useState('');
   const [startDate, setStartDate] = useState(todayStr());
   // Ids from PAYMENT_METHODS, the codes the database accepts (CASH, bKASH, CARD...).
   const [paymentMethod, setPaymentMethod] = useState('CASH');
-  const [notes, setNotes] = useState('First installment paid on approval. Balance due by 25 Oct 2026.');
+  const [notes, setNotes] = useState('');
   const [validationError, setValidationError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [successDetails, setSuccessDetails] = useState(null);
@@ -46,7 +47,7 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
   const hasApplication = Boolean(application);
 
   const selectedPlan = useMemo(() => {
-    return activePlans.find((p) => p.id === Number(planId)) || activePlans[0] || { price: 15000, name: '3 Months' };
+    return activePlans.find((p) => p.id === Number(planId)) || activePlans[0] || null;
   }, [activePlans, planId]);
 
   const hasDiscountPrivilege = canRoleApplyDiscount();
@@ -55,7 +56,7 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
 
   const pricing = useMemo(() => {
     return calculatePricing({
-      basePrice: selectedPlan?.price || 15000,
+      basePrice: selectedPlan?.price || 0,
       discountType,
       discountValue: hasDiscountPrivilege ? discountValue : 0,
       vatPercent: 0,
@@ -66,20 +67,20 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
   useEffect(() => {
     if (hasApplication && isOpen) {
       const requestedPlanIsActive = activePlans.some((plan) => plan.id === desiredPlanId);
-      const planToSet = requestedPlanIsActive ? desiredPlanId : (activePlans[1]?.id || activePlans[0]?.id || 2);
+      // The plan the applicant chose; if it is no longer active, the first active plan.
+      const planToSet = requestedPlanIsActive ? desiredPlanId : activePlans[0]?.id || '';
       setPlanId(planToSet);
 
-      // Default mock scenario from requirement prompt:
-      // Package: ৳15,000, Initial: ৳10,000, Due: ৳5,000, Due date: 25 Oct 2026
+      // Start clean: no discount, paid in full, nothing due.
       setDiscountType('flat');
       setDiscountValue(0);
-      setDiscountReason('Online Application Early Bird Promo');
-      setPaymentOption('partial');
-      setInitialPayment('10000');
-      setDueDate('2026-10-25');
+      setDiscountReason('');
+      setPaymentOption('full');
+      setInitialPayment('');
+      setDueDate('');
       setStartDate(todayStr());
       setPaymentMethod('CASH');
-      setNotes('First installment paid on approval. Balance due on 25 Oct 2026.');
+      setNotes('');
       setValidationError('');
       setIsSuccess(false);
       setSuccessDetails(null);
@@ -107,14 +108,8 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
   const handlePaymentOptionChange = (option) => {
     setPaymentOption(option);
     setValidationError('');
-    if (option === 'full') {
-      setInitialPayment(String(pricing.netPayable));
-    } else {
-      // Default partial scenario
-      const partialDefault = Math.round(pricing.netPayable * 0.65);
-      setInitialPayment(String(partialDefault > 0 ? partialDefault : 10000));
-      if (!dueDate) setDueDate('2026-10-25');
-    }
+    // Partial: staff type what the member pays now and agree a due date with them.
+    setInitialPayment(option === 'full' ? String(pricing.netPayable) : '');
   };
 
   const handleApprove = async (e) => {
@@ -122,6 +117,10 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
     setValidationError('');
 
     // Form Validation
+    if (!selectedPlan) {
+      setValidationError('There is no active plan. Add one under Subscription Plans first.');
+      return;
+    }
     const payNum = Number(calculatedInitialPay);
     if (Number.isNaN(payNum) || payNum < 0) {
       setValidationError('Initial payment cannot be negative or invalid.');
@@ -143,6 +142,10 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
       setValidationError('Due clearance date is mandatory when an outstanding balance remains.');
       return;
     }
+    if (outstandingDue > 0 && dueDate < todayStr()) {
+      setValidationError('The due clearance date cannot be in the past.');
+      return;
+    }
 
     try {
       // The approval RPC creates the member, invoice and first payment together.
@@ -155,7 +158,8 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
         paymentMethod,
         paidAmount: payNum,
         dueDate: outstandingDue > 0 ? dueDate : null,
-        notes,
+        // The note is the agreement about the remaining due, so only sent when something is due.
+        notes: outstandingDue > 0 ? notes.trim() || null : null,
         startDate,
       });
 
@@ -501,7 +505,7 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Total Package Price ({selectedPlan.name}):</span>
+              <span>Total Package Price ({selectedPlan?.name || 'no plan'}):</span>
               <strong>{formatBDT(pricing.basePrice)}</strong>
             </div>
             {pricing.discountAmount > 0 && (
@@ -587,11 +591,11 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
                 value={paymentOption === 'full' ? pricing.netPayable : initialPayment}
                 onChange={(e) => setInitialPayment(e.target.value)}
                 disabled={paymentOption === 'full'}
-                placeholder="e.g. 10000"
+                placeholder="Amount paid now"
                 required
               />
               <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                {paymentOption === 'partial' ? 'Example mock scenario: ৳10,000 paid on admission' : 'Full settlement received'}
+                {paymentOption === 'partial' ? 'What the member pays today; can be ৳0' : 'Full settlement received'}
               </span>
             </div>
 
@@ -650,11 +654,12 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
                     type="date"
                     className="form-input"
                     value={dueDate}
+                    min={todayStr()}
                     onChange={(e) => setDueDate(e.target.value)}
                     required
                   />
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                    Example mock due date: <strong>25 October 2026</strong>
+                    The date the member agreed to pay the rest
                   </span>
                 </div>
 
@@ -667,7 +672,7 @@ export default function ApprovalModal({ application, isOpen, onClose }) {
                     className="form-input"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="e.g. Member committed to pay remaining ৳5,000 on 25th"
+                    placeholder="e.g. Will pay the rest by bKash after salary"
                   />
                 </div>
               </div>

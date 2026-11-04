@@ -9,7 +9,7 @@
 
 ## Now
 
-- [ ] **Approval form**: first payment, due date and notes based on the chosen plan, not demo values
+- [ ] **Reports export**: branch name from settings, not "Dhanmondi"
 
 ---
 
@@ -47,13 +47,13 @@
   - Rebuild the SMS Management page as WhatsApp (templates, campaigns, message log); check whether `sms_campaigns` can be reused
 
 ### Real defaults in forms
-- [ ] **Approval form**: first payment, due date and notes based on the chosen plan, not demo values
+- [x] **Approval form**: starts on full payment at the plan's price; partial keeps an empty amount and a required due date (not in the past); the agreement note is only saved when something is due; no demo plan fallback (5 Nov 2026)
   - [x] Payment list: "Visa / Mastercard POS" sent `Bank Card`, which the database rejected; now uses `PAYMENT_METHODS` from `financeConfig.js` like the renewal form (4 Nov 2026)
 - [ ] **Reports export**: branch name from settings, not "Dhanmondi"
 
 ### Cleanup
 - [ ] Delete the unused `src/pages/Admissions.jsx`
-- [ ] Remove leftover "mock" / "demo" text (Approval form, Financial Reports, Monthly Closing "Demo Adjustment")
+- [ ] Remove leftover "mock" / "demo" text (Financial Reports, Monthly Closing "Demo Adjustment")
 - [ ] Decide: keep or remove the Revenue Simulator
 - [ ] Fix the lint warnings
 
