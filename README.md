@@ -38,17 +38,29 @@ client bundle — keep Supabase RLS enabled and never put a service-role key her
 
 `.env` is gitignored. Never commit real keys.
 
-## Deploying to Vercel
+## Deploying to Cloudflare Pages
 
-1. Push this repo to GitHub.
-2. In Vercel: **Add New → Project → import the repo**. The Vite framework
-   preset is auto-detected — defaults are correct:
-   - Build command: `npm run build`
-   - Output directory: `dist`
-3. Under **Settings → Environment Variables**, add `VITE_SUPABASE_URL` and
-   `VITE_SUPABASE_PUBLISHABLE_KEY` (Production + Preview).
-4. Deploy. `vercel.json` already contains the SPA rewrite so client-side
-   routes deep-link correctly.
+Two Pages projects, both connected to this GitHub repo; every push to `main`
+deploys both.
+
+| | Admin portal | Admission form |
+| --- | --- | --- |
+| Root directory | *(empty)* | `admission-form` |
+| Framework preset | React (Vite) | React (Vite) |
+| Build command | `npm run build` | `npm run build` |
+| Output directory | `dist` | `dist` |
+
+1. Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git**,
+   pick the repo, fill in the table above.
+2. **Environment variables** (Production and Preview): `VITE_SUPABASE_URL` and
+   `VITE_SUPABASE_PUBLISHABLE_KEY`. They are built into the bundle, so a change
+   needs a new deploy.
+3. Node version comes from `.node-version` (22).
+4. Client-side routes need no config: without a `404.html`, Pages serves
+   `index.html` for unknown paths.
+5. Supabase → Authentication → URL Configuration: set the Site URL to the admin
+   portal's address and add `https://<admin-address>/reset-password` to the
+   Redirect URLs.
 
 ## Scripts
 

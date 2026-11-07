@@ -21,7 +21,7 @@ Other notable root items:
 - `database/migrations/` — additive, non-destructive migrations run *after* `schema.sql` (e.g. `001_shop_products.sql` creates + seeds the `shop_products` table used by the `/coffee-shop` page).
 - `scratch/verify_fitness_engine.mjs` — a standalone script to sanity-check the fitness calculation engine.
 - `BACKEND_ARCHITECTURE.md` — a spec of the *intended* REST API / discount engine / RBAC model (aspirational blueprint, not the current code).
-- `vercel.json` — SPA rewrite for client-side routing on Vercel.
+- Hosting: Cloudflare Pages (see README). `vercel.json` files are left over from Vercel and go once the move is done.
 
 ---
 

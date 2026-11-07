@@ -13,7 +13,7 @@
   - [x] Device probe `tools/device-probe/` to see what the machine sends (5 Nov 2026)
   - [ ] At the gym: run the probe; photos of System Info and Cloud Server Setting; collect `probe-log.jsonl`
   - [ ] Migration `022`: `devices`, `members.device_user_id`, `device_punches` (raw, no duplicates), scans → `attendance`; attendance date/time defaults in Dhaka time (now UTC)
-  - [ ] Receiver: Supabase Edge Function, plus a relay for the fixed `/iclock/...` paths (Vercel rewrite if HTTPS works, else a Cloudflare Worker); only registered serial numbers accepted
+  - [ ] Receiver: Supabase Edge Function, plus a relay for the fixed `/iclock/...` paths (Pages Function if the device can use HTTPS; plain HTTP needs a custom domain with "Always Use HTTPS" off); only registered serial numbers accepted
   - [ ] App: real Devices page; Device user ID on members; replace the simulated `RemoteEnrollModal`
   - Fingerprints and faces are enrolled on the machine and stay there; the database only links device user number → member
 
@@ -76,7 +76,11 @@
 - [ ] Phone, tablet and desktop; light and dark mode
 
 ### Deploy & handover
-- [ ] Vercel environment variables for the admin portal and the admission form
+- [ ] **Move hosting to Cloudflare Pages** (Vercel Hobby is not for commercial use)
+  - [x] Repo ready: `.node-version`, README deploy steps (7 Nov 2026)
+  - [ ] Pages projects for the admin portal and the admission form, with environment variables
+  - [ ] Supabase Auth Site URL and redirect URLs set to the new address; test login and password reset
+  - [ ] Check the full flow on the new addresses, then delete the Vercel projects and `vercel.json` files
 - [ ] Supabase Auth redirect URLs set to the live domain
 - [ ] **Custom email sending (SMTP)** for password-reset emails, e.g. a free Resend account; Supabase's built-in sender only allows a few emails per hour
 - [ ] Buy Supabase Pro **before the client enters real data**, then confirm daily backups appear under Database → Backups

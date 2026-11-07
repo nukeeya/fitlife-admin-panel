@@ -11,7 +11,7 @@ function ConfigError() {
       <h2>Configuration error</h2>
       <p>
         VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY are not set. Add them to <code>.env</code> for
-        local development, or to the Vercel project&apos;s Environment Variables, then rebuild.
+        local development, or to the Cloudflare Pages project&apos;s environment variables, then rebuild.
       </p>
     </div>
   )
