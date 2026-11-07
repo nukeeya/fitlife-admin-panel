@@ -81,10 +81,10 @@ export default function Login() {
             {renderBrandIcon()}
             <h1 className="login-brand">{branding?.gymName || 'FITLIFE'}</h1>
             <p className="login-tagline" style={{ whiteSpace: 'pre-line' }}>
-              {branding?.heroTagline || 'TRAIN HARD.\nLIVE STRONG.'}
+              {'TRAIN HARD.\nLIVE STRONG.'}
             </p>
             <p className="login-sub" style={{ whiteSpace: 'pre-line' }}>
-              {branding?.heroSub || 'YOUR FITNESS.\nYOUR JOURNEY.'}
+              {'YOUR FITNESS.\nYOUR JOURNEY.'}
             </p>
           </div>
         </div>

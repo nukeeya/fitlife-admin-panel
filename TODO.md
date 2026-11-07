@@ -71,13 +71,14 @@
 - [ ] Full flow: admission form → approve → payment → check-in; reload and confirm everything is saved
 - [ ] Log in as each role (Super Admin, Branch Manager, Receptionist, Trainer, Accountant); test accounts `*@fitlife.test` created (7 Nov 2026)
   - [x] Refused updates/deletes showed "removed"/"saved": `requireChanged()` now treats 0 changed rows as refused (7 Nov 2026)
-  - [ ] Role toggles (System Management) and branding fail without a message
+  - [x] Role toggles and branding failed without a message; System Management slimmed to **Settings** (Super Admin only: gym details + role switches incl. Handle Payments) (8 Nov 2026)
+  - [x] Branch Manager and Accountant tested (8 Nov 2026)
   - [ ] Decide with the client what Trainers may do (today the same as Receptionist: members, payments, coaches)
 - [ ] Phone, tablet and desktop; light and dark mode
 
 ### Deploy & handover
 - [x] **Hosting moved to Cloudflare Workers** (Vercel Hobby is not for commercial use): both apps deploy on push; Supabase redirect URLs, login, password reset and admission → approval checked; `vercel.json` removed (7 Nov 2026)
-  - [ ] Delete the Vercel projects; remove the Vercel entries from Supabase Redirect URLs
+  - [x] Vercel projects deleted; Vercel entries removed from Supabase Redirect URLs (7 Nov 2026)
 - [ ] Supabase Auth redirect URLs set to the live domain
 - [ ] **Custom email sending (SMTP)** for password-reset emails, e.g. a free Resend account; Supabase's built-in sender only allows a few emails per hour
 - [ ] Buy Supabase Pro **before the client enters real data**, then confirm daily backups appear under Database → Backups

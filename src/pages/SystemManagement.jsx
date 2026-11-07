@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
 
+
 export default function SystemManagement() {
   const {
     roles,
@@ -23,14 +24,13 @@ export default function SystemManagement() {
     updateBranding,
     resetBranding,
   } = useGymData();
+  const [saveError, setSaveError] = useState('');
 
   const [activeTab, setActiveTab] = useState('branding'); // default to branding so user can see it right away!
   const [gymName, setGymName] = useState(branding?.gymName || 'FitLife');
   const [tagline, setTagline] = useState(branding?.tagline || 'ENTERPRISE GYM');
   const [logoUrl, setLogoUrl] = useState(branding?.logoUrl || '');
   const [logoIcon, setLogoIcon] = useState(branding?.logoIcon || 'Flame');
-  const [heroTagline, setHeroTagline] = useState(branding?.heroTagline || 'TRAIN HARD.\nLIVE STRONG.');
-  const [heroSub, setHeroSub] = useState(branding?.heroSub || 'YOUR FITNESS.\nYOUR JOURNEY.');
   const [phone, setPhone] = useState(branding?.phone || '+880 1711-223344');
   const [email, setEmail] = useState(branding?.email || 'contact@fitlife.com');
   const [address, setAddress] = useState(branding?.address || 'Plot 42, Gulshan Avenue, Dhaka, Bangladesh');
@@ -57,32 +57,44 @@ export default function SystemManagement() {
     }
   };
 
-  const handleSaveBranding = (e) => {
+  const handleSaveBranding = async (e) => {
     e.preventDefault();
-    updateBranding({
+    setSaveError('');
+    const { error } = await updateBranding({
       gymName: gymName.trim() || 'FitLife',
       tagline: tagline.trim() || 'ENTERPRISE GYM',
       logoUrl,
       logoIcon,
-      heroTagline,
-      heroSub,
       phone,
       email,
       address,
     });
+    if (error) {
+      setSaveError(`Branding was not saved: ${error.message}`);
+      return;
+    }
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3500);
   };
 
-  const handleReset = () => {
+  const changeRole = async (roleId, field, value) => {
+    setSaveError('');
+    const result = await updateRolePermission(roleId, field, value);
+    if (result?.error) setSaveError(`The role was not changed: ${result.error.message}`);
+  };
+
+  const handleReset = async () => {
     if (window.confirm('Reset branding back to default FitLife values?')) {
-      resetBranding();
+      setSaveError('');
+      const { error } = await resetBranding();
+      if (error) {
+        setSaveError(`Branding was not reset: ${error.message}`);
+        return;
+      }
       setGymName('FitLife');
       setTagline('ENTERPRISE GYM');
       setLogoUrl('');
       setLogoIcon('Flame');
-      setHeroTagline('TRAIN HARD.\nLIVE STRONG.');
-      setHeroSub('YOUR FITNESS.\nYOUR JOURNEY.');
       setPhone('+880 1711-223344');
       setEmail('contact@fitlife.com');
       setAddress('Plot 42, Gulshan Avenue, Dhaka, Bangladesh');
@@ -110,9 +122,9 @@ export default function SystemManagement() {
       {/* Header */}
       <div className="page-header">
         <div className="page-title-group">
-          <h1 className="page-title">System Settings & Brand Management</h1>
+          <h1 className="page-title">Settings</h1>
           <p className="page-subtitle">
-            Configure gym identity, customize logo & name, and manage role-based discount authority (RBAC).
+            Gym name, logo and contact details, and what each staff role is allowed to do.
           </p>
         </div>
 
@@ -123,14 +135,14 @@ export default function SystemManagement() {
             onClick={() => setActiveTab('branding')}
           >
             <Building2 size={15} style={{ display: 'inline', marginRight: '6px' }} />
-            Brand & Logo Identity
+            Gym Details
           </button>
           <button
             className={`subtab-btn ${activeTab === 'roles' ? 'active' : ''}`}
             onClick={() => setActiveTab('roles')}
           >
             <ShieldCheck size={15} style={{ display: 'inline', marginRight: '6px' }} />
-            Role Privileges & Access Matrix
+            Role Permissions
           </button>
         </div>
       </div>
@@ -150,6 +162,12 @@ export default function SystemManagement() {
         >
           <CheckCircle2 size={18} />
           <strong>Brand settings saved successfully!</strong> Updates are now live throughout the entire application.
+        </div>
+      )}
+
+      {saveError && (
+        <div className="badge badge-danger" style={{ padding: '12px 18px', fontSize: '14px', borderRadius: 'var(--radius-md)' }}>
+          {saveError}
         </div>
       )}
 
@@ -176,9 +194,9 @@ export default function SystemManagement() {
                 <Flame size={20} />
               </div>
               <div>
-                <h2 style={{ fontSize: '18px', fontWeight: 800 }}>Gym Identity & Logo Customizer</h2>
+                <h2 style={{ fontSize: '18px', fontWeight: 800 }}>Gym Details</h2>
                 <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                  Change the name, slogan and logo shown on the sidebar, login screen and reports.
+                  Name, logo and contact details shown on the sidebar, login screen, reports and payslips.
                 </p>
               </div>
             </div>
@@ -206,38 +224,6 @@ export default function SystemManagement() {
                     onChange={(e) => setTagline(e.target.value)}
                     placeholder="e.g. ENTERPRISE GYM"
                   />
-                </div>
-              </div>
-
-              {/* Logo Selection Mode */}
-              <div className="form-group">
-                <label className="form-label">Select Brand Icon (Default Vector)</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                  {iconOptions.map((opt) => {
-                    const IconComp = opt.icon;
-                    const isSelected = logoIcon === opt.id && !logoUrl;
-                    return (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => {
-                          setLogoIcon(opt.id);
-                          setLogoUrl(''); // Clear custom URL to use vector icon
-                        }}
-                        className={`btn ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '10px',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <IconComp size={18} />
-                        <span style={{ fontSize: '12px' }}>{opt.label}</span>
-                      </button>
-                    );
-                  })}
                 </div>
               </div>
 
@@ -269,31 +255,6 @@ export default function SystemManagement() {
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                   Paste any image link or upload directly from your computer (.PNG, .JPG, .SVG).
                 </span>
-              </div>
-
-              {/* Taglines on Login Page */}
-              <div className="form-grid">
-                <div className="form-group">
-                  <label className="form-label">Login Hero Tagline</label>
-                  <textarea
-                    className="form-textarea"
-                    rows={2}
-                    value={heroTagline}
-                    onChange={(e) => setHeroTagline(e.target.value)}
-                    placeholder="TRAIN HARD.&#10;LIVE STRONG."
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Login Sub-Tagline</label>
-                  <textarea
-                    className="form-textarea"
-                    rows={2}
-                    value={heroSub}
-                    onChange={(e) => setHeroSub(e.target.value)}
-                    placeholder="YOUR FITNESS.&#10;YOUR JOURNEY."
-                  />
-                </div>
               </div>
 
               {/* Contact Information */}
@@ -458,7 +419,7 @@ export default function SystemManagement() {
           {/* Roles & Permissions Matrix */}
           <div className="activity-card">
             <div className="activity-header">
-              <span style={{ fontWeight: 800 }}>Role Permission & Dynamic Discount Authority Matrix</span>
+              <span style={{ fontWeight: 800 }}>Role Permissions</span>
             </div>
 
             <div className="table-responsive">
@@ -466,10 +427,11 @@ export default function SystemManagement() {
                 <thead>
                   <tr>
                     <th>Role & Description</th>
-                    <th>Discount Privilege</th>
+                    <th>Give Discounts</th>
                     <th>Max Discount %</th>
-                    <th>Approve Members</th>
-                    <th>Financials</th>
+                    <th>Approve Admissions</th>
+                    <th>Handle Payments</th>
+                    <th>Finance & Payroll</th>
                     <th>Staff Count</th>
                   </tr>
                 </thead>
@@ -491,7 +453,7 @@ export default function SystemManagement() {
                       <td>
                         <button
                           className={`btn btn-sm ${role.canApplyDiscount ? 'btn-primary' : 'btn-danger'}`}
-                          onClick={() => updateRolePermission(role.id, 'canApplyDiscount', !role.canApplyDiscount)}
+                          onClick={() => changeRole(role.id, 'canApplyDiscount', !role.canApplyDiscount)}
                           title="Toggle discount privilege"
                         >
                           {role.canApplyDiscount ? '✓ Allowed' : '✗ Denied'}
@@ -509,7 +471,7 @@ export default function SystemManagement() {
                               style={{ width: '65px', padding: '4px 6px', fontSize: '12px' }}
                               className="form-input"
                               value={role.maxDiscountPercent}
-                              onChange={(e) => updateRolePermission(role.id, 'maxDiscountPercent', Number(e.target.value))}
+                              onChange={(e) => changeRole(role.id, 'maxDiscountPercent', Number(e.target.value))}
                             />
                             <span style={{ fontWeight: 700, fontSize: '12px' }}>%</span>
                           </div>
@@ -522,19 +484,31 @@ export default function SystemManagement() {
                       <td>
                         <button
                           className={`btn btn-sm ${role.canApproveMembers ? 'btn-secondary' : 'btn-danger'}`}
-                          onClick={() => updateRolePermission(role.id, 'canApproveMembers', !role.canApproveMembers)}
+                          onClick={() => changeRole(role.id, 'canApproveMembers', !role.canApproveMembers)}
                         >
                           {role.canApproveMembers ? '✓ Yes' : '✗ No'}
                         </button>
                       </td>
 
-                      {/* Financials */}
+                      {/* Handle payments (migration 021) */}
+                      <td>
+                        <button
+                          className={`btn btn-sm ${role.canHandlePayments ? 'btn-secondary' : 'btn-danger'}`}
+                          onClick={() => changeRole(role.id, 'canHandlePayments', !role.canHandlePayments)}
+                          title="Add members, renew, take payments and coffee shop sales; see invoices and payments"
+                        >
+                          {role.canHandlePayments ? '✓ Yes' : '✗ No'}
+                        </button>
+                      </td>
+
+                      {/* Finance & payroll */}
                       <td>
                         <button
                           className={`btn btn-sm ${role.canManageFinances ? 'btn-secondary' : 'btn-danger'}`}
-                          onClick={() => updateRolePermission(role.id, 'canManageFinances', !role.canManageFinances)}
+                          onClick={() => changeRole(role.id, 'canManageFinances', !role.canManageFinances)}
+                          title="Expenses, payroll, plan prices, monthly closing and finance reports"
                         >
-                          {role.canManageFinances ? '✓ Full' : '✗ View Only'}
+                          {role.canManageFinances ? '✓ Yes' : '✗ No'}
                         </button>
                       </td>
 

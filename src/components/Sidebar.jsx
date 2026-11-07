@@ -362,17 +362,6 @@ export default function Sidebar({ isOpen = false, onClose }) {
             <span>Reports & Analytics</span>
           </div>
         </NavLink>
-
-        {/* 16. System Management */}
-        <NavLink
-          to="/system-roles"
-          className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-        >
-          <div className="sidebar-link-content">
-            <ShieldCheck size={18} />
-            <span>System Management</span>
-          </div>
-        </NavLink>
       </nav>
 
       <div className="sidebar-footer">
@@ -380,10 +369,12 @@ export default function Sidebar({ isOpen = false, onClose }) {
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           <span>{theme === 'dark' ? 'LIGHT MODE' : 'NIGHT MODE'}</span>
         </button>
-        <NavLink to="/system-roles" className="sidebar-link settings-btn">
-          <Settings size={18} />
-          <span>SETTINGS</span>
-        </NavLink>
+        {access.superAdmin && (
+          <NavLink to="/system-roles" className="sidebar-link settings-btn">
+            <Settings size={18} />
+            <span>SETTINGS</span>
+          </NavLink>
+        )}
       </div>
     </aside>
   );

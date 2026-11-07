@@ -460,20 +460,21 @@ export function GymDataProvider({ children }) {
     }
   }, [branding]);
 
-  const updateBranding = (updates) => {
-    const next = { ...branding, ...updates };
+  // Returns { error }; on failure the previous branding is put back.
+  const saveBranding = async (next) => {
+    const previous = branding;
     setBranding(next);
-    db.upsertAppSetting('branding', next).then(({ error }) => {
-      if (error) console.error('[GymDataContext] branding save failed:', error.message);
-    });
+    const { error } = await db.upsertAppSetting('branding', next);
+    if (error) {
+      console.error('[GymDataContext] branding save failed:', error.message);
+      setBranding(previous);
+    }
+    return { error };
   };
 
-  const resetBranding = () => {
-    setBranding(DEFAULT_BRANDING);
-    db.upsertAppSetting('branding', DEFAULT_BRANDING).then(({ error }) => {
-      if (error) console.error('[GymDataContext] branding reset failed:', error.message);
-    });
-  };
+  const updateBranding = (updates) => saveBranding({ ...branding, ...updates });
+
+  const resetBranding = () => saveBranding(DEFAULT_BRANDING);
 
   // --- Discount engine (pure, unchanged) ---------------------------------------
   const calculatePricing = ({ basePrice, discountType, discountValue, vatPercent = 5 }) => {
@@ -1080,12 +1081,13 @@ export function GymDataProvider({ children }) {
       canApproveMembers: 'can_approve_members',
       canManageLockers: 'can_manage_lockers',
       canManageFinances: 'can_manage_finances',
+      canHandlePayments: 'can_handle_payments',
       description: 'description',
     };
     const dbField = fieldMap[field];
     if (!dbField) return;
 
-    await commit({
+    return commit({
       optimistic: () =>
         setRaw((prev) =>
           prev

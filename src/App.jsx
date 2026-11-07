@@ -71,8 +71,8 @@ export default function App() {
               <Route path="/diet-plans" element={<DietPlans />} />
               <Route path="/job-postings" element={<JobPosting />} />
               <Route path="/reports" element={<Reports />} />
-              <Route path="/system" element={<SystemManagement />} />
-              <Route path="/system-roles" element={<SystemManagement />} />
+              <Route path="/system" element={<RequireAccess need="superAdmin"><SystemManagement /></RequireAccess>} />
+              <Route path="/system-roles" element={<RequireAccess need="superAdmin"><SystemManagement /></RequireAccess>} />
             </Route>
             </Route>
           </Routes>

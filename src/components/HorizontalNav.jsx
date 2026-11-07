@@ -202,10 +202,12 @@ export default function HorizontalNav() {
         <span>Reports</span>
       </NavLink>
 
-      <NavLink to="/system-roles" className="h-nav-link">
-        <ShieldCheck size={16} />
-        <span>Roles</span>
-      </NavLink>
+      {access.superAdmin && (
+        <NavLink to="/system-roles" className="h-nav-link">
+          <ShieldCheck size={16} />
+          <span>Settings</span>
+        </NavLink>
+      )}
     </nav>
   );
 }
