@@ -40,18 +40,19 @@ client bundle — keep Supabase RLS enabled and never put a service-role key her
 
 ## Deploying to Cloudflare Pages
 
-Two Pages projects, both connected to this GitHub repo; every push to `main`
-deploys both.
+Two Pages projects, each connected to its own GitHub repo; every push deploys
+that project.
 
 | | Admin portal | Admission form |
 | --- | --- | --- |
-| Root directory | *(empty)* | `admission-form` |
+| GitHub repo / branch | `nukeeya/fitlife-admin-panel` / `main` | `nukeeya/admission-form` / `master` |
+| Root directory | *(empty)* | *(empty)* |
 | Framework preset | React (Vite) | React (Vite) |
 | Build command | `npm run build` | `npm run build` |
 | Output directory | `dist` | `dist` |
 
 1. Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git**,
-   pick the repo, fill in the table above.
+   pick the repo, fill in the table above. Do this once per app.
 2. **Environment variables** (Production and Preview): `VITE_SUPABASE_URL` and
    `VITE_SUPABASE_PUBLISHABLE_KEY`. They are built into the bundle, so a change
    needs a new deploy.
