@@ -12,6 +12,19 @@ import { supabase } from './supabase';
 // Small helpers
 // -----------------------------------------------------------------------------
 
+/**
+ * Run an update/delete and fail when it changed no rows.
+ * When row-level security blocks an update or delete, Supabase returns no error;
+ * it just changes 0 rows. Without this check the app would say "removed" or
+ * "saved" while nothing happened. Pass the query without .select().
+ */
+export async function requireChanged(query, refusedMessage = 'Your role is not allowed to make this change.') {
+  const { data, error } = await query.select('id');
+  if (error) return { data: null, error };
+  if (!data || data.length === 0) return { data: null, error: new Error(refusedMessage) };
+  return { data, error: null };
+}
+
 export function todayStr() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -711,7 +724,7 @@ export const db = {
   },
 
   deleteExpense(id) {
-    return supabase.from('expenses').delete().eq('id', id);
+    return requireChanged(supabase.from('expenses').delete().eq('id', id));
   },
 
   insertExpenseCategory(name) {
@@ -822,7 +835,7 @@ export const db = {
   },
 
   deleteJobApplication(id) {
-    return supabase.from('job_applications').delete().eq('id', id);
+    return requireChanged(supabase.from('job_applications').delete().eq('id', id));
   },
 
   // Roles ------------------------------------------------------------------------------
@@ -863,7 +876,7 @@ export const db = {
   },
 
   deleteDietPlan(id) {
-    return supabase.from('ai_diet_plans').delete().eq('id', id);
+    return requireChanged(supabase.from('ai_diet_plans').delete().eq('id', id));
   },
 
   assignDietPlan(id, memberId, clientName) {
@@ -910,7 +923,7 @@ export const db = {
   },
 
   deleteWorkoutPlan(id) {
-    return supabase.from('ai_workout_plans').delete().eq('id', id);
+    return requireChanged(supabase.from('ai_workout_plans').delete().eq('id', id));
   },
 
   assignWorkoutPlan(id, memberId, clientName) {
@@ -957,7 +970,7 @@ export const db = {
   },
 
   deleteShopProduct(id) {
-    return supabase.from('shop_products').delete().eq('id', id);
+    return requireChanged(supabase.from('shop_products').delete().eq('id', id));
   },
 
   fetchShopOrders() {

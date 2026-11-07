@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
 import { supabase } from '../lib/supabase';
+import { requireChanged } from '../lib/supabaseData';
 import { uploadProfilePhoto } from '../lib/profilePhotos';
 import Modal from '../components/common/Modal';
 import DataState from '../components/common/DataState';
@@ -127,7 +128,7 @@ export default function Employees() {
       const uploadedPhoto = await uploadProfilePhoto(formData.profilePhoto, 'employees');
       if (editingEmployee) {
         // Update existing
-        const { error } = await supabase
+        const { error } = await requireChanged(supabase
           .from('employees')
           .update({
             name: formData.name.trim(),
@@ -140,7 +141,7 @@ export default function Employees() {
             status: formData.status,
             ...(uploadedPhoto ? { avatar: uploadedPhoto } : {}),
           })
-          .eq('id', editingEmployee.id);
+          .eq('id', editingEmployee.id), 'Your role is not allowed to edit staff records.');
         if (error) throw error;
         setNotice(`Staff member "${formData.name}" updated successfully.`);
       } else {
@@ -183,14 +184,17 @@ export default function Employees() {
   const handleDeleteEmployee = async (emp) => {
     if (window.confirm(`Are you sure you want to remove "${emp.name}" from active records?`)) {
       try {
-        const { error } = await supabase.from('employees').delete().eq('id', emp.id);
+        const { error } = await requireChanged(
+          supabase.from('employees').delete().eq('id', emp.id),
+          'Your role is not allowed to remove staff records.'
+        );
         if (error) throw error;
         await refresh();
         setNotice(`Staff record for "${emp.name}" was removed.`);
         setTimeout(() => setNotice(''), 3000);
       } catch (err) {
         console.error('Delete employee failed:', err);
-        alert('Could not remove employee. Check console.');
+        alert(err.message || 'Could not remove employee.');
       }
     }
   };

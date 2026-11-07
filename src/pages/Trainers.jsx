@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
 import { supabase } from '../lib/supabase';
+import { requireChanged } from '../lib/supabaseData';
 import { uploadProfilePhoto } from '../lib/profilePhotos';
 import Modal from '../components/common/Modal';
 import DataState from '../components/common/DataState';
@@ -84,7 +85,7 @@ export default function Trainers() {
     try {
       const uploadedPhoto = await uploadProfilePhoto(formData.profilePhoto, 'trainers');
       if (editingTrainer) {
-        const { error } = await supabase
+        const { error } = await requireChanged(supabase
           .from('trainers')
           .update({
             name: formData.name.trim(),
@@ -96,7 +97,7 @@ export default function Trainers() {
             is_available: formData.available,
             ...(uploadedPhoto ? { avatar: uploadedPhoto } : {}),
           })
-          .eq('id', editingTrainer.id);
+          .eq('id', editingTrainer.id), 'Your role is not allowed to edit coach profiles.');
 
         if (error) throw error;
         setNotice(`Coach profile for "${formData.name}" updated successfully.`);
@@ -137,14 +138,17 @@ export default function Trainers() {
   const handleDeleteTrainer = async (t) => {
     if (window.confirm(`Are you sure you want to remove coach "${t.name}"?`)) {
       try {
-        const { error } = await supabase.from('trainers').delete().eq('id', t.id);
+        const { error } = await requireChanged(
+          supabase.from('trainers').delete().eq('id', t.id),
+          'Your role is not allowed to remove coaches.'
+        );
         if (error) throw error;
         await refresh();
         setNotice(`Coach "${t.name}" was removed.`);
         setTimeout(() => setNotice(''), 3000);
       } catch (err) {
         console.error('Delete trainer error:', err);
-        alert('Could not remove coach profile.');
+        alert(err.message || 'Could not remove coach profile.');
       }
     }
   };

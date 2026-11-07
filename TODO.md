@@ -69,7 +69,10 @@
 ### Testing
 - [ ] Empty database test: no fake names anywhere
 - [ ] Full flow: admission form → approve → payment → check-in; reload and confirm everything is saved
-- [ ] Log in as each role (Super Admin, Branch Manager, Receptionist, Trainer, Accountant)
+- [ ] Log in as each role (Super Admin, Branch Manager, Receptionist, Trainer, Accountant); test accounts `*@fitlife.test` created (7 Nov 2026)
+  - [x] Refused updates/deletes showed "removed"/"saved": `requireChanged()` now treats 0 changed rows as refused (7 Nov 2026)
+  - [ ] Role toggles (System Management) and branding fail without a message
+  - [ ] Decide with the client what Trainers may do (today the same as Receptionist: members, payments, coaches)
 - [ ] Phone, tablet and desktop; light and dark mode
 
 ### Deploy & handover

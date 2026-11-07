@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Check, Plus, RotateCcw, Trash2, Ticket, Award } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
 import { supabase } from '../lib/supabase';
+import { requireChanged } from '../lib/supabaseData';
 import Modal from '../components/common/Modal';
 
 const EMPTY_FORM = {
@@ -118,10 +119,13 @@ export default function SubscriptionPlans() {
     setError('');
     setNotice('');
     try {
-      const { error: updateError } = await supabase
-        .from('plans')
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', plan.id);
+      const { error: updateError } = await requireChanged(
+        supabase
+          .from('plans')
+          .update({ status, updated_at: new Date().toISOString() })
+          .eq('id', plan.id),
+        'Your role is not allowed to change plans.'
+      );
       if (updateError) throw updateError;
       await refresh();
       setNotice(status === 'Active'
