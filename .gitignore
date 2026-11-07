@@ -28,9 +28,7 @@ dist-ssr
 *.sln
 *.sw?
 
-.vercel
-
-# Env files (set these in the Cloudflare Pages project settings instead)
+# Env files (set these as Cloudflare build variables instead)
 .env
 .env.*
 !.env.example

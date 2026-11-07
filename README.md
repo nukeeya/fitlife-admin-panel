@@ -38,30 +38,26 @@ client bundle — keep Supabase RLS enabled and never put a service-role key her
 
 `.env` is gitignored. Never commit real keys.
 
-## Deploying to Cloudflare Pages
+## Deploying (Cloudflare Workers)
 
-Two Pages projects, each connected to its own GitHub repo; every push deploys
-that project.
+Both apps run as Cloudflare Workers serving static files, each connected to its
+own GitHub repo; every push deploys that app.
 
 | | Admin portal | Admission form |
 | --- | --- | --- |
 | GitHub repo / branch | `nukeeya/fitlife-admin-panel` / `main` | `nukeeya/admission-form` / `master` |
-| Root directory | *(empty)* | *(empty)* |
-| Framework preset | React (Vite) | React (Vite) |
+| Address | https://fitlife-admin-panel.marufaman037.workers.dev | https://admission-form.marufaman037.workers.dev |
 | Build command | `npm run build` | `npm run build` |
 | Output directory | `dist` | `dist` |
 
-1. Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git**,
-   pick the repo, fill in the table above. Do this once per app.
-2. **Environment variables** (Production and Preview): `VITE_SUPABASE_URL` and
-   `VITE_SUPABASE_PUBLISHABLE_KEY`. They are built into the bundle, so a change
-   needs a new deploy.
-3. Node version comes from `.node-version` (22).
-4. Client-side routes need no config: without a `404.html`, Pages serves
-   `index.html` for unknown paths.
-5. Supabase → Authentication → URL Configuration: set the Site URL to the admin
-   portal's address and add `https://<admin-address>/reset-password` to the
-   Redirect URLs.
+- **Environment variables** (Worker → Settings → Variables and Secrets, build
+  variables): `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. They are
+  built into the bundle, so a change needs a new deploy.
+- Node version comes from `.node-version` (22).
+- Client-side routes (`/members/12`, `/reset-password`) are served by
+  `index.html`; Cloudflare set this up automatically.
+- Supabase → Authentication → URL Configuration: Site URL is the admin
+  portal's address, and `<admin address>/reset-password` is a Redirect URL.
 
 ## Scripts
 
