@@ -29,6 +29,7 @@ import VisitorEntry from './pages/VisitorEntry';
 import DeviceManagement from './pages/DeviceManagement';
 import ErrorBoundary from './components/ErrorBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
+import RequireAccess from './components/RequireAccess';
 
 export default function App() {
   return (
@@ -48,8 +49,8 @@ export default function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/members" element={<Members />} />
               <Route path="/members/:id" element={<MemberDetails />} />
-              <Route path="/admissions" element={<ApprovalManagement />} />
-              <Route path="/approvals" element={<ApprovalManagement />} />
+              <Route path="/admissions" element={<RequireAccess need="admissions"><ApprovalManagement /></RequireAccess>} />
+              <Route path="/approvals" element={<RequireAccess need="admissions"><ApprovalManagement /></RequireAccess>} />
               <Route path="/trainers" element={<Trainers />} />
               <Route path="/employees" element={<Employees />} />
               <Route path="/accounts" element={<Accounts />} />

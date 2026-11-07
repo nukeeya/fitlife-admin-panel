@@ -170,6 +170,8 @@ export function mapRole(row, usersByRoleId = {}) {
     canApproveMembers: !!row.can_approve_members,
     canManageLockers: !!row.can_manage_lockers,
     canManageFinances: !!row.can_manage_finances,
+    // Migration 021; missing column (not run yet) = old behaviour, allowed.
+    canHandlePayments: row.can_handle_payments ?? true,
     usersCount: usersByRoleId[row.id] || 0,
   };
 }

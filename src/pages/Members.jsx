@@ -41,7 +41,7 @@ export default function Members() {
     loading,
     loadErrors,
   } = useGymData();
-  const { resetPassword } = useAuth();
+  const { resetPassword, access } = useAuth();
   const allMembers = liveMembers || [];
 
   const [searchTerm, setSearchTerm] = useState(queryFromUrl);
@@ -223,10 +223,12 @@ export default function Members() {
         </div>
 
         <div className="page-actions">
-          <button className="btn btn-primary" onClick={openAdmission}>
-            <Plus size={16} />
-            Add New Member
-          </button>
+          {access.admissions && (
+            <button className="btn btn-primary" onClick={openAdmission}>
+              <Plus size={16} />
+              Add New Member
+            </button>
+          )}
         </div>
       </div>
 
@@ -281,7 +283,7 @@ export default function Members() {
         isEmpty={allMembers.length === 0}
         noun="members"
         onRetry={refresh}
-        onAdd={openAdmission}
+        onAdd={access.admissions ? openAdmission : undefined}
         addLabel="Add your first member"
       >
       <div className="table-card">

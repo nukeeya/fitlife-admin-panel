@@ -95,11 +95,32 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const access = accessFor(staff?.role);
+
   return (
-    <AuthContext.Provider value={{ user, staff, loading, signIn, signOut, resetPassword, updatePassword }}>
+    <AuthContext.Provider value={{ user, staff, access, loading, signIn, signOut, resetPassword, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );
+}
+
+/**
+ * What the signed-in role may see in the app. Mirrors the database rules
+ * (staff_can() in migrations 011 and 021): the database refuses the action
+ * anyway, this only hides screens and buttons that would fail.
+ */
+export function accessFor(role) {
+  const superAdmin = role?.name === 'Super Admin';
+  const finances = superAdmin || !!role?.canManageFinances;
+  const payments = finances || !!role?.canHandlePayments;
+  return {
+    superAdmin,
+    finances,
+    payments,
+    approveMembers: superAdmin || !!role?.canApproveMembers,
+    // Admitting a member creates an invoice, so it needs payments.
+    admissions: payments,
+  };
 }
 
 export function useAuth() {

@@ -21,9 +21,11 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function HorizontalNav() {
   const { navStyle } = useTheme();
+  const { access } = useAuth();
   const [activeDropdown, setActiveDropdown] = useState(null);
 
   const handleDropdownClick = (name) => {
@@ -44,10 +46,12 @@ export default function HorizontalNav() {
         <span>Members</span>
       </NavLink>
 
-      <NavLink to="/approvals" className="h-nav-link">
-        <UserCheck size={16} />
-        <span>Approvals</span>
-      </NavLink>
+      {access.admissions && (
+        <NavLink to="/approvals" className="h-nav-link">
+          <UserCheck size={16} />
+          <span>Approvals</span>
+        </NavLink>
+      )}
 
       <NavLink to="/trainers" className="h-nav-link">
         <Dumbbell size={16} />

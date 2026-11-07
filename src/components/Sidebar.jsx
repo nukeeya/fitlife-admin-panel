@@ -28,10 +28,12 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useGymData } from '../context/GymDataContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar({ isOpen = false, onClose }) {
   const { theme, toggleTheme } = useTheme();
   const { applications, branding } = useGymData();
+  const { access } = useAuth();
   const location = useLocation();
 
   const [openMenus, setOpenMenus] = useState({
@@ -124,6 +126,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
         </NavLink>
 
         {/* 3. Approval Management */}
+        {access.admissions && (
         <NavLink
           to="/approvals"
           className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
@@ -136,6 +139,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
             <span className="nav-badge-pending">{pendingAppsCount}</span>
           )}
         </NavLink>
+        )}
 
         {/* 4. Trainer Management */}
         <NavLink

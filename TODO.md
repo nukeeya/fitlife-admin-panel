@@ -12,7 +12,7 @@
 - [ ] **ZKTeco SenseFace 3A** (face + fingerprint, door lock, AC push / ADMS mode): scans reach the database
   - [x] Device probe `tools/device-probe/` to see what the machine sends (5 Nov 2026)
   - [ ] At the gym: run the probe; photos of System Info and Cloud Server Setting; collect `probe-log.jsonl`
-  - [ ] Migration `021`: `devices`, `members.device_user_id`, `device_punches` (raw, no duplicates), scans → `attendance`; attendance date/time defaults in Dhaka time (now UTC)
+  - [ ] Migration `022`: `devices`, `members.device_user_id`, `device_punches` (raw, no duplicates), scans → `attendance`; attendance date/time defaults in Dhaka time (now UTC)
   - [ ] Receiver: Supabase Edge Function, plus a relay for the fixed `/iclock/...` paths (Vercel rewrite if HTTPS works, else a Cloudflare Worker); only registered serial numbers accepted
   - [ ] App: real Devices page; Device user ID on members; replace the simulated `RemoteEnrollModal`
   - Fingerprints and faces are enrolled on the machine and stay there; the database only links device user number → member

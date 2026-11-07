@@ -20,7 +20,7 @@ import { downloadBackup, hasBusinessData } from '../utils/localBackup';
 
 export default function Header({ onOpenQuickCheckIn, onOpenAdmission, onToggleSidebar }) {
   const { theme, toggleTheme, setIsCustomizerOpen } = useTheme();
-  const { user, signOut } = useAuth();
+  const { user, access, signOut } = useAuth();
   const { overdueCount, showOverduePopup, setShowOverduePopup } = useFinance();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -79,14 +79,16 @@ export default function Header({ onOpenQuickCheckIn, onOpenAdmission, onToggleSi
           />
         </div>
 
-        <button
-          className="btn btn-primary btn-sm"
-          onClick={onOpenAdmission}
-          title="New Member Admission"
-        >
-          <Plus size={14} />
-          <span className="btn-label">New Admission</span>
-        </button>
+        {access.admissions && (
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={onOpenAdmission}
+            title="New Member Admission"
+          >
+            <Plus size={14} />
+            <span className="btn-label">New Admission</span>
+          </button>
+        )}
 
         <button
           className="btn btn-secondary btn-sm"
