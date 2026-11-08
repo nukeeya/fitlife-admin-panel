@@ -756,6 +756,38 @@ export const db = {
       .single();
   },
 
+  // Door machines ----------------------------------------------------------------
+  listDevices() {
+    return supabase.from('devices').select('*').order('id');
+  },
+
+  listDevicePunches(limit = 50) {
+    return supabase
+      .from('device_punches')
+      .select('id, device_id, device_user_id, member_id, punched_at, event_code, verify_type, attendance_id')
+      .order('punched_at', { ascending: false })
+      .limit(limit);
+  },
+
+  listMemberDeviceLinks() {
+    return supabase
+      .from('members')
+      .select('id, first_name, last_name, member_code, device_user_id')
+      .order('first_name');
+  },
+
+  insertDevice(row) {
+    return supabase.from('devices').insert(row).select('*').single();
+  },
+
+  updateDevice(id, fields) {
+    return requireChanged(supabase.from('devices').update(fields).eq('id', id));
+  },
+
+  setMemberDeviceUser(memberId, deviceUserId) {
+    return requireChanged(supabase.from('members').update({ device_user_id: deviceUserId }).eq('id', memberId));
+  },
+
   // Attendance -------------------------------------------------------------------
   insertAttendance({ memberId, method, checkInDisplay }) {
     const row = {

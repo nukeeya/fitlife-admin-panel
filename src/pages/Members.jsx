@@ -14,14 +14,12 @@ import {
   Dumbbell,
   MessageSquare,
   Mail,
-  Fingerprint,
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/common/Modal';
 import DataState from '../components/common/DataState';
 import Avatar from '../components/common/Avatar';
-import RemoteEnrollModal from '../components/RemoteEnrollModal';
 
 export default function Members() {
   const navigate = useNavigate();
@@ -60,7 +58,6 @@ export default function Members() {
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [messageMember, setMessageMember] = useState(null);
   const [messageText, setMessageText] = useState('');
-  const [remoteEnrollMember, setRemoteEnrollMember] = useState(null);
   const [actionFeedback, setActionFeedback] = useState(null);
   const [isSavingAction, setIsSavingAction] = useState(false);
 
@@ -114,11 +111,6 @@ export default function Members() {
 
     if (action === 'details') {
       navigate(`/members/${member.id}`);
-      return;
-    }
-
-    if (action === 'remote-enroll') {
-      setRemoteEnrollMember(member);
       return;
     }
 
@@ -358,14 +350,6 @@ export default function Members() {
                         >
                           <Eye size={14} /> View Details
                         </button>
-                        <button
-                          type="button"
-                          className="member-options-item"
-                          role="menuitem"
-                          onClick={() => handleMenuAction(m, 'remote-enroll')}
-                        >
-                          <Fingerprint size={14} /> Remote Enroll
-                        </button>
                         <div className="member-options-divider" />
                         <button type="button" className="member-options-item" role="menuitem" disabled title={disabledIntegrationTitle}>
                           <CheckCircle2 size={14} /> Force Access Allow
@@ -538,12 +522,6 @@ export default function Members() {
           This opens your device’s messaging app with the member’s number and your message ready to send.
         </p>
       </Modal>
-
-      <RemoteEnrollModal
-        isOpen={!!remoteEnrollMember}
-        onClose={() => setRemoteEnrollMember(null)}
-        member={remoteEnrollMember}
-      />
     </div>
   );
 }

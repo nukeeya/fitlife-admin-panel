@@ -63,8 +63,10 @@ machine's main screen usually turns from crossed out to normal.
 
 ## 5. Send me
 
-- The file `tools/device-probe/probe-log.jsonl`. It contains user numbers and scan times
-  but no fingerprints or photos, and it's git-ignored.
+- A cleaned copy of `tools/device-probe/probe-log.jsonl`, never the file itself. It's
+  git-ignored, but when someone is enrolled it captures their **face photo and face or
+  fingerprint template**. Only enroll people who have agreed, and remove the
+  `biodata`, `biophoto` and `userpic` entries before sharing it.
 - The photos from step 1
 - Whether the HTTPS option exists, and whether "Enable Domain Name" accepts a web address
 

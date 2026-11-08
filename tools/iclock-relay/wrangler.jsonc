@@ -1,0 +1,10 @@
+{
+  // Separate from the admin portal's Worker, so deploying one can't affect the other.
+  "name": "fitlife-iclock-relay",
+  "main": "worker.js",
+  "compatibility_date": "2026-11-01",
+  "vars": {
+    // Replace <project-ref> with your Supabase project's reference ID.
+    "RECEIVER_URL": "https://<project-ref>.supabase.co/functions/v1/iclock"
+  }
+}

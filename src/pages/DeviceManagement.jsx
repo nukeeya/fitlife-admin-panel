@@ -1,313 +1,225 @@
-import React, { useState } from 'react';
-import {
-  ScanFace,
-  CheckCircle2,
-  AlertCircle,
-  RefreshCw,
-  Plus,
-  Edit2,
-  Trash2,
-  Activity,
-  Server,
-  Wifi,
-  WifiOff,
-  Info,
-} from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AlertCircle, CheckCircle2, Edit2, Link2, Plus, Power, RefreshCw, ScanFace, Unlink } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { db } from '../lib/supabaseData';
 import Modal from '../components/common/Modal';
 
-// Sample pre-configured entrance device
-const INITIAL_DEVICES = [
-  {
-    id: 'dev_01',
-    name: 'Main Entrance Face Recognition Terminal',
-    type: 'Face Recognition Access Controller',
-    model: 'FR-8000 Pro (Biometric Terminal)',
-    location: 'Main Gym Entrance (Turnstile Gate #1)',
-    ipAddress: '192.168.1.120',
-    port: '8000',
-    protocol: 'TCP/IP WebSocket & HTTP REST',
-    macAddress: '70:B3:D5:19:8A:2F',
-    serialNumber: 'SN-FR2026-99412',
-    doorRelayMs: '3000',
-    antiPassback: true,
-    status: 'connected', // 'connected' | 'disconnected' | 'not_configured'
-    lastSeen: '24 Oct 2026, 12:54:18 PM (Just now)',
-    latencyMs: 24,
-    enrolledFacesCount: 428,
-  },
-];
+const REFRESH_MS = 15000;
+const ONLINE_WITHIN_MS = 2 * 60 * 1000; // the machine checks in every 30 seconds
+
+const EMPTY_FORM = { serialNumber: '', name: '', location: '' };
+
+const cardStyle = {
+  background: 'var(--bg-card)',
+  borderRadius: '12px',
+  border: '1px solid var(--border-color)',
+  padding: '20px',
+};
+
+const dhakaTime = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Dhaka',
+  day: '2-digit',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: true,
+});
+const formatTime = (value) => (value ? dhakaTime.format(new Date(value)) : 'Never');
+
+const memberName = (m) => `${m.first_name} ${m.last_name}`.trim();
+
+const VERIFY_LABELS = { 1: 'Fingerprint', 4: 'Card', 15: 'Face' };
+
+// Keep the "Door opened" codes in step with device_event_grants_entry() in migration 022.
+function eventLabel(code) {
+  if (code === 0 || code === 1 || code === 3) return { text: 'Door opened', color: '#10B981' };
+  if (code === 202) return { text: 'Exit button', color: '#3B82F6' };
+  if (code === 206) return { text: 'Machine started', color: '#64748B' };
+  if (code === 102) return { text: 'Door opened without a scan', color: '#EF4444' };
+  return { text: `Event ${code}`, color: '#F59E0B' };
+}
+
+function deviceStatus(device, now) {
+  if (!device.enabled) return { text: 'Disabled', color: '#64748B' };
+  if (!device.last_seen_at) return { text: 'Never connected', color: '#F59E0B' };
+  return now - new Date(device.last_seen_at).getTime() < ONLINE_WITHIN_MS
+    ? { text: 'Online', color: '#10B981' }
+    : { text: 'Offline', color: '#EF4444' };
+}
+
+function Pill({ text, color }) {
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '3px 10px',
+        borderRadius: '999px',
+        fontSize: '12px',
+        fontWeight: 600,
+        color,
+        background: `${color}1F`,
+      }}
+    >
+      <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: color }} />
+      {text}
+    </span>
+  );
+}
+
+function Detail({ label, value }) {
+  return (
+    <div>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{label}</div>
+      <div style={{ fontSize: '13px', fontWeight: 600, overflowWrap: 'anywhere' }}>{value || '—'}</div>
+    </div>
+  );
+}
 
 export default function DeviceManagement() {
-  const [devices, setDevices] = useState(INITIAL_DEVICES);
-  const [activeDeviceId, setActiveDeviceId] = useState(INITIAL_DEVICES[0]?.id || null);
+  const { access } = useAuth();
+  const canManage = !!access?.superAdmin;
 
-  // Setup / Edit Modal State
+  const [devices, setDevices] = useState([]);
+  const [punches, setPunches] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [now, setNow] = useState(() => Date.now());
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const [feedback, setFeedback] = useState(null);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDevice, setEditingDevice] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Connection simulation state
-  const [isTesting, setIsTesting] = useState(false);
-  const [testResult, setTestResult] = useState(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [feedbackMsg, setFeedbackMsg] = useState(null);
+  const [linkPin, setLinkPin] = useState('');
+  const [linkMemberId, setLinkMemberId] = useState('');
 
-  // Form State for Setup / Edit
-  const [formData, setFormData] = useState({
-    name: '',
-    type: 'Face Recognition Access Controller',
-    model: 'FR-8000 Pro (Biometric Terminal)',
-    location: 'Main Gym Entrance (Turnstile Gate #1)',
-    ipAddress: '192.168.1.120',
-    port: '8000',
-    protocol: 'TCP/IP WebSocket & HTTP REST',
-    serialNumber: '',
-    doorRelayMs: '3000',
-    antiPassback: true,
-  });
-
-  const activeDevice = devices.find((d) => d.id === activeDeviceId) || devices[0] || null;
-
-  // Open Add Device Modal
-  const handleOpenAdd = () => {
-    setEditingDevice(null);
-    setFormData({
-      name: 'Main Entrance Face Recognition Terminal',
-      type: 'Face Recognition Access Controller',
-      model: 'FR-8000 Pro',
-      location: 'Main Entrance Turnstile',
-      ipAddress: '192.168.1.125',
-      port: '8000',
-      protocol: 'TCP/IP WebSocket & HTTP REST',
-      serialNumber: `SN-FR-${Math.floor(10000 + Math.random() * 90000)}`,
-      doorRelayMs: '3000',
-      antiPassback: true,
-    });
-    setIsModalOpen(true);
-  };
-
-  // Open Edit Device Modal
-  const handleOpenEdit = (dev) => {
-    setEditingDevice(dev);
-    setFormData({
-      name: dev.name,
-      type: dev.type,
-      model: dev.model,
-      location: dev.location,
-      ipAddress: dev.ipAddress,
-      port: dev.port,
-      protocol: dev.protocol,
-      serialNumber: dev.serialNumber || '',
-      doorRelayMs: dev.doorRelayMs || '3000',
-      antiPassback: dev.antiPassback ?? true,
-    });
-    setIsModalOpen(true);
-  };
-
-  // Save or Update Device
-  const handleSaveDevice = (e) => {
-    e.preventDefault();
-    if (!formData.name.trim() || !formData.ipAddress.trim()) {
-      return;
-    }
-
-    if (editingDevice) {
-      setDevices((prev) =>
-        prev.map((d) =>
-          d.id === editingDevice.id
-            ? {
-                ...d,
-                ...formData,
-              }
-            : d
-        )
-      );
-      setFeedbackMsg({ type: 'success', text: `Configuration for "${formData.name}" updated successfully.` });
+  const load = useCallback(async () => {
+    const [deviceRes, punchRes, memberRes] = await Promise.all([
+      db.listDevices(),
+      db.listDevicePunches(),
+      db.listMemberDeviceLinks(),
+    ]);
+    const error = deviceRes.error || punchRes.error || memberRes.error;
+    if (error) {
+      setLoadError(error.message);
     } else {
-      const newDev = {
-        id: `dev_${Date.now()}`,
-        ...formData,
-        macAddress: '70:B3:D5:' + Array.from({ length: 3 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0').toUpperCase()).join(':'),
-        status: 'disconnected',
-        lastSeen: 'Configured (Awaiting first handshake)',
-        latencyMs: null,
-        enrolledFacesCount: 0,
-      };
-      setDevices((prev) => [...prev, newDev]);
-      setActiveDeviceId(newDev.id);
-      setFeedbackMsg({ type: 'success', text: `Device "${formData.name}" added successfully.` });
+      setLoadError(null);
+      setDevices(deviceRes.data);
+      setPunches(punchRes.data);
+      setMembers(memberRes.data);
+      setNow(Date.now());
     }
+    setIsLoading(false);
+  }, []);
 
-    setIsModalOpen(false);
-    setTimeout(() => setFeedbackMsg(null), 3000);
+  useEffect(() => {
+    load();
+    const timer = setInterval(() => {
+      if (!document.hidden) load();
+    }, REFRESH_MS);
+    return () => clearInterval(timer);
+  }, [load]);
+
+  const membersById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
+  const linkedMembers = useMemo(() => members.filter((m) => m.device_user_id), [members]);
+  const membersByPin = useMemo(() => new Map(linkedMembers.map((m) => [m.device_user_id, m])), [linkedMembers]);
+  const devicesById = useMemo(() => new Map(devices.map((d) => [d.id, d])), [devices]);
+
+  const unlinkedPins = useMemo(
+    () => [...new Set(punches.map((p) => p.device_user_id))].filter((pin) => pin !== '0' && !membersByPin.has(pin)),
+    [punches, membersByPin]
+  );
+
+  const showResult = (error, successText) => {
+    setFeedback(error ? { ok: false, text: error.message } : { ok: true, text: successText });
+    if (!error) load();
   };
 
-  // Delete Device
-  const handleDeleteDevice = (id) => {
-    setDevices((prev) => prev.filter((d) => d.id !== id));
-    if (activeDeviceId === id) {
-      setActiveDeviceId(devices.find((d) => d.id !== id)?.id || null);
-    }
-    setFeedbackMsg({ type: 'info', text: 'Device removed from console.' });
-    setTimeout(() => setFeedbackMsg(null), 2500);
+  const openAdd = () => {
+    setEditingDevice(null);
+    setForm(EMPTY_FORM);
+    setIsModalOpen(true);
   };
 
-  // Add Default Sample Device (from empty state)
-  const handleAddSampleDevice = () => {
-    setDevices(INITIAL_DEVICES);
-    setActiveDeviceId(INITIAL_DEVICES[0].id);
-    setFeedbackMsg({ type: 'success', text: 'Sample entrance device added.' });
-    setTimeout(() => setFeedbackMsg(null), 2500);
+  const openEdit = (device) => {
+    setEditingDevice(device);
+    setForm({ serialNumber: device.serial_number, name: device.name, location: device.location || '' });
+    setIsModalOpen(true);
   };
 
-  // Toggle Connected / Disconnected Simulation
-  const handleToggleConnection = () => {
-    if (!activeDevice) return;
-    const isCurrentlyConnected = activeDevice.status === 'connected';
-
-    setIsConnecting(true);
-
-    setTimeout(() => {
-      setDevices((prev) =>
-        prev.map((d) =>
-          d.id === activeDevice.id
-            ? {
-                ...d,
-                status: isCurrentlyConnected ? 'disconnected' : 'connected',
-                lastSeen: isCurrentlyConnected
-                  ? 'Disconnected by Administrator'
-                  : 'Just now (Simulated Heartbeat Active)',
-                latencyMs: isCurrentlyConnected ? null : Math.floor(18 + Math.random() * 15),
-              }
-            : d
-        )
-      );
-      setIsConnecting(false);
-      setFeedbackMsg({
-        type: isCurrentlyConnected ? 'info' : 'success',
-        text: isCurrentlyConnected
-          ? `Device "${activeDevice.name}" is now disconnected.`
-          : `Device "${activeDevice.name}" is now connected. Heartbeat sync active.`,
-      });
-      setTimeout(() => setFeedbackMsg(null), 3000);
-    }, 1100);
-  };
-
-  // Test Connection (Ping & Latency Check)
-  const handleTestConnection = () => {
-    if (!activeDevice) return;
-    setIsTesting(true);
-    setTestResult(null);
-
-    setTimeout(() => {
-      const isConnected = activeDevice.status === 'connected';
-      const latency = isConnected ? Math.floor(18 + Math.random() * 14) : null;
-      setTestResult({
-        success: isConnected,
-        latencyMs: latency,
-        packetsSent: 4,
-        packetsReceived: isConnected ? 4 : 0,
-        packetLossPercent: isConnected ? 0 : 100,
-        message: isConnected
-          ? `TCP Connection Verified: Terminal at ${activeDevice.ipAddress}:${activeDevice.port} responded with 0% packet loss.`
-          : `Connection Timed Out: Terminal at ${activeDevice.ipAddress}:${activeDevice.port} is unreachable or in Disconnected state.`,
-      });
-      setIsTesting(false);
-    }, 900);
-  };
-
-  // Refresh Status
-  const handleRefreshStatus = () => {
-    if (!activeDevice) return;
-    setDevices((prev) =>
-      prev.map((d) =>
-        d.id === activeDevice.id
-          ? {
-              ...d,
-              lastSeen: d.status === 'connected' ? 'Just now (Heartbeat ACK received)' : 'Offline (No response to polling)',
-              latencyMs: d.status === 'connected' ? Math.floor(18 + Math.random() * 12) : null,
-            }
-          : d
-      )
-    );
-    setFeedbackMsg({ type: 'info', text: 'Device status refreshed from terminal controller.' });
-    setTimeout(() => setFeedbackMsg(null), 2000);
-  };
-
-  const statusMeta = {
-    connected: { label: 'Online', color: '#10B981' },
-    disconnected: { label: 'Offline', color: '#F59E0B' },
-    not_configured: { label: 'Not set up', color: '#94A3B8' },
-  };
-
-  const cardStyle = {
-    background: 'var(--bg-card)',
-    borderRadius: '12px',
-    border: '1px solid var(--border-color)',
-    padding: '20px',
-  };
-
-  const renderStatusPill = (status) => {
-    const meta = statusMeta[status] || statusMeta.not_configured;
-    return (
-      <span
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '6px',
-          padding: '3px 10px',
-          borderRadius: '999px',
-          fontSize: '12px',
-          fontWeight: 600,
-          color: meta.color,
-          background: `${meta.color}1F`,
-        }}
-      >
-        <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: meta.color }} />
-        {meta.label}
-      </span>
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    const { error } = editingDevice
+      ? await db.updateDevice(editingDevice.id, { name: form.name.trim(), location: form.location.trim() || null })
+      : await db.insertDevice({
+          serial_number: form.serialNumber.trim(),
+          name: form.name.trim(),
+          location: form.location.trim() || null,
+        });
+    setIsSaving(false);
+    if (!error) setIsModalOpen(false);
+    showResult(
+      error?.code === '23505' ? new Error('A device with that serial number already exists.') : error,
+      'Device saved.'
     );
   };
 
-  const sampleEvents = [
-    { time: '12:54 PM', name: 'Farhan Ahmed', code: 'FLM-1008', method: 'Face', granted: true },
-    { time: '12:51 PM', name: 'Tanvir Hossain', code: 'FLM-1022', method: 'Face', granted: true },
-    { time: '12:47 PM', name: 'Unknown face', code: null, method: 'Face', granted: false },
-    { time: '12:42 PM', name: 'Kabir Chowdhury', code: 'FLM-1001', method: 'Fingerprint', granted: true },
-  ];
+  const handleToggle = async (device) => {
+    const { error } = await db.updateDevice(device.id, { enabled: !device.enabled });
+    showResult(error, device.enabled ? 'Device disabled. Its scans will be refused.' : 'Device enabled.');
+  };
+
+  const handleLink = async (e) => {
+    e.preventDefault();
+    const { error } = await db.setMemberDeviceUser(Number(linkMemberId), linkPin.trim());
+    if (!error) {
+      setLinkPin('');
+      setLinkMemberId('');
+    }
+    showResult(
+      error?.code === '23505' ? new Error('That machine user number is already linked to a member.') : error,
+      'Member linked. Their next scan will be counted as attendance.'
+    );
+  };
+
+  const handleUnlink = async (member) => {
+    const { error } = await db.setMemberDeviceUser(member.id, null);
+    showResult(error, `${memberName(member)} unlinked.`);
+  };
 
   return (
     <div className="page" style={{ paddingBottom: '3rem' }}>
-      {/* Page Header */}
       <div className="page-header" style={{ marginBottom: '1.25rem' }}>
         <div className="page-title-group">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h1 className="page-title">Devices</h1>
-            <span className="badge badge-warning" style={{ fontSize: '10px' }} title="Not connected to real hardware yet">
-              Demo mode
-            </span>
-          </div>
-          <p className="page-subtitle">Entrance terminals and access controllers</p>
+          <h1 className="page-title">Devices</h1>
+          <p className="page-subtitle">Door machines and the scans they send</p>
         </div>
-
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={handleOpenAdd}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-        >
-          <Plus size={16} />
-          Add Device
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button type="button" className="btn btn-secondary" onClick={load}>
+            <RefreshCw size={15} /> Refresh
+          </button>
+          {canManage && (
+            <button type="button" className="btn btn-primary" onClick={openAdd}>
+              <Plus size={16} /> Add Device
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Feedback message */}
-      {feedbackMsg && (
+      {(feedback || loadError) && (
         <div
+          role="status"
           style={{
             padding: '8px 14px',
             borderRadius: 'var(--radius-md)',
-            background: feedbackMsg.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-            color: feedbackMsg.type === 'success' ? '#10B981' : '#3B82F6',
+            background: !loadError && feedback?.ok ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+            color: !loadError && feedback?.ok ? '#10B981' : '#EF4444',
             fontSize: '13px',
             marginBottom: '1rem',
             display: 'flex',
@@ -315,383 +227,217 @@ export default function DeviceManagement() {
             gap: '8px',
           }}
         >
-          {feedbackMsg.type === 'success' ? <CheckCircle2 size={15} /> : <Info size={15} />}
-          <span>{feedbackMsg.text}</span>
+          {!loadError && feedback?.ok ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
+          <span>{loadError ? `Couldn't load device data: ${loadError}` : feedback.text}</span>
         </div>
       )}
 
-      {devices.length === 0 ? (
-        /* Empty state */
-        <div style={{ ...cardStyle, padding: '48px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-          <ScanFace size={36} style={{ color: 'var(--text-muted)' }} />
-          <div>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 4px 0', color: 'var(--text-primary)' }}>
-              No devices yet
-            </h3>
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '380px' }}>
-              Add your entrance terminal to track check-ins and control access.
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '10px', marginTop: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <button type="button" className="btn btn-secondary" onClick={handleAddSampleDevice}>
-              Add Sample Device
-            </button>
-            <button type="button" className="btn btn-primary" onClick={handleOpenAdd} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              <Plus size={16} /> Add Device
-            </button>
-          </div>
-        </div>
+      {isLoading ? (
+        <div style={cardStyle}>Loading devices…</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* Device switcher (only needed with more than one device) */}
-          {devices.length > 1 && (
-            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
-              {devices.map((dev) => {
-                const isSelected = dev.id === activeDevice?.id;
-                return (
-                  <button
-                    key={dev.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveDeviceId(dev.id);
-                      setTestResult(null);
-                    }}
-                    style={{
-                      padding: '7px 12px',
-                      borderRadius: '8px',
-                      border: `1px solid ${isSelected ? 'var(--primary)' : 'var(--border-base)'}`,
-                      background: 'var(--bg-card)',
-                      color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
-                      fontWeight: 600,
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: (statusMeta[dev.status] || statusMeta.not_configured).color }} />
-                    {dev.name}
-                  </button>
-                );
-              })}
+          {devices.length === 0 && !loadError && (
+            <div style={{ ...cardStyle, textAlign: 'center', padding: '48px 20px' }}>
+              <ScanFace size={36} style={{ color: 'var(--text-muted)' }} />
+              <h3 style={{ margin: '12px 0 4px' }}>No devices yet</h3>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
+                Add a machine by its serial number so its scans are accepted.
+              </p>
             </div>
           )}
 
-          {/* Selected device */}
-          {activeDevice && (
-            <div style={cardStyle}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                  <div
-                    style={{
-                      width: '42px',
-                      height: '42px',
-                      borderRadius: 'var(--radius-md)',
-                      background: 'var(--bg-surface)',
-                      color: 'var(--text-secondary)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <ScanFace size={22} />
+          {devices.map((device) => {
+            const status = deviceStatus(device, now);
+            return (
+              <div key={device.id} style={cardStyle}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <ScanFace size={22} style={{ color: 'var(--primary)' }} />
+                    <h3 style={{ margin: 0, fontSize: '16px' }}>{device.name}</h3>
+                    <Pill {...status} />
                   </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                      <h2 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-                        {activeDevice.name}
-                      </h2>
-                      {renderStatusPill(activeDevice.status)}
+                  {canManage && (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => openEdit(device)}>
+                        <Edit2 size={14} /> Edit
+                      </button>
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => handleToggle(device)}>
+                        <Power size={14} /> {device.enabled ? 'Disable' : 'Enable'}
+                      </button>
                     </div>
-                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                      {activeDevice.location}
-                    </div>
-                  </div>
+                  )}
                 </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                  <button
-                    type="button"
-                    className={`btn ${activeDevice.status === 'connected' ? 'btn-secondary' : 'btn-primary'}`}
-                    onClick={handleToggleConnection}
-                    disabled={isConnecting}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
-                  >
-                    {isConnecting ? (
-                      <><RefreshCw size={14} className="spin-animation" /> {activeDevice.status === 'connected' ? 'Disconnecting...' : 'Connecting...'}</>
-                    ) : activeDevice.status === 'connected' ? (
-                      <><WifiOff size={14} /> Disconnect</>
-                    ) : (
-                      <><Wifi size={14} /> Connect</>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={handleTestConnection}
-                    disabled={isTesting}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
-                  >
-                    {isTesting ? <RefreshCw size={14} className="spin-animation" /> : <Activity size={14} />}
-                    {isTesting ? 'Testing...' : 'Test'}
-                  </button>
-                  <button type="button" className="btn-icon" onClick={handleRefreshStatus} title="Refresh status" aria-label="Refresh status">
-                    <RefreshCw size={16} />
-                  </button>
-                  <button type="button" className="btn-icon" onClick={() => handleOpenEdit(activeDevice)} title="Edit device" aria-label="Edit device">
-                    <Edit2 size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-icon"
-                    onClick={() => handleDeleteDevice(activeDevice.id)}
-                    title="Remove device"
-                    aria-label="Remove device"
-                    style={{ color: '#EF4444' }}
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Connection test result */}
-              {testResult && (
                 <div
                   style={{
-                    marginTop: '14px',
-                    padding: '8px 12px',
-                    borderRadius: 'var(--radius-sm)',
-                    background: testResult.success ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-                    color: testResult.success ? '#10B981' : '#EF4444',
-                    fontSize: '13px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                    gap: '14px',
+                    marginTop: '16px',
                   }}
                 >
-                  {testResult.success ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
-                  {testResult.success
-                    ? `Device responded in ${testResult.latencyMs} ms`
-                    : `No response from ${activeDevice.ipAddress}:${activeDevice.port}`}
+                  <Detail label="Last seen" value={formatTime(device.last_seen_at)} />
+                  <Detail label="Serial number" value={device.serial_number} />
+                  <Detail label="Location" value={device.location} />
+                  <Detail label="Model" value={device.model} />
+                  <Detail label="Network address" value={device.ip_address} />
+                  <Detail label="Firmware" value={device.firmware} />
                 </div>
-              )}
+              </div>
+            );
+          })}
 
-              {/* Details */}
-              <dl
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-                  gap: '16px 24px',
-                  margin: '18px 0 0 0',
-                  paddingTop: '16px',
-                  borderTop: '1px solid var(--border-base)',
-                }}
-              >
-                {[
-                  ['Address', <code key="addr">{activeDevice.ipAddress}:{activeDevice.port}</code>],
-                  ['Model', activeDevice.model || '—'],
-                  ['Serial number', activeDevice.serialNumber ? <code key="sn">{activeDevice.serialNumber}</code> : '—'],
-                  ['Last seen', activeDevice.lastSeen],
-                  ['Door unlock time', `${(Number(activeDevice.doorRelayMs) || 0) / 1000} s`],
-                  ['Anti-passback', activeDevice.antiPassback ? 'On' : 'Off'],
-                ].map(([label, value]) => (
-                  <div key={label}>
-                    <dt style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '3px' }}>{label}</dt>
-                    <dd style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>{value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          )}
-
-          {/* Recent access events (sample data until hardware is connected) */}
           <div style={cardStyle}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', gap: '8px' }}>
-              <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>Recent access events</h3>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Sample data</span>
-            </div>
-
-            <div style={{ overflowX: 'auto' }}>
-              <table className="table" style={{ margin: 0 }}>
-                <thead>
-                  <tr>
-                    <th>Time</th>
-                    <th>Member</th>
-                    <th>Method</th>
-                    <th>Result</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sampleEvents.map((row, i) => (
-                    <tr key={i}>
-                      <td style={{ fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{row.time}</td>
-                      <td>
-                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{row.name}</div>
-                        {row.code && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{row.code}</div>}
-                      </td>
-                      <td style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{row.method}</td>
-                      <td>
-                        <span className={`badge ${row.granted ? 'badge-success' : 'badge-danger'}`} style={{ fontSize: '11px' }}>
-                          {row.granted ? 'Granted' : 'Denied'}
-                        </span>
-                      </td>
-                    </tr>
+            <h3 style={{ margin: '0 0 4px', fontSize: '15px' }}>Link machine users to members</h3>
+            <p style={{ margin: '0 0 14px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+              Enroll the face or fingerprint on the machine, then link its user number here. Scans made before
+              linking aren&apos;t counted as attendance.
+            </p>
+            <form onSubmit={handleLink} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label" htmlFor="link-pin">Machine user number</label>
+                <input
+                  id="link-pin"
+                  className="form-input"
+                  inputMode="numeric"
+                  pattern="[1-9][0-9]*"
+                  required
+                  value={linkPin}
+                  onChange={(e) => setLinkPin(e.target.value)}
+                />
+              </div>
+              <div className="form-group" style={{ margin: 0, flex: '1 1 220px' }}>
+                <label className="form-label" htmlFor="link-member">Member</label>
+                <select
+                  id="link-member"
+                  className="form-select"
+                  required
+                  value={linkMemberId}
+                  onChange={(e) => setLinkMemberId(e.target.value)}
+                >
+                  <option value="">Choose a member…</option>
+                  {members.filter((m) => !m.device_user_id).map((m) => (
+                    <option key={m.id} value={m.id}>{memberName(m)} ({m.member_code})</option>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </select>
+              </div>
+              <button type="submit" className="btn btn-primary"><Link2 size={15} /> Link</button>
+            </form>
+
+            {unlinkedPins.length > 0 && (
+              <div style={{ marginTop: '12px', fontSize: '13px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Recent scans from unlinked users:</span>
+                {unlinkedPins.map((pin) => (
+                  <button key={pin} type="button" className="btn btn-secondary btn-sm" onClick={() => setLinkPin(pin)}>
+                    User {pin}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {linkedMembers.length > 0 && (
+              <div className="table-responsive" style={{ marginTop: '14px' }}>
+                <table className="custom-table">
+                  <thead>
+                    <tr><th>Machine user</th><th>Member</th><th>Code</th><th /></tr>
+                  </thead>
+                  <tbody>
+                    {linkedMembers.map((m) => (
+                      <tr key={m.id}>
+                        <td>{m.device_user_id}</td>
+                        <td>{memberName(m)}</td>
+                        <td>{m.member_code}</td>
+                        <td style={{ textAlign: 'right' }}>
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => handleUnlink(m)}>
+                            <Unlink size={14} /> Unlink
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <div style={cardStyle}>
+            <h3 style={{ margin: '0 0 14px', fontSize: '15px' }}>Recent activity</h3>
+            {punches.length === 0 ? (
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
+                No scans received yet.
+              </p>
+            ) : (
+              <div className="table-responsive">
+                <table className="custom-table">
+                  <thead>
+                    <tr><th>Time</th><th>Who</th><th>Method</th><th>Result</th><th>Attendance</th><th>Machine</th></tr>
+                  </thead>
+                  <tbody>
+                    {punches.map((p) => {
+                      const member = membersById.get(p.member_id);
+                      const who = member
+                        ? memberName(member)
+                        : p.device_user_id === '0' ? '—' : `Not linked (user ${p.device_user_id})`;
+                      return (
+                        <tr key={p.id}>
+                          <td>{formatTime(p.punched_at)}</td>
+                          <td>{who}</td>
+                          <td>{p.device_user_id === '0' ? '—' : VERIFY_LABELS[p.verify_type] || `Type ${p.verify_type}`}</td>
+                          <td><Pill {...eventLabel(p.event_code)} /></td>
+                          <td>{p.attendance_id ? 'Counted' : '—'}</td>
+                          <td>{devicesById.get(p.device_id)?.name || '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* DEVICE CONFIGURATION SETUP / EDIT MODAL */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingDevice ? 'Edit Device' : 'Add Device'}
-        subtitle="Name, location and network details"
-        icon={Server}
-        size="md"
+        size="sm"
       >
-        <form onSubmit={handleSaveDevice} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <form onSubmit={handleSave}>
           <div className="form-group">
-            <label className="form-label">Device Name *</label>
+            <label className="form-label" htmlFor="device-serial">Serial number *</label>
             <input
-              type="text"
-              required
+              id="device-serial"
               className="form-input"
-              value={formData.name}
-              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="e.g. Main Entrance Face Recognition Terminal"
+              required
+              pattern="[A-Za-z0-9_\-]{4,64}"
+              disabled={!!editingDevice}
+              value={form.serialNumber}
+              onChange={(e) => setForm({ ...form, serialNumber: e.target.value })}
             />
           </div>
-
-          <div className="form-grid">
-            <div className="form-group">
-              <label className="form-label">Device Type</label>
-              <select
-                className="form-select"
-                value={formData.type}
-                onChange={(e) => setFormData((prev) => ({ ...prev, type: e.target.value }))}
-              >
-                <option value="Face Recognition Access Controller">Face Recognition Terminal</option>
-                <option value="Fingerprint Biometric Controller">Fingerprint Scanner</option>
-                <option value="Dual Face & Fingerprint Turnstile Gate">Dual Face & Fingerprint Gate</option>
-                <option value="RFID Smart Card Reader">RFID Turnstile Reader</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Hardware Model</label>
-              <input
-                type="text"
-                className="form-input"
-                value={formData.model}
-                onChange={(e) => setFormData((prev) => ({ ...prev, model: e.target.value }))}
-                placeholder="e.g. FR-8000 Pro"
-              />
-            </div>
-          </div>
-
           <div className="form-group">
-            <label className="form-label">Physical Location *</label>
+            <label className="form-label" htmlFor="device-name">Name *</label>
             <input
-              type="text"
-              required
+              id="device-name"
               className="form-input"
-              value={formData.location}
-              onChange={(e) => setFormData((prev) => ({ ...prev, location: e.target.value }))}
-              placeholder="e.g. Main Gym Entrance (Turnstile Gate #1)"
+              required
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
           </div>
-
-          <div className="form-grid">
-            <div className="form-group">
-              <label className="form-label">IP Address / Hostname *</label>
-              <input
-                type="text"
-                required
-                className="form-input"
-                value={formData.ipAddress}
-                onChange={(e) => setFormData((prev) => ({ ...prev, ipAddress: e.target.value }))}
-                placeholder="192.168.1.120"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Port *</label>
-              <input
-                type="text"
-                required
-                className="form-input"
-                value={formData.port}
-                onChange={(e) => setFormData((prev) => ({ ...prev, port: e.target.value }))}
-                placeholder="8000"
-              />
-            </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="device-location">Location</label>
+            <input
+              id="device-location"
+              className="form-input"
+              value={form.location}
+              onChange={(e) => setForm({ ...form, location: e.target.value })}
+            />
           </div>
-
-          <div className="form-grid">
-            <div className="form-group">
-              <label className="form-label">Communication Protocol</label>
-              <select
-                className="form-select"
-                value={formData.protocol}
-                onChange={(e) => setFormData((prev) => ({ ...prev, protocol: e.target.value }))}
-              >
-                <option value="TCP/IP WebSocket & HTTP REST">TCP/IP WebSocket & HTTP REST</option>
-                <option value="Direct TCP Socket">Direct TCP Socket (Port 8000)</option>
-                <option value="Wiegand / RS-485 Controller">Wiegand / RS-485 Bridge</option>
-                <option value="MQTT IoT Gateway">MQTT IoT Gateway</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Serial Number</label>
-              <input
-                type="text"
-                className="form-input"
-                value={formData.serialNumber}
-                onChange={(e) => setFormData((prev) => ({ ...prev, serialNumber: e.target.value }))}
-                placeholder="SN-FR2026-XXXXX"
-              />
-            </div>
-          </div>
-
-          <div className="form-grid">
-            <div className="form-group">
-              <label className="form-label">Door Unlock Time (ms)</label>
-              <input
-                type="number"
-                min="500"
-                max="10000"
-                className="form-input"
-                value={formData.doorRelayMs}
-                onChange={(e) => setFormData((prev) => ({ ...prev, doorRelayMs: e.target.value }))}
-              />
-            </div>
-
-            <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '18px', fontSize: '13px' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.antiPassback}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, antiPassback: e.target.checked }))}
-                />
-                <span>Anti-passback (block re-entry sharing)</span>
-              </label>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '14px' }}>
-            <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary">
-              {editingDevice ? 'Save Changes' : 'Add Device'}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
+            <button type="submit" className="btn btn-primary" disabled={isSaving}>
+              {isSaving ? 'Saving…' : 'Save'}
             </button>
           </div>
         </form>

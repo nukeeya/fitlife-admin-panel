@@ -11,11 +11,16 @@
 
 - [ ] **ZKTeco SenseFace 3A** (face + fingerprint, door lock, AC push / ADMS mode): scans reach the database
   - [x] Device probe `tools/device-probe/` to see what the machine sends (5 Nov 2026)
-  - [ ] At the gym: run the probe; photos of System Info and Cloud Server Setting; collect `probe-log.jsonl`
-  - [ ] Migration `022`: `devices`, `members.device_user_id`, `device_punches` (raw, no duplicates), scans → `attendance`; attendance date/time defaults in Dhaka time (now UTC)
-  - [ ] Receiver: Supabase Edge Function, plus a relay for the fixed `/iclock/...` paths (a route on the admin Worker if the device can use HTTPS; plain HTTP needs a custom domain with "Always Use HTTPS" off); only registered serial numbers accepted
-  - [ ] App: real Devices page; Device user ID on members; replace the simulated `RemoteEnrollModal`
-  - Fingerprints and faces are enrolled on the machine and stay there; the database only links device user number → member
+  - [x] At the gym: probe run; machine connects, face and card scans confirmed (event 3 opens the door, verify 15 = face, 4 = card) (8 Nov 2026)
+  - [ ] Still to test on the machine: fingerprint scan, unenrolled face, missed scans while offline
+  - [x] Migration `022` written: `devices`, `members.device_user_id`, `device_punches` (raw, no duplicates), scans → `attendance`; attendance date/time defaults in Dhaka time
+  - [x] Run `022` on the live database (8 Nov 2026)
+  - [x] Receiver written: `supabase/functions/iclock`, relay in `tools/iclock-relay`; only registered serial numbers accepted
+  - [ ] Deploy receiver and relay. The relay needs HTTPS on the machine, or a custom domain with "Always Use HTTPS" off for plain HTTP
+  - [ ] On the machine: set gateway and DNS (currently none), then point Cloud Server Setting at the relay
+  - [ ] Check the door sensor: the machine reported an alarm and "door opened without a scan" at startup
+  - [x] App: real Devices page with member linking; simulated `RemoteEnrollModal` removed
+  - The machine uploads face photos and templates to the server when someone enrolls. The receiver discards them, and the database only links device user number → member
 
 ---
 
