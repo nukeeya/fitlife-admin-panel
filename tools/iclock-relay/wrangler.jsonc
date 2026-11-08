@@ -4,7 +4,6 @@
   "main": "worker.js",
   "compatibility_date": "2026-11-01",
   "vars": {
-    // Replace <project-ref> with your Supabase project's reference ID.
-    "RECEIVER_URL": "https://<project-ref>.supabase.co/functions/v1/iclock"
+    "RECEIVER_URL": "https://ffufaofffpbcfahtmmmt.supabase.co/functions/v1/iclock"
   }
 }

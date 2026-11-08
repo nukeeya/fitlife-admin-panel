@@ -33,5 +33,9 @@ dist-ssr
 .env.*
 !.env.example
 
-# Device probe log (holds member user numbers and scan times)
+# Device probe log (holds user numbers, scan times, and face/fingerprint data)
 tools/device-probe/probe-log.jsonl
+
+# Supabase and Wrangler local files
+supabase/.temp/
+.wrangler/
