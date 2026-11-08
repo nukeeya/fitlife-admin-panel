@@ -16,8 +16,9 @@
   - [x] Migration `022` written: `devices`, `members.device_user_id`, `device_punches` (raw, no duplicates), scans → `attendance`; attendance date/time defaults in Dhaka time
   - [x] Run `022` on the live database (8 Nov 2026)
   - [x] Receiver written: `supabase/functions/iclock`, relay in `tools/iclock-relay`; only registered serial numbers accepted
-  - [ ] Deploy receiver and relay. The relay needs HTTPS on the machine, or a custom domain with "Always Use HTTPS" off for plain HTTP
-  - [ ] On the machine: set gateway and DNS (currently none), then point Cloud Server Setting at the relay
+  - [x] Receiver and relay deployed; machine pointed at the relay over Wi-Fi and online (8 Nov 2026)
+  - [x] Send to Machine: migrations `023` (command queue) and `024`; the app creates the user and door permission, then staff capture the face on the machine
+  - Remote `ENROLL_BIO` shows the scan screen and says success but saves no face, so it isn't used
   - [ ] Check the door sensor: the machine reported an alarm and "door opened without a scan" at startup
   - [x] App: real Devices page with member linking; simulated `RemoteEnrollModal` removed
   - The machine uploads face photos and templates to the server when someone enrolls. The receiver discards them, and the database only links device user number → member

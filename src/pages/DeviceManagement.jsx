@@ -40,6 +40,13 @@ function eventLabel(code) {
   return { text: `Event ${code}`, color: '#F59E0B' };
 }
 
+function sendStatus(commands) {
+  if (commands.some((c) => c.status === 'failed')) return { text: 'Failed. Send again', color: '#EF4444' };
+  if (commands.some((c) => c.status === 'expired')) return { text: 'Not delivered. Send again', color: '#EF4444' };
+  if (commands.some((c) => c.status !== 'done')) return { text: 'Waiting for machine', color: '#F59E0B' };
+  return { text: 'Ready. Add face on machine', color: '#10B981' };
+}
+
 function deviceStatus(device, now) {
   if (!device.enabled) return { text: 'Disabled', color: '#64748B' };
   if (!device.last_seen_at) return { text: 'Never connected', color: '#F59E0B' };
@@ -85,6 +92,7 @@ export default function DeviceManagement() {
   const [devices, setDevices] = useState([]);
   const [punches, setPunches] = useState([]);
   const [members, setMembers] = useState([]);
+  const [machineSends, setMachineSends] = useState([]);
   const [now, setNow] = useState(() => Date.now());
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -99,12 +107,13 @@ export default function DeviceManagement() {
   const [linkMemberId, setLinkMemberId] = useState('');
 
   const load = useCallback(async () => {
-    const [deviceRes, punchRes, memberRes] = await Promise.all([
+    const [deviceRes, punchRes, memberRes, sendRes] = await Promise.all([
       db.listDevices(),
       db.listDevicePunches(),
       db.listMemberDeviceLinks(),
+      db.listMachineSends(),
     ]);
-    const error = deviceRes.error || punchRes.error || memberRes.error;
+    const error = deviceRes.error || punchRes.error || memberRes.error || sendRes.error;
     if (error) {
       setLoadError(error.message);
     } else {
@@ -112,6 +121,7 @@ export default function DeviceManagement() {
       setDevices(deviceRes.data);
       setPunches(punchRes.data);
       setMembers(memberRes.data);
+      setMachineSends(sendRes.data);
       setNow(Date.now());
     }
     setIsLoading(false);
@@ -129,6 +139,17 @@ export default function DeviceManagement() {
   const linkedMembers = useMemo(() => members.filter((m) => m.device_user_id), [members]);
   const membersByPin = useMemo(() => new Map(linkedMembers.map((m) => [m.device_user_id, m])), [linkedMembers]);
   const devicesById = useMemo(() => new Map(devices.map((d) => [d.id, d])), [devices]);
+
+  // Each member's latest send. Commands queued together share a created_at.
+  const latestSends = useMemo(() => {
+    const byMember = new Map();
+    for (const command of machineSends) {
+      const send = byMember.get(command.member_id);
+      if (!send) byMember.set(command.member_id, { memberId: command.member_id, createdAt: command.created_at, commands: [command] });
+      else if (send.createdAt === command.created_at) send.commands.push(command);
+    }
+    return [...byMember.values()].slice(0, 10);
+  }, [machineSends]);
 
   const unlinkedPins = useMemo(
     () => [...new Set(punches.map((p) => p.device_user_id))].filter((pin) => pin !== '0' && !membersByPin.has(pin)),
@@ -358,6 +379,35 @@ export default function DeviceManagement() {
               </div>
             )}
           </div>
+
+          {latestSends.length > 0 && (
+            <div style={cardStyle}>
+              <h3 style={{ margin: '0 0 4px', fontSize: '15px' }}>Sent to the machine</h3>
+              <p style={{ margin: '0 0 14px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                When a member is ready, open their user number on the machine and tap Face.
+              </p>
+              <div className="table-responsive">
+                <table className="custom-table">
+                  <thead>
+                    <tr><th>Member</th><th>Machine user</th><th>Sent</th><th>Status</th></tr>
+                  </thead>
+                  <tbody>
+                    {latestSends.map((send) => {
+                      const member = membersById.get(send.memberId);
+                      return (
+                        <tr key={send.memberId}>
+                          <td>{member ? memberName(member) : '—'}</td>
+                          <td>{member?.device_user_id || '—'}</td>
+                          <td>{formatTime(send.createdAt)}</td>
+                          <td><Pill {...sendStatus(send.commands)} /></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           <div style={cardStyle}>
             <h3 style={{ margin: '0 0 14px', fontSize: '15px' }}>Recent activity</h3>

@@ -79,6 +79,18 @@ function parseAccessLog(body: string) {
   return rows;
 }
 
+// One result per line: ID=17&Return=0&CMD=DATA
+function parseCommandResults(body: string) {
+  const results = [];
+  for (const line of body.split(/\r?\n/)) {
+    const fields = new URLSearchParams(line.trim());
+    const id = toInt(fields.get('ID') ?? undefined);
+    const returnCode = toInt(fields.get('Return') ?? undefined);
+    if (id !== null && id > 0 && returnCode !== null) results.push({ id, returnCode });
+  }
+  return results;
+}
+
 const registryField = (body: string, key: string) =>
   body.match(new RegExp(`(?:^|,)~?${key}=([^,]*)`))?.[1] || null;
 
@@ -136,7 +148,25 @@ Deno.serve(async (req) => {
       return text('OK');
     }
 
-    return text('OK'); // getrequest, ping, devicecmd
+    if (route === 'getrequest') {
+      const { data: command, error: commandError } = await db.rpc('next_device_command', { p_serial: sn });
+      if (commandError) throw commandError;
+      return text(command ?? 'OK');
+    }
+
+    if (route === 'devicecmd' && req.method === 'POST') {
+      for (const result of parseCommandResults(await readBody(req))) {
+        const { error: resultError } = await db.rpc('record_device_command_result', {
+          p_serial: sn,
+          p_command_id: result.id,
+          p_return_code: result.returnCode,
+        });
+        if (resultError) throw resultError;
+      }
+      return text('OK');
+    }
+
+    return text('OK'); // ping
   } catch (err) {
     if (err instanceof RangeError) return text('Too large', 413);
     console.error('iclock failed:', err instanceof Error ? err.message : 'unknown error');

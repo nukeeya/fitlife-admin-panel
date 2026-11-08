@@ -776,6 +776,19 @@ export const db = {
       .order('first_name');
   },
 
+  listMachineSends(limit = 40) {
+    return supabase
+      .from('device_commands')
+      .select('id, member_id, status, created_at')
+      .not('member_id', 'is', null)
+      .order('id', { ascending: false })
+      .limit(limit);
+  },
+
+  sendMemberToMachine(memberId) {
+    return supabase.rpc('send_member_to_machine', { p_member_id: memberId });
+  },
+
   insertDevice(row) {
     return supabase.from('devices').insert(row).select('*').single();
   },

@@ -20,6 +20,7 @@ import { useAuth } from '../context/AuthContext';
 import Modal from '../components/common/Modal';
 import DataState from '../components/common/DataState';
 import Avatar from '../components/common/Avatar';
+import { db } from '../lib/supabaseData';
 
 export default function Members() {
   const navigate = useNavigate();
@@ -117,6 +118,14 @@ export default function Members() {
     if (action === 'diet' || action === 'workout') {
       setPlanAssignment({ member, type: action });
       setSelectedPlanId('');
+      return;
+    }
+
+    if (action === 'send-to-machine') {
+      const { data: pin, error } = await db.sendMemberToMachine(member.id);
+      setActionFeedback(error
+        ? { type: 'error', text: `Couldn't send ${member.name} to the machine: ${error.message}` }
+        : { type: 'success', text: `${member.name} will appear on the machine as user ${pin} in about a minute. Then open that user on the machine and tap Face.` });
       return;
     }
 
@@ -357,9 +366,16 @@ export default function Members() {
                         <button type="button" className="member-options-item" role="menuitem" disabled title={disabledIntegrationTitle}>
                           <Ban size={14} /> Force Access Deny
                         </button>
-                        <button type="button" className="member-options-item" role="menuitem" disabled title={disabledIntegrationTitle}>
-                          <ScanFace size={14} /> Sync with Face ID
-                        </button>
+                        {access?.approveMembers && (
+                          <button
+                            type="button"
+                            className="member-options-item"
+                            role="menuitem"
+                            onClick={() => handleMenuAction(m, 'send-to-machine')}
+                          >
+                            <ScanFace size={14} /> Send to Machine
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="member-options-item"
