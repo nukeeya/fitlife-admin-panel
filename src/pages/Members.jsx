@@ -14,6 +14,7 @@ import {
   Dumbbell,
   MessageSquare,
   Mail,
+  Fingerprint,
 } from 'lucide-react';
 import { useGymData } from '../context/GymDataContext';
 import { useAuth } from '../context/AuthContext';
@@ -61,7 +62,7 @@ export default function Members() {
   const [messageText, setMessageText] = useState('');
   const [actionFeedback, setActionFeedback] = useState(null);
   const [isSavingAction, setIsSavingAction] = useState(false);
-  const [faceEnrollMember, setFaceEnrollMember] = useState(null);
+  const [enrollRequest, setEnrollRequest] = useState(null); // { member, kind: 'face' | 'finger', finger }
 
   useEffect(() => {
     if (openMenuId === null) return undefined;
@@ -122,8 +123,8 @@ export default function Members() {
       return;
     }
 
-    if (action === 'enroll-face') {
-      setFaceEnrollMember(member);
+    if (action === 'enroll-face' || action === 'enroll-finger') {
+      setEnrollRequest({ member, kind: action === 'enroll-face' ? 'face' : 'finger', finger: 6 });
       return;
     }
 
@@ -216,15 +217,18 @@ export default function Members() {
     setMessageText('');
   };
 
-  const confirmFaceEnroll = async () => {
-    const member = faceEnrollMember;
+  const confirmEnroll = async () => {
+    const { member, kind, finger } = enrollRequest;
+    const scanName = kind === 'face' ? 'face' : 'fingerprint';
     setIsSavingAction(true);
-    const { data: pin, error } = await db.enrollMemberFace(member.id);
+    const { data: pin, error } = kind === 'face'
+      ? await db.enrollMemberFace(member.id)
+      : await db.enrollMemberFingerprint(member.id, finger);
     setIsSavingAction(false);
-    setFaceEnrollMember(null);
+    setEnrollRequest(null);
     setActionFeedback(error
-      ? { type: 'error', text: `Couldn't start the face scan for ${member.name}: ${error.message}` }
-      : { type: 'success', text: `${member.name} is user ${pin}. The scan will start on the machine within about a minute. Check the Devices tab for "Face saved".` });
+      ? { type: 'error', text: `Couldn't start the ${scanName} scan for ${member.name}: ${error.message}` }
+      : { type: 'success', text: `${member.name} is user ${pin}. The ${scanName} scan will start on the machine within about a minute. Check the Devices tab for "Saved".` });
   };
 
   const disabledIntegrationTitle ='Requires an access-control/face-ID system integration.';
@@ -398,6 +402,16 @@ export default function Members() {
                             type="button"
                             className="member-options-item"
                             role="menuitem"
+                            onClick={() => handleMenuAction(m, 'enroll-finger')}
+                          >
+                            <Fingerprint size={14} /> New Fingerprint Enroll
+                          </button>
+                        )}
+                        {access?.approveMembers && (
+                          <button
+                            type="button"
+                            className="member-options-item"
+                            role="menuitem"
                             onClick={() => handleMenuAction(m, 'send-to-machine')}
                           >
                             <ScanFace size={14} /> Send to Machine
@@ -451,29 +465,44 @@ export default function Members() {
       </DataState>
 
       <Modal
-        isOpen={!!faceEnrollMember}
-        onClose={() => { if (!isSavingAction) setFaceEnrollMember(null); }}
-        title="New Face Enroll"
+        isOpen={!!enrollRequest}
+        onClose={() => { if (!isSavingAction) setEnrollRequest(null); }}
+        title={enrollRequest?.kind === 'finger' ? 'New Fingerprint Enroll' : 'New Face Enroll'}
         size="sm"
         closeOnBackdropClick={!isSavingAction}
         closeOnEsc={!isSavingAction}
         footer={
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-            <button type="button" className="btn btn-secondary" disabled={isSavingAction} onClick={() => setFaceEnrollMember(null)}>
+            <button type="button" className="btn btn-secondary" disabled={isSavingAction} onClick={() => setEnrollRequest(null)}>
               Cancel
             </button>
-            <button type="button" className="btn btn-primary" disabled={isSavingAction} onClick={confirmFaceEnroll}>
+            <button type="button" className="btn btn-primary" disabled={isSavingAction} onClick={confirmEnroll}>
               {isSavingAction ? 'Starting…' : 'Member agreed. Start scan'}
             </button>
           </div>
         }
       >
         <p style={{ margin: '0 0 10px' }}>
-          Ask <strong>{faceEnrollMember?.name}</strong> to stand in front of the door machine.
+          Ask <strong>{enrollRequest?.member.name}</strong> to stand at the door machine.
         </p>
+        {enrollRequest?.kind === 'finger' && (
+          <div className="form-group">
+            <label className="form-label" htmlFor="enroll-finger">Finger slot</label>
+            <select
+              id="enroll-finger"
+              className="form-select"
+              value={enrollRequest.finger}
+              onChange={(e) => setEnrollRequest({ ...enrollRequest, finger: Number(e.target.value) })}
+            >
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((slot) => (
+                <option key={slot} value={slot - 1}>Finger {slot}{slot === 7 ? ' (default)' : ''}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
-          Confirm they&apos;ve agreed to have their face stored on the machine for door access. If they don&apos;t
-          agree, cancel and give them a card instead.
+          Confirm they&apos;ve agreed to have their {enrollRequest?.kind === 'finger' ? 'fingerprint' : 'face'} stored
+          on the machine for door access. If they don&apos;t agree, cancel and give them a card instead.
         </p>
       </Modal>
 

@@ -18,7 +18,7 @@
   - [x] Receiver written: `supabase/functions/iclock`, relay in `tools/iclock-relay`; only registered serial numbers accepted
   - [x] Receiver and relay deployed; machine pointed at the relay over Wi-Fi and online (8 Nov 2026)
   - [x] Send to Machine: migrations `023` (command queue) and `024`; the app creates the user and door permission, then staff capture the face on the machine
-  - [x] New Face Enroll: migrations `025` and `026`; one click creates the user and starts the scan
+  - [x] New Face Enroll and New Fingerprint Enroll: migrations `025`, `026` and `028`; one click creates the user and starts the scan. A remote fingerprint has 6 extra bytes that must be removed before it goes back
   - After a remote `ENROLL_BIO` the machine uploads the face (`type=BioData`) and keeps nothing until the server sends it back. The template is erased when delivered, or within 10 minutes (owner approved, 8 Nov 2026)
   - [ ] Check the door sensor: the machine reported an alarm and "door opened without a scan" at startup
   - [x] App: real Devices page with member linking; simulated `RemoteEnrollModal` removed

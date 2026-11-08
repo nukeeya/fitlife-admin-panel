@@ -51,10 +51,10 @@ function sendStatus(commands, now) {
 
   const scan = commands.find((c) => c.enroll_member_id);
   if (!scan) return { text: 'Ready. Add face on machine', color: '#10B981' };
-  if (scan.face_saved_at) return { text: 'Face saved', color: '#10B981' };
+  if (scan.face_saved_at) return { text: 'Saved', color: '#10B981' };
   return now - new Date(scan.finished_at).getTime() < FACE_SAVE_WAIT_MS
-    ? { text: 'Saving face', color: '#F59E0B' }
-    : { text: 'Face not saved. Try again', color: '#EF4444' };
+    ? { text: 'Saving', color: '#F59E0B' }
+    : { text: 'Not saved. Try again', color: '#EF4444' };
 }
 
 function deviceStatus(device, now) {
@@ -395,7 +395,7 @@ export default function DeviceManagement() {
             <div style={cardStyle}>
               <h3 style={{ margin: '0 0 4px', fontSize: '15px' }}>Sent to the machine</h3>
               <p style={{ margin: '0 0 14px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                Only "Face saved" means the machine has stored the face, whatever its screen says.
+                Only "Saved" means the machine has stored the face or fingerprint, whatever its screen says.
               </p>
               <div className="table-responsive">
                 <table className="custom-table">

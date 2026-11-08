@@ -117,13 +117,27 @@ function faceReturnCommand(f: Record<string, string>) {
   const tmp = f.tmp ?? f.template ?? '';
   if (!/^[1-9]\d{0,8}$/.test(f.pin ?? '') || !/^[A-Za-z0-9+/]+={0,2}$/.test(tmp)) return null;
   const num = (value: string | undefined, fallback: string) => (/^\d{1,4}$/.test(value ?? '') ? value : fallback);
-  return {
-    pin: f.pin,
-    command:
-      `DATA UPDATE biodata Pin=${f.pin}\tNo=${num(f.no, '0')}\tIndex=${num(f.index, '0')}` +
-      `\tValid=${num(f.valid, '1')}\tDuress=${num(f.duress, '0')}\tType=${num(f.type, '9')}` +
-      `\tMajorVer=${num(f.majorver, '40')}\tMinorVer=${num(f.minorver, '1')}\tFormat=${num(f.format, '0')}\tTmp=${tmp}`,
-  };
+  const type = num(f.type, '9');
+  const isFingerprint = type === '1'; // the machine reports fingerprint 13.0, face 40.1
+
+  const build = (template: string) =>
+    `DATA UPDATE biodata Pin=${f.pin}\tNo=${num(f.no, '0')}\tIndex=${num(f.index, '0')}` +
+    `\tValid=${num(f.valid, '1')}\tDuress=${num(f.duress, '0')}\tType=${type}` +
+    `\tMajorVer=${num(f.majorver, isFingerprint ? '13' : '40')}\tMinorVer=${num(f.minorver, isFingerprint ? '0' : '1')}` +
+    `\tFormat=${num(f.format, '0')}\tTmp=${template}`;
+
+  // A remote fingerprint is 6 bytes longer than a hand-enrolled one, and the
+  // machine refuses it whole (-30). Trimming the end made it store and open the door.
+  if (isFingerprint) {
+    try {
+      const bytes = atob(tmp);
+      if (bytes.length > 6) return { pin: f.pin, commands: [build(btoa(bytes.slice(0, -6)))] };
+    } catch {
+      return null;
+    }
+  }
+
+  return { pin: f.pin, commands: [build(tmp)] };
 }
 
 const registryField = (body: string, key: string) =>
@@ -179,13 +193,15 @@ Deno.serve(async (req) => {
             console.warn(`Unusable face upload. Fields: ${safeFieldNames(fields)}`);
             continue;
           }
-          const { data: queued, error: queueError } = await db.rpc('queue_face_template_return', {
-            p_serial: sn,
-            p_pin: item.pin,
-            p_command: item.command,
-          });
-          if (queueError) throw new Error('Could not queue the face return');
-          if (!queued) console.warn('Face upload ignored: no matching scan was requested');
+          for (const command of item.commands) {
+            const { data: queued, error: queueError } = await db.rpc('queue_face_template_return', {
+              p_serial: sn,
+              p_pin: item.pin,
+              p_command: command,
+            });
+            if (queueError) throw new Error('Could not queue the face return');
+            if (!queued) console.warn('Face upload ignored: no matching scan was requested');
+          }
         }
         return text('OK');
       }

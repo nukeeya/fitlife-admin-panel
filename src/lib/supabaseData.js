@@ -789,6 +789,10 @@ export const db = {
     return supabase.rpc('send_member_to_machine', { p_member_id: memberId });
   },
 
+  enrollMemberFingerprint(memberId, finger) {
+    return supabase.rpc('enroll_member_fingerprint', { p_member_id: memberId, p_finger: finger });
+  },
+
   enrollMemberFace(memberId) {
     return supabase.rpc('enroll_member_face', { p_member_id: memberId });
   },
