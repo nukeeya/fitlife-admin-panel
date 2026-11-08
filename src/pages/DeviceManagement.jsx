@@ -40,11 +40,21 @@ function eventLabel(code) {
   return { text: `Event ${code}`, color: '#F59E0B' };
 }
 
-function sendStatus(commands) {
-  if (commands.some((c) => c.status === 'failed')) return { text: 'Failed. Send again', color: '#EF4444' };
-  if (commands.some((c) => c.status === 'expired')) return { text: 'Not delivered. Send again', color: '#EF4444' };
+// The machine says "done" even when no face was stored, so a scan only counts as
+// saved once face_saved_at is set.
+const FACE_SAVE_WAIT_MS = 2 * 60 * 1000;
+
+function sendStatus(commands, now) {
+  if (commands.some((c) => c.status === 'failed')) return { text: 'Failed. Try again', color: '#EF4444' };
+  if (commands.some((c) => c.status === 'expired')) return { text: 'Not delivered. Try again', color: '#EF4444' };
   if (commands.some((c) => c.status !== 'done')) return { text: 'Waiting for machine', color: '#F59E0B' };
-  return { text: 'Ready. Add face on machine', color: '#10B981' };
+
+  const scan = commands.find((c) => c.enroll_member_id);
+  if (!scan) return { text: 'Ready. Add face on machine', color: '#10B981' };
+  if (scan.face_saved_at) return { text: 'Face saved', color: '#10B981' };
+  return now - new Date(scan.finished_at).getTime() < FACE_SAVE_WAIT_MS
+    ? { text: 'Saving face', color: '#F59E0B' }
+    : { text: 'Face not saved. Try again', color: '#EF4444' };
 }
 
 function deviceStatus(device, now) {
@@ -144,8 +154,9 @@ export default function DeviceManagement() {
   const latestSends = useMemo(() => {
     const byMember = new Map();
     for (const command of machineSends) {
-      const send = byMember.get(command.member_id);
-      if (!send) byMember.set(command.member_id, { memberId: command.member_id, createdAt: command.created_at, commands: [command] });
+      const memberId = command.member_id ?? command.enroll_member_id;
+      const send = byMember.get(memberId);
+      if (!send) byMember.set(memberId, { memberId, createdAt: command.created_at, commands: [command] });
       else if (send.createdAt === command.created_at) send.commands.push(command);
     }
     return [...byMember.values()].slice(0, 10);
@@ -384,7 +395,7 @@ export default function DeviceManagement() {
             <div style={cardStyle}>
               <h3 style={{ margin: '0 0 4px', fontSize: '15px' }}>Sent to the machine</h3>
               <p style={{ margin: '0 0 14px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                When a member is ready, open their user number on the machine and tap Face.
+                Only "Face saved" means the machine has stored the face, whatever its screen says.
               </p>
               <div className="table-responsive">
                 <table className="custom-table">
@@ -399,7 +410,7 @@ export default function DeviceManagement() {
                           <td>{member ? memberName(member) : '—'}</td>
                           <td>{member?.device_user_id || '—'}</td>
                           <td>{formatTime(send.createdAt)}</td>
-                          <td><Pill {...sendStatus(send.commands)} /></td>
+                          <td><Pill {...sendStatus(send.commands, now)} /></td>
                         </tr>
                       );
                     })}

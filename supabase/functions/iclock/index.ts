@@ -91,6 +91,41 @@ function parseCommandResults(body: string) {
   return results;
 }
 
+// A remote-scan upload: one template per line, key=value pairs.
+function parseFaceUploads(body: string) {
+  return body
+    .split(/\r?\n/)
+    .filter((line) => line.trim())
+    .slice(0, 12)
+    .map((line) => {
+      const parts = line.includes('\t') ? line.split('\t') : line.split('&');
+      return Object.fromEntries(
+        parts.map((part) => {
+          const at = part.indexOf('=');
+          const key = (at < 0 ? part : part.slice(0, at)).trim().split(/\s+/).pop()!.toLowerCase();
+          return [key, at < 0 ? '' : part.slice(at + 1)];
+        }),
+      ) as Record<string, string>;
+    });
+}
+
+// Only short, plain names, so a malformed upload can't leak values into the log.
+const safeFieldNames = (fields: Record<string, string>) =>
+  Object.keys(fields).filter((k) => /^[a-z_]{1,12}$/.test(k)).slice(0, 20).join(',');
+
+function faceReturnCommand(f: Record<string, string>) {
+  const tmp = f.tmp ?? f.template ?? '';
+  if (!/^[1-9]\d{0,8}$/.test(f.pin ?? '') || !/^[A-Za-z0-9+/]+={0,2}$/.test(tmp)) return null;
+  const num = (value: string | undefined, fallback: string) => (/^\d{1,4}$/.test(value ?? '') ? value : fallback);
+  return {
+    pin: f.pin,
+    command:
+      `DATA UPDATE biodata Pin=${f.pin}\tNo=${num(f.no, '0')}\tIndex=${num(f.index, '0')}` +
+      `\tValid=${num(f.valid, '1')}\tDuress=${num(f.duress, '0')}\tType=${num(f.type, '9')}` +
+      `\tMajorVer=${num(f.majorver, '40')}\tMinorVer=${num(f.minorver, '1')}\tFormat=${num(f.format, '0')}\tTmp=${tmp}`,
+  };
+}
+
 const registryField = (body: string, key: string) =>
   body.match(new RegExp(`(?:^|,)~?${key}=([^,]*)`))?.[1] || null;
 
@@ -133,6 +168,27 @@ Deno.serve(async (req) => {
 
     if (route === 'cdata') {
       if (req.method === 'GET') return text(handshake(sn));
+
+      // A remote scan's face. It only goes back to the machine, and only if the
+      // server asked for that scan (migration 025). Never log the values.
+      if (url.searchParams.get('type')?.toLowerCase() === 'biodata') {
+        const uploads = parseFaceUploads(await readBody(req));
+        for (const fields of uploads) {
+          const item = faceReturnCommand(fields);
+          if (!item) {
+            console.warn(`Unusable face upload. Fields: ${safeFieldNames(fields)}`);
+            continue;
+          }
+          const { data: queued, error: queueError } = await db.rpc('queue_face_template_return', {
+            p_serial: sn,
+            p_pin: item.pin,
+            p_command: item.command,
+          });
+          if (queueError) throw new Error('Could not queue the face return');
+          if (!queued) console.warn('Face upload ignored: no matching scan was requested');
+        }
+        return text('OK');
+      }
 
       if (url.searchParams.get('table') === 'rtlog') {
         const rows = parseAccessLog(await readBody(req));

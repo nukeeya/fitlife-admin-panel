@@ -779,14 +779,18 @@ export const db = {
   listMachineSends(limit = 40) {
     return supabase
       .from('device_commands')
-      .select('id, member_id, status, created_at')
-      .not('member_id', 'is', null)
+      .select('id, member_id, enroll_member_id, status, created_at, finished_at, face_saved_at')
+      .or('member_id.not.is.null,enroll_member_id.not.is.null')
       .order('id', { ascending: false })
       .limit(limit);
   },
 
   sendMemberToMachine(memberId) {
     return supabase.rpc('send_member_to_machine', { p_member_id: memberId });
+  },
+
+  enrollMemberFace(memberId) {
+    return supabase.rpc('enroll_member_face', { p_member_id: memberId });
   },
 
   insertDevice(row) {

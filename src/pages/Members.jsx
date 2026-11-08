@@ -61,6 +61,7 @@ export default function Members() {
   const [messageText, setMessageText] = useState('');
   const [actionFeedback, setActionFeedback] = useState(null);
   const [isSavingAction, setIsSavingAction] = useState(false);
+  const [faceEnrollMember, setFaceEnrollMember] = useState(null);
 
   useEffect(() => {
     if (openMenuId === null) return undefined;
@@ -118,6 +119,11 @@ export default function Members() {
     if (action === 'diet' || action === 'workout') {
       setPlanAssignment({ member, type: action });
       setSelectedPlanId('');
+      return;
+    }
+
+    if (action === 'enroll-face') {
+      setFaceEnrollMember(member);
       return;
     }
 
@@ -210,7 +216,18 @@ export default function Members() {
     setMessageText('');
   };
 
-  const disabledIntegrationTitle = 'Requires an access-control/face-ID system integration.';
+  const confirmFaceEnroll = async () => {
+    const member = faceEnrollMember;
+    setIsSavingAction(true);
+    const { data: pin, error } = await db.enrollMemberFace(member.id);
+    setIsSavingAction(false);
+    setFaceEnrollMember(null);
+    setActionFeedback(error
+      ? { type: 'error', text: `Couldn't start the face scan for ${member.name}: ${error.message}` }
+      : { type: 'success', text: `${member.name} is user ${pin}. The scan will start on the machine within about a minute. Check the Devices tab for "Face saved".` });
+  };
+
+  const disabledIntegrationTitle ='Requires an access-control/face-ID system integration.';
 
   return (
     <div className="page">
@@ -371,6 +388,16 @@ export default function Members() {
                             type="button"
                             className="member-options-item"
                             role="menuitem"
+                            onClick={() => handleMenuAction(m, 'enroll-face')}
+                          >
+                            <ScanFace size={14} /> New Face Enroll
+                          </button>
+                        )}
+                        {access?.approveMembers && (
+                          <button
+                            type="button"
+                            className="member-options-item"
+                            role="menuitem"
                             onClick={() => handleMenuAction(m, 'send-to-machine')}
                           >
                             <ScanFace size={14} /> Send to Machine
@@ -422,6 +449,33 @@ export default function Members() {
         </table>
       </div>
       </DataState>
+
+      <Modal
+        isOpen={!!faceEnrollMember}
+        onClose={() => { if (!isSavingAction) setFaceEnrollMember(null); }}
+        title="New Face Enroll"
+        size="sm"
+        closeOnBackdropClick={!isSavingAction}
+        closeOnEsc={!isSavingAction}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <button type="button" className="btn btn-secondary" disabled={isSavingAction} onClick={() => setFaceEnrollMember(null)}>
+              Cancel
+            </button>
+            <button type="button" className="btn btn-primary" disabled={isSavingAction} onClick={confirmFaceEnroll}>
+              {isSavingAction ? 'Starting…' : 'Member agreed. Start scan'}
+            </button>
+          </div>
+        }
+      >
+        <p style={{ margin: '0 0 10px' }}>
+          Ask <strong>{faceEnrollMember?.name}</strong> to stand in front of the door machine.
+        </p>
+        <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
+          Confirm they&apos;ve agreed to have their face stored on the machine for door access. If they don&apos;t
+          agree, cancel and give them a card instead.
+        </p>
+      </Modal>
 
       {actionFeedback && (
         <div
